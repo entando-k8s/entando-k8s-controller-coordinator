@@ -95,7 +95,7 @@ pipelineConfig:
             steps:
               - sh: NAMESPACE_OVERRIDE=${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} make preview
                 name: make-preview
-              - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} --app $APP_NAME --dir ../..
+              - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER}
                 name: jx-preview
           - sh: >-
               mvn verify -Pinter-process-verification \
