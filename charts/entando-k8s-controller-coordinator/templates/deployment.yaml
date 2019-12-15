@@ -25,19 +25,19 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
           - name: ENTANDO_K8S_OPERATOR_REGISTRY
-            value: {{ .Values.operator.registry }}
+            value: "{{ .Values.operator.registry }}"
           - name: ENTANDO_OPERATOR_NAMESPACE_OVERRIDE
-            value: {{ .Values.operator.namespaceOverride }}
+            value: "{{ .Values.operator.namespaceOverride }}"
           - name: ENTANDO_DEFAULT_ROUTING_SUFFIX
-            value: {{ .Values.operator.defaultRoutingSuffix }}
+            value: "{{ .Values.operator.defaultRoutingSuffix }}"
           - name: ENTANDO_POD_READINESS_TIMEOUT_SECONDS
-            value: {{ .Values.operator.podReadinessTimeoutSeconds }}
+            value: "{{ .Values.operator.podReadinessTimeoutSeconds }}"
           - name: ENTANDO_POD_COMPLETION_TIMEOUT_SECONDS
-            value: {{ .Values.operator.podCompletionTimeoutSeconds }}
+            value: "{{ .Values.operator.podCompletionTimeoutSeconds }}"
           - name: ENTANDO_DISABLE_KEYCLOAK_SSL_REQUIREMENT
-            value: {{ .Values.operator.disableKeycloakSslRequirement }}
+            value: "{{ .Values.operator.disableKeycloakSslRequirement }}"
           - name: ENTANDO_K8S_OPERATOR_IMAGE_NAMESPACE
-            value: {{ .Values.operator.imageNamespace }}
+            value: "{{ .Values.operator.imageNamespace }}"
         livenessProbe:
           exec:
             command:

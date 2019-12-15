@@ -10,3 +10,12 @@ preview:
     repository:
     tag:
     pullPolicy: IfNotPresent
+
+operator:
+  registry: docker-registry.default.svc:5000
+  namespaceOverride:
+  defaultRoutingSuffix: apps.serv.run
+  podReadinessTimeoutSeconds: 900
+  podCompletionTimeoutSeconds: 900
+  disableKeycloakSslRequirement: true
+  imageNamespace: entando
