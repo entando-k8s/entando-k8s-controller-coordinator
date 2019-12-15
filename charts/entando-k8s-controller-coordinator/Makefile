@@ -35,7 +35,6 @@ ifeq ($(OS),Darwin)
 	sed -i "" -e "s/version:.*/version: $(RELEASE_VERSION)/" Chart.yaml
 	sed -i "" -e "s/tag:.*/tag: $(RELEASE_VERSION)/" values.yaml
 else ifeq ($(OS),Linux)
-    export NAMESPACE_OVERRIDE=$(REPO_NAME)-$(PIPELINE_CODE)ms
 	sed -i -e "s/version:.*/version: $(RELEASE_VERSION)/" Chart.yaml
 	sed -i -e "s|repository:.*|repository: $(DOCKER_REGISTRY)\/entando\/entando-k8s-controller-coordinator|" values.yaml
 	sed -i -e "s|namespaceOverride:.*|namespaceOverride: $(NAMESPACE_OVERRIDE)|" values.yaml
