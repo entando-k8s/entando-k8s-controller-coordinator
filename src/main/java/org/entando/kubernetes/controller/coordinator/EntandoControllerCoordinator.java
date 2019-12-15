@@ -11,6 +11,7 @@ import java.util.function.BiConsumer;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import org.entando.kubernetes.controller.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.common.ControllerExecutor;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
@@ -45,6 +46,7 @@ public class EntandoControllerCoordinator {
         addObserver(EntandoPlugin.class, this::startImage);
         addObserver(EntandoAppPluginLink.class, this::startImage);
         addObserver(EntandoDatabaseService.class, this.abstractDbAwareController::processEvent);
+        KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());
     }
 
     @SuppressWarnings("unchecked")
