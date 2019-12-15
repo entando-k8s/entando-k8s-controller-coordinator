@@ -25,7 +25,7 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
           - name: ENTANDO_K8S_OPERATOR_REGISTRY
-            value: {{ . Values.operator.registry }}
+            value: {{ .Values.operator.registry }}
           - name: ENTANDO_OPERATOR_NAMESPACE_OVERRIDE
             value: {{ .Values.operator.namespaceOverride }}
           - name: ENTANDO_DEFAULT_ROUTING_SUFFIX
