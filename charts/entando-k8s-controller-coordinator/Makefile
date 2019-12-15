@@ -22,8 +22,8 @@ clean:
 	rm -rf charts
 	rm -rf ${NAME}*.tgz
 
-release: clean
-	helm dependency build
+cat
+
 	helm lint
 	helm init --client-only
 	helm package .
@@ -35,16 +35,16 @@ ifeq ($(OS),Darwin)
 	sed -i "" -e "s/version:.*/version: $(RELEASE_VERSION)/" Chart.yaml
 	sed -i "" -e "s/tag:.*/tag: $(RELEASE_VERSION)/" values.yaml
 else ifeq ($(OS),Linux)
+    export NAMESPACE_OVERRIDE=$(REPO_NAME)-$(PIPELINE_CODE)ms
 	sed -i -e "s/version:.*/version: $(RELEASE_VERSION)/" Chart.yaml
 	sed -i -e "s|repository:.*|repository: $(DOCKER_REGISTRY)\/entando\/entando-k8s-controller-coordinator|" values.yaml
-	sed -i -e "s|ENTANDO_K8S_OPERATOR_REGISTRY:.*|ENTANDO_K8S_OPERATOR_REGISTRY: $(DOCKER_REGISTRY)|" values.yaml
-	sed -i -e "s|ENTANDO_DEFAULT_ROUTING_SUFFIX:.*|ENTANDO_DEFAULT_ROUTING_SUFFIX: $(ENTANDO_DEFAULT_ROUTING_SUFFIX)|" values.yaml
+	sed -i -e "s|namespaceOverride:.*|namespaceOverride: $(NAMESPACE_OVERRIDE)|" values.yaml
 	sed -i -e "s/tag:.*/tag: $(RELEASE_VERSION)/" values.yaml
 else
 	echo "platfrom $(OS) not supported to release from"
 	exit -1
 endif
 	git add --all
-	git commit -m "release $(RELEASE_VERSION)" --allow-empty # if first release then no verion update is performed
+	git commit -m "release $(RELEASE_VERSION)" --allow-empty # if first release then no version update is performed
 	git tag -fa v$(RELEASE_VERSION) -m "Release version $(RELEASE_VERSION)"
 	git push origin v$(RELEASE_VERSION)

@@ -7,13 +7,16 @@ image:
   tag: dev
   pullPolicy: IfNotPresent
 
-# define environment variables here as a map of key: value
-env:
-  ENTANDO_K8S_OPERATOR_REGISTRY: to-be-replaced
-  ENTANDO_DEFAULT_ROUTING_SUFFIX: to-be-replaced
 # enable this flag to use knative serve to deploy the app
 knativeDeploy: false
-
+operator:
+  registry: docker-registry.default.svc:5000
+  namespaceOverride:
+  defaultRoutingSuffix: apps.serv.run
+  podReadinessTimeoutSeconds: 900
+  podCompletionTimeoutSeconds: 900
+  disableKeycloakSslRequirement: true
+  imageNamespace: entando
 resources:
   limits:
     cpu: 500m
