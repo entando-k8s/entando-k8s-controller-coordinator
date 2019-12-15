@@ -140,7 +140,7 @@ pipelineConfig:
             name: create-admin-rolebinding
           - dir: charts/preview
             steps:
-              - sh: make preview
+              - sh: NAMESPACE_OVERRIDE=${REPO_NAME}-${PIPELINE_CODE}ms make preview
                 name: make-preview
               - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}ms --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}ms
                 name: jx-preview
