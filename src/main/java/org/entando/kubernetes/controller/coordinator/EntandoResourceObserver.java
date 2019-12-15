@@ -2,7 +2,6 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
-import io.fabric8.kubernetes.api.model.Doneable;
 import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
@@ -18,6 +17,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.app.EntandoBaseCustomResource;
 
 public class EntandoResourceObserver<
@@ -61,13 +61,15 @@ public class EntandoResourceObserver<
         System.out.println("received " + action + " for resource " + resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
             cache.put(resource.getMetadata().getUid(), resource);
+            if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
+                executor.execute(() -> callback.accept(action, resource));
+            }
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
         } else {
             LOGGER.log(Level.WARNING, () -> format("EntandoResourceObserver could not process the %s action on the %s %s/%s", action.name(),
                     resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
         }
-        executor.execute(() -> callback.accept(action, resource));
     }
 
     protected boolean isNewEvent(R resource) {

@@ -93,9 +93,9 @@ pipelineConfig:
         steps:
           - dir: charts/preview
             steps:
-              - sh: make preview
+              - sh: NAMESPACE_OVERRIDE=${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} make preview
                 name: make-preview
-              - sh: jx preview --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER}
+              - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER}
                 name: jx-preview
           - sh: >-
               mvn verify -Pinter-process-verification \
@@ -112,19 +112,18 @@ pipelineConfig:
         steps:
           - sh: git fetch origin
             name: fetch-full-repo
-          - sh: mvn clean package -P${EXECUTABLE_TYPE}
-#          - sh: >-
-#              mvn clean deploy sonar:sonar \
-#                -Pin-process-verification -P${EXECUTABLE_TYPE} \
-#                -Pprepare-for-nexus \
-#                -Dsonar.login=${SONAR_TOKEN} \
-#                -DautoUpdate=false \
-#                -DconnectionString=${OWASPDB_URL} \
-#                -DdatabasePassword=${OWASPDB_PASSWORD} \
-#                -DdatabaseUser=${OWASPDB_USERNAME} \
-#                -Dgpg.homedir=${GPG_HOMEDIR} \
-#                -Dgpg.keyname=${GPG_KEYNAME} \
-#                -Dgpg.passphrase=${GPG_PASSPHRASE}
+          - sh: >-
+              mvn clean deploy sonar:sonar \
+                -Pin-process-verification -P${EXECUTABLE_TYPE} \
+                -Pprepare-for-nexus \
+                -Dsonar.login=${SONAR_TOKEN} \
+                -DautoUpdate=false \
+                -DconnectionString=${OWASPDB_URL} \
+                -DdatabasePassword=${OWASPDB_PASSWORD} \
+                -DdatabaseUser=${OWASPDB_USERNAME} \
+                -Dgpg.homedir=${GPG_HOMEDIR} \
+                -Dgpg.keyname=${GPG_KEYNAME} \
+                -Dgpg.passphrase=${GPG_PASSPHRASE}
             name: mvn-deploy
           - sh: echo "This avoids unwanted kaniko command substitution"  &&  skaffold build -p ${EXECUTABLE_TYPE} -f skaffold.yaml
             name: container-build
@@ -154,10 +153,7 @@ pipelineConfig:
                 -Dentando.test.image.version=${VERSION}
             name: run-end-to-end-tests
       promote:
-        replace: true
         steps:
-          - sh: jx step changelog --version v\$(cat ../../VERSION)
-            name: changelog
           - sh: >-
               kubectl patch configmap image-versions -n entando -p "{\"data\":{\"${APP_NAME}\":\"${VERSION}\",\"${APP_NAME}-executable-type\":\"${EXECUTABLE_TYPE}\"}}"
             name: update-image-map
