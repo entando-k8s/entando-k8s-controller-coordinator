@@ -28,8 +28,6 @@ spec:
         - name: {{ $pkey }}
           value: {{ quote $pval }}
 {{- end }}
-        ports:
-        - containerPort: {{ .Values.service.internalPort }}
         livenessProbe:
           exec:
             command:
