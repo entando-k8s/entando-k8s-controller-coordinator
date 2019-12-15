@@ -9,7 +9,8 @@ image:
 
 # define environment variables here as a map of key: value
 env:
-
+  ENTADDO_K8S_OPERATOR_REGISTRY:
+  ENTANDO_DEFAULT_ROUTING_SUFFIX:
 # enable this flag to use knative serve to deploy the app
 knativeDeploy: false
 
