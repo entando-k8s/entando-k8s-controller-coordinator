@@ -33,7 +33,7 @@ spec:
             command:
               - cat
               - /tmp/EntandoControllerCoordinator.ready
-        initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
           successThreshold: {{ .Values.livenessProbe.successThreshold }}
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
