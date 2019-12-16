@@ -15,12 +15,6 @@ import org.junit.jupiter.api.Tag;
 @Tag("inter-process")
 public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorTest {
 
-
-    @Override
-    protected KubernetesClient getClient() {
-        return newClient();
-    }
-
     private static NamespacedKubernetesClient newClient() {
         return new DefaultKubernetesClient().inNamespace(NAMESPACE);
     }
@@ -32,6 +26,11 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
         } else {
             //Should be installed by helm chart in pipeline
         }
+    }
+
+    @Override
+    protected KubernetesClient getClient() {
+        return newClient();
     }
 
     @Override

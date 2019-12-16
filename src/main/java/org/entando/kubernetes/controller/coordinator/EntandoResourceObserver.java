@@ -27,10 +27,8 @@ public class EntandoResourceObserver<
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
     private final Map<String, R> cache = new ConcurrentHashMap<>();
-
-    private NonNamespaceOperation<R, L, D, Resource<R, D>> operations;
     private final BiConsumer<Action, R> callback;
-
+    private NonNamespaceOperation<R, L, D, Resource<R, D>> operations;
     private Executor executor = Executors.newSingleThreadExecutor();
 
     public EntandoResourceObserver(CustomResourceOperationsImpl<R, L, D> operations, BiConsumer<Action, R> callback) {
