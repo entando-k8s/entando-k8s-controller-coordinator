@@ -96,7 +96,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         afterCreate(database);
         FilterWatchListDeletable<Service, ServiceList, Boolean, Watch, Watcher<Service>> listable = getClient()
                 .services()
-                .inNamespace(getClient().getNamespace());//.withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoDatabaseService");
+                .inNamespace(getClient().getNamespace()).withLabel("EntandoDatabaseService", database.getMetadata().getName());
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
         Service service = listable.list().getItems().get(0);
         assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
