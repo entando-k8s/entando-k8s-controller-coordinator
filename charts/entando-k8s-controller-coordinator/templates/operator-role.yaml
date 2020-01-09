@@ -14,11 +14,7 @@ rules:
       - entandoapppluginlinks
       - entandodatabaseservices
     verbs:
-      - update
-      - list
-      - get
-      - watch
-      - patch
+      - "*"
   - apiGroups:
       - ""
     resources:

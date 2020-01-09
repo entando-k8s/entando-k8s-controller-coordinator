@@ -41,6 +41,10 @@ spec:
             value: {{ .Release.Namespace }}
           - name: ENTANDO_K8S_OPERATOR_SECURITY_MODE
             value: strict
+          - name: ENTANDO_K8S_OPERATOR_SERVICEACCOUNT
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.serviceAccountName
 {{- range $pkey, $pval := .Values.env }}
           - name: {{ $pkey }}
             value: {{ quote $pval }}
