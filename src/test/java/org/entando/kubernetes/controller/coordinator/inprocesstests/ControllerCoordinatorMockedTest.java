@@ -7,7 +7,7 @@ import io.quarkus.runtime.StartupEvent;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.controller.coordinator.AbstractControllerCoordinatorTest;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
-import org.entando.kubernetes.model.app.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.junit.Rule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

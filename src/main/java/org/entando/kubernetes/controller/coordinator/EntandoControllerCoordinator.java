@@ -14,9 +14,9 @@ import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.common.ControllerExecutor;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
 import org.entando.kubernetes.model.app.EntandoApp;
-import org.entando.kubernetes.model.app.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.infrastructure.EntandoClusterInfrastructure;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
@@ -27,7 +27,6 @@ public class EntandoControllerCoordinator {
 
     private final KubernetesClient client;
     private final Map<Class<? extends EntandoBaseCustomResource>, EntandoResourceObserver<?, ?, ?>> observers = new ConcurrentHashMap<>();
-    private final ControllerExecutor executor;
     private final EntandoResourceOperationsRegistry entandoResourceOperationsRegistry;
     private final EntandoDatabaseServiceController abstractDbAwareController;
 
@@ -35,7 +34,6 @@ public class EntandoControllerCoordinator {
     public EntandoControllerCoordinator(KubernetesClient client) {
         this.entandoResourceOperationsRegistry = new EntandoResourceOperationsRegistry(client);
         this.client = client;
-        this.executor = new ControllerExecutor(client.getNamespace(), client);
         abstractDbAwareController = new EntandoDatabaseServiceController(client);
     }
 
@@ -59,14 +57,15 @@ public class EntandoControllerCoordinator {
     @SuppressWarnings("unchecked")
     private <R extends EntandoBaseCustomResource> void addObserver(Class<R> type, BiConsumer<Action, R> consumer) {
         CustomResourceOperationsImpl operations = this.entandoResourceOperationsRegistry.getOperations(type);
-        CustomResourceOperationsImpl namespacedOperations = EntandoOperatorConfig.getOperatorNamespaceOverride()
+        CustomResourceOperationsImpl namespacedOperations = EntandoOperatorConfig.getOperatorNamespaceToObserve()
                 .map(s -> (CustomResourceOperationsImpl) operations.inNamespace(s))
                 .orElse((CustomResourceOperationsImpl) operations.inAnyNamespace());
         observers.put(operations.getType(), new EntandoResourceObserver<>(namespacedOperations, consumer));
     }
 
     private <T extends EntandoBaseCustomResource> void startImage(Action action, T resource) {
-        executor.startControllerFor(action, resource, ControllerExecutor.resolveLatestImageFor(client, resource.getClass()).orElseThrow(
+        ControllerExecutor executor = new ControllerExecutor(client.getNamespace(), client);
+        executor.startControllerFor(action, resource, executor.resolveLatestImageFor(resource.getClass()).orElseThrow(
                 IllegalStateException::new));
     }
 

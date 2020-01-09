@@ -36,24 +36,14 @@ spec:
           - name: entando-ca-cert-volume
             mountPath: /etc/entando/ca
         env:
-          - name: ENTANDO_K8S_OPERATOR_REGISTRY
-            value: "{{ .Values.operator.registry }}"
-          - name: ENTANDO_OPERATOR_NAMESPACE_OVERRIDE
-            value: "{{ .Release.Namespace }}"
-          - name: ENTANDO_DEFAULT_ROUTING_SUFFIX
-            value: "{{ .Values.operator.defaultRoutingSuffix }}"
-          - name: ENTANDO_POD_READINESS_TIMEOUT_SECONDS
-            value: "{{ .Values.operator.podReadinessTimeoutSeconds }}"
-          - name: ENTANDO_POD_COMPLETION_TIMEOUT_SECONDS
-            value: "{{ .Values.operator.podCompletionTimeoutSeconds }}"
-          - name: ENTANDO_DISABLE_KEYCLOAK_SSL_REQUIREMENT
-            value: "{{ .Values.operator.disableKeycloakSslRequirement }}"
-          - name: ENTANDO_K8S_OPERATOR_IMAGE_NAMESPACE
-            value: "{{ .Values.operator.imageNamespace }}"
-          - name: ENTANDO_CA_CERT_PATHS
-            value: "/etc/entando/ca/ca.crt"
-          - name: ENTANDO_PATH_TO_TLS_KEYPAIR
-            value: "/etc/entando/tls"
+          - name: ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE
+            value: {{ .Release.Namespace }}
+          - name: ENTANDO_K8S_OPERATOR_SECURITY_MODE
+            value: strict
+{{- range $pkey, $pval := .Values.env }}
+          - name: {{ $pkey }}
+            value: {{ quote $pval }}
+{{- end }}
         livenessProbe:
           exec:
             command:

@@ -6,9 +6,9 @@ import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import io.quarkus.runtime.StartupEvent;
 import org.entando.kubernetes.controller.coordinator.AbstractControllerCoordinatorTest;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
-import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorE2ETestConfig;
-import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorE2ETestConfig.TestTarget;
-import org.entando.kubernetes.model.app.EntandoBaseCustomResource;
+import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
+import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig.TestTarget;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
@@ -21,7 +21,7 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
 
     @BeforeAll
     public static void prepareCoordinator() {
-        if (EntandoOperatorE2ETestConfig.getTestTarget() == TestTarget.STANDALONE) {
+        if (EntandoOperatorTestConfig.getTestTarget() == TestTarget.STANDALONE) {
             new EntandoControllerCoordinator(newClient()).onStartup(new StartupEvent());
         } else {
             //Should be installed by helm chart in pipeline

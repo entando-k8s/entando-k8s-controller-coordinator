@@ -2,6 +2,7 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
@@ -14,14 +15,15 @@ import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
-import org.entando.kubernetes.controller.inprocesstest.FluentTraversals;
-import org.entando.kubernetes.controller.inprocesstest.VariableReferenceAssertions;
-import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorE2ETestConfig;
+import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
+import org.entando.kubernetes.controller.test.support.FluentTraversals;
+import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsImageVendor;
-import org.entando.kubernetes.model.app.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceBuilder;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceOperationFactory;
@@ -32,7 +34,7 @@ import org.junit.jupiter.api.Test;
 
 public abstract class AbstractControllerCoordinatorTest implements FluentIntegrationTesting, FluentTraversals, VariableReferenceAssertions {
 
-    public static final String NAMESPACE = EntandoOperatorE2ETestConfig.calculateNameSpace("coordinateor-test");
+    public static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("coordinator-test");
 
     protected abstract KubernetesClient getClient();
 
@@ -41,15 +43,22 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
 
     @Test
     public void testExecuteControllerPod() {
+        //Given I have a clean namespace
         TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
         KubernetesClient client = getClient();
-        System.setProperty(EntandoOperatorConfig.ENTANDO_OPERATOR_NAMESPACE_OVERRIDE, client.getNamespace());
-        createNamespaceInAbsent(client.getNamespace());
-        createNamespaceInAbsent("entando");
-        if (client.configMaps().inNamespace("entando").withName("image-versions").fromServer().get() == null) {
-            client.configMaps().inNamespace("entando").createNew().withNewMetadata().withName("image-versions").endMetadata()
-                    .addToData("entando-k8s-keycloak-controller", "6.0.0-SNAPSHOT").done();
+        //and the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
+                client.getNamespace());
+        //And I have a config map with the Entando KeycloakController's image information
+        String configMapNamespace = EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(NAMESPACE);
+        String versionsConfigMap = EntandoOperatorConfig.getEntandoDockerImageVersionsConfigMap();
+        if (client.configMaps().inNamespace(configMapNamespace).withName(versionsConfigMap).fromServer().get() == null) {
+            client.configMaps().inNamespace(configMapNamespace).createNew().withNewMetadata().withName(
+                    versionsConfigMap).endMetadata()
+                    .addToData("entando-k8s-keycloak-controller", "{\"version\":\"6.0.0\"}").done();
+
         }
+        //When I create a new EntandoKeycloakServer resource
         EntandoKeycloakServer keycloakServer = new EntandoKeycloakServerBuilder()
                 .withNewMetadata().withName("test-keycloak").withNamespace(client.getNamespace()).endMetadata()
                 .withNewSpec()
@@ -59,6 +68,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(client)
                 .inNamespace(client.getNamespace()).create(keycloakServer);
         afterCreate(keycloakServer);
+        //Then I expect to see at least one controller pod
         FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
@@ -69,19 +79,15 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
                 is(keycloakServer.getMetadata().getName()));
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAMESPACE").on(thePrimaryContainerOn(theControllerPod)),
                 is(keycloakServer.getMetadata().getNamespace()));
-    }
-
-    protected void createNamespaceInAbsent(String namespace) {
-        if (getClient().namespaces().withName(namespace).fromServer().get() == null) {
-            getClient().namespaces().createNew().withNewMetadata().withName(namespace).endMetadata().done();
-        }
+        //With the correct version specified
+        assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith("6.0.0"));
     }
 
     @Test
     public void testExecuteControllerObject() {
         TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE));
-        System.setProperty(EntandoOperatorConfig.ENTANDO_OPERATOR_NAMESPACE_OVERRIDE, getClient().getNamespace());
-        createNamespaceInAbsent(getClient().getNamespace());
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
+                getClient().getNamespace());
         EntandoDatabaseService database = new EntandoDatabaseServiceBuilder()
                 .withNewMetadata().withName("test-database").withNamespace(getClient().getNamespace()).endMetadata()
                 .withNewSpec()
