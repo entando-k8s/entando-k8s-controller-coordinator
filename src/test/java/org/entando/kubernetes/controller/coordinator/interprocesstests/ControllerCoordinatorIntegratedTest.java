@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Tag;
 @Tag("inter-process")
 public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorTest {
 
+    private NamespacedKubernetesClient client;
+
     private static NamespacedKubernetesClient newClient() {
         return new DefaultKubernetesClient().inNamespace(NAMESPACE);
     }
@@ -30,7 +32,10 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
 
     @Override
     protected KubernetesClient getClient() {
-        return newClient();
+        if (this.client == null) {
+            this.client = newClient();
+        }
+        return this.client;
     }
 
     @Override
