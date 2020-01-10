@@ -5,9 +5,8 @@ import static java.lang.String.format;
 import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
-import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -15,10 +14,9 @@ import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
-import org.entando.kubernetes.model.app.EntandoBaseCustomResource;
 
 public class EntandoResourceObserver<
         R extends EntandoBaseCustomResource,
@@ -28,14 +26,22 @@ public class EntandoResourceObserver<
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
     private final Map<String, R> cache = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
-    private NonNamespaceOperation<R, L, D, Resource<R, D>> operations;
     private Executor executor = Executors.newSingleThreadExecutor();
 
     public EntandoResourceObserver(CustomResourceOperationsImpl<R, L, D> operations, BiConsumer<Action, R> callback) {
-        this.operations = operations;
         this.callback = callback;
-        cache.putAll(operations.list().getItems().stream().collect(Collectors.toMap(r -> r.getMetadata().getUid(), o -> o)));
+        processExistingRequestedEntandoResources(operations);
         operations.watch(this);
+    }
+
+    private void processExistingRequestedEntandoResources(CustomResourceOperationsImpl<R, L, D> operations) {
+        List<R> items = operations.list().getItems();
+        for (R item : items) {
+            if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
+                eventReceived(Action.ADDED, item);
+            }
+            cache.put(item.getMetadata().getUid(), item);
+        }
     }
 
     @Override
@@ -52,11 +58,11 @@ public class EntandoResourceObserver<
 
     @Override
     public void onClose(KubernetesClientException cause) {
-        LOGGER.log(Level.SEVERE, cause, () -> "EntandoResourceObserver closed");
+        LOGGER.log(Level.WARNING, cause, () -> "EntandoResourceObserver closed");
     }
 
     protected void performCallback(Action action, R resource) {
-        System.out.println("received " + action + " for resource " + resource);
+        logAction(Level.INFO, "Received %s for resource %s %s/%s", action, resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
             cache.put(resource.getMetadata().getUid(), resource);
             if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
@@ -65,20 +71,27 @@ public class EntandoResourceObserver<
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
         } else {
-            LOGGER.log(Level.WARNING, () -> format("EntandoResourceObserver could not process the %s action on the %s %s/%s", action.name(),
-                    resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
+            logAction(Level.WARNING, "EntandoResourceObserver could not process the %s action on the %s %s/%s", action, resource);
         }
     }
 
-    protected boolean isNewEvent(R resource) {
+    private void logAction(Level info, String format, Action action, R resource) {
+        LOGGER.log(info,
+                () -> format(format, action.name(), resource.getKind(), resource.getMetadata().getNamespace(),
+                        resource.getMetadata().getName()));
+    }
+
+    protected boolean isNewEvent(R newResource) {
         boolean isNewEvent = true;
-        if (cache.containsKey(resource.getMetadata().getUid())) {
-            int knownResourceVersion = Integer.parseInt(cache.get(resource.getMetadata().getUid()).getMetadata().getResourceVersion());
-            int receivedResourceVersion = Integer.parseInt(resource.getMetadata().getResourceVersion());
+        if (cache.containsKey(newResource.getMetadata().getUid())) {
+            R oldResource = cache.get(newResource.getMetadata().getUid());
+            int knownResourceVersion = Integer.parseInt(oldResource.getMetadata().getResourceVersion());
+            int receivedResourceVersion = Integer.parseInt(newResource.getMetadata().getResourceVersion());
             if (knownResourceVersion > receivedResourceVersion) {
                 isNewEvent = false;
             }
         }
         return isNewEvent;
     }
+
 }

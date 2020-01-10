@@ -1,62 +1,12 @@
-buildPack: maven
+buildPack: maven-java11
 pipelineConfig:
   agent:
-    image: maven-graalvm
+    image: entando-jx-maven-java11
   env:
     - name: PIPELINE_CODE
       value: co
     - name: _JAVA_OPTIONS
       value: -XX:+UnlockExperimentalVMOptions -Dsun.zip.disableMemoryMapping=true -XX:+UseParallelGC -XX:MinHeapFreeRatio=5 -XX:MaxHeapFreeRatio=10 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Xms1000m -Xmx12000m
-    - name: SONAR_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: sonar.token
-    - name: SONAR_GITHUB_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: sonar.github.token
-    - name: OWASPDB_USERNAME
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: owaspdb.username
-    - name: OWASPDB_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: owaspdb.password
-    - name: OWASPDB_URL
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: owaspdb.url
-    - name: GPG_PASSPHRASE
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: gpg.passphrase
-    - name: GPG_KEYNAME
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: gpg.keyname
-    - name: GPG_HOMEDIR
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: gpg.homedir
-    - name: EXECUTABLE_TYPE
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: executable.type
-    - name: ENTANDO_DEFAULT_ROUTING_SUFFIX
-      valueFrom:
-        secretKeyRef:
-          name: entando-jx-common-secret
-          key: default.routing.suffix
   pipelines:
     pullRequest:
       build:
@@ -64,28 +14,10 @@ pipelineConfig:
         steps:
           - sh: mvn versions:set -DnewVersion=$PREVIEW_VERSION
             name: set-version
-          - sh: git fetch origin
-            name: fetch-full-repo
-          - sh: >-
-              if ! kubectl get clusterrolebinding ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER}-is-admin; then
-                kubectl create clusterrolebinding ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER}-is-admin --clusterrole=cluster-admin --serviceaccount=${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER}:default
-              fi
-            name: create-admin-rolebinding
-          - sh: >-
-              mvn clean verify sonar:sonar \
-                -Pin-process-verification -P${EXECUTABLE_TYPE} \
-                -Dsonar.login=${SONAR_TOKEN} \
-                -Dsonar.pullrequest.key=${PULL_NUMBER} \
-                -Dsonar.pullrequest.base=master \
-                -Dsonar.pullrequest.branch=${BRANCH_NAME} \
-                -Dsonar.pullrequest.provider=github \
-                -Dsonar.pullrequest.vsts.token.secured=${SONAR_GITHUB_TOKEN} \
-                -Dsonar.pullrequest.github.repository=${REPO_OWNER}/${REPO_NAME} \
-                -DautoUpdate=false \
-                -DconnectionString=${OWASPDB_URL} \
-                -DdatabasePassword=${OWASPDB_PASSWORD} \
-                -DdatabaseUser=${OWASPDB_USERNAME}
-            name: mvn-verify
+          - sh: fix-git-branches
+            name: fix-git-for-sonar
+          - sh: mvn-verify-pr -P${EXECUTABLE_TYPE}
+            name: mvn-verify-pr
           - sh:  echo "This avoids unwanted kaniko command substitution" &&  skaffold build -p ${EXECUTABLE_TYPE} -f skaffold.yaml
             name: container-build
       promote:
@@ -93,38 +25,20 @@ pipelineConfig:
         steps:
           - dir: charts/preview
             steps:
-              - sh: NAMESPACE_OVERRIDE=${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} make preview
+              - sh: make preview
                 name: make-preview
               - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER}
                 name: jx-preview
-          - sh: >-
-              mvn verify -Pinter-process-verification \
-                -Dentando.k8s.operator.registry=${DOCKER_REGISTRY} \
-                -Dentando.k8s.operator.tests.run.target=K8S \
-                -Dentando.default.routing.suffix=${ENTANDO_DEFAULT_ROUTING_SUFFIX} \
-                -Dentando.test.namespace.override=${REPO_NAME} \
-                -Dentando.test.name.suffix=${PIPELINE_CODE}pr${PULL_NUMBER} \
-                -Dentando.test.image.version=${PREVIEW_VERSION} \
-            name: run-end-to-end-tests
+          - sh: run-inter-process-tests
+            name: run-inter-process-tests
     release:
       build:
         replace: true
         steps:
-          - sh: git fetch origin
-            name: fetch-full-repo
-          - sh: >-
-              mvn clean deploy sonar:sonar \
-                -Pin-process-verification -P${EXECUTABLE_TYPE} \
-                -Pprepare-for-nexus \
-                -Dsonar.login=${SONAR_TOKEN} \
-                -DautoUpdate=false \
-                -DconnectionString=${OWASPDB_URL} \
-                -DdatabasePassword=${OWASPDB_PASSWORD} \
-                -DdatabaseUser=${OWASPDB_USERNAME} \
-                -Dgpg.homedir=${GPG_HOMEDIR} \
-                -Dgpg.keyname=${GPG_KEYNAME} \
-                -Dgpg.passphrase=${GPG_PASSPHRASE}
-            name: mvn-deploy
+          - sh: fetch-history-by-days 30
+            name: fetch-history-for-sonar
+          - sh: mvn-deploy-release -P${EXECUTABLE_TYPE}
+            name: mvn-deploy-release
           - sh: echo "This avoids unwanted kaniko command substitution"  &&  skaffold build -p ${EXECUTABLE_TYPE} -f skaffold.yaml
             name: container-build
       postBuild:
@@ -132,28 +46,15 @@ pipelineConfig:
         steps:
           - sh: jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)
             name: post-build
-          - sh: >-
-              if ! kubectl get clusterrolebinding ${REPO_NAME}-${PIPELINE_CODE}ms-is-admin; then
-                kubectl create clusterrolebinding ${REPO_NAME}-${PIPELINE_CODE}ms-is-admin --clusterrole=cluster-admin --serviceaccount=${REPO_NAME}-${PIPELINE_CODE}ms:default
-              fi
-            name: create-admin-rolebinding
           - dir: charts/preview
             steps:
-              - sh: NAMESPACE_OVERRIDE=${REPO_NAME}-${PIPELINE_CODE}ms make preview
+              - sh: make preview
                 name: make-preview
               - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}ms --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}ms
                 name: jx-preview
-          - sh: >-
-              mvn verify -Pinter-process-verification \
-                -Dentando.k8s.operator.registry=${DOCKER_REGISTRY} \
-                -Dentando.k8s.operator.tests.run.target=K8S \
-                -Dentando.default.routing.suffix=${ENTANDO_DEFAULT_ROUTING_SUFFIX} \
-                -Dentando.test.namespace.override=${REPO_NAME} \
-                -Dentando.test.name.suffix=${PIPELINE_CODE}ms \
-                -Dentando.test.image.version=${VERSION}
-            name: run-end-to-end-tests
+          - sh: run-inter-process-tests
+            name: run-inter-process-tests
       promote:
         steps:
-          - sh: >-
-              kubectl patch configmap image-versions -n entando -p "{\"data\":{\"${APP_NAME}\":\"${VERSION}\",\"${APP_NAME}-executable-type\":\"${EXECUTABLE_TYPE}\"}}"
+          - sh: publish-image-info
             name: update-image-map
