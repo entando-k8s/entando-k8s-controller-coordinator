@@ -46,6 +46,15 @@ rules:
       - ingresses
     verbs:
       - "*"
+{{- if .Values.supportOpenshift }}
+  - apiGroups:
+      - route.openshift.io
+    resources:
+      - "routes"
+      - "routes/custom-host"
+    verbs:
+      - "*"
+{{- end }}
   - apiGroups:
       - ""
     resources:

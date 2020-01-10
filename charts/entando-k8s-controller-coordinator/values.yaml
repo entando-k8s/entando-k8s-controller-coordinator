@@ -9,6 +9,7 @@ image:
 
 # enable this flag to use knative serve to deploy the app
 knativeDeploy: false
+supportOpenshift: true
 env:
   ENTANDO_DOCKER_IMAGE_VERSION_DEFAULT: 6.0.0
   ENTANDO_DOCKER_REGISTRY_DEFAULT: docker.io
