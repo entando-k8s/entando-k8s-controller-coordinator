@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 
 public class EntandoResourceObserver<
         R extends EntandoBaseCustomResource,
@@ -47,13 +48,18 @@ public class EntandoResourceObserver<
     @Override
     public void eventReceived(Action action, R resource) {
         try {
-            if (isNewEvent(resource)) {
+            if (isNewEvent(resource) && isNotOwnedByCompositeApp(resource)) {
                 performCallback(action, resource);
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e, () -> format("Could not process the %s %s/%s", resource.getKind(),
                     resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
         }
+    }
+
+    private boolean isNotOwnedByCompositeApp(R resource) {
+        return resource.getMetadata().getOwnerReferences().stream().noneMatch(ownerReference -> ownerReference.getKind().equals(
+                EntandoCompositeApp.class.getName()));
     }
 
     @Override

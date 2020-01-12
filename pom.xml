@@ -46,8 +46,8 @@
     </scm>
     <properties>
         <sonar.projectKey>${github.organization}_${project.artifactId}</sonar.projectKey>
-        <entando.k8s.operator.common.version>6.0.69</entando.k8s.operator.common.version>
-        <entando.k8s.custom.model.version>6.0.36</entando.k8s.custom.model.version>
+        <entando.k8s.operator.common.version>6.0.76</entando.k8s.operator.common.version>
+        <entando.k8s.custom.model.version>6.0.37</entando.k8s.custom.model.version>
     </properties>
     <issueManagement>
         <system>Github</system>

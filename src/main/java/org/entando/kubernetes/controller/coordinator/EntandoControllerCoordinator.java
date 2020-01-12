@@ -17,12 +17,13 @@ import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
 import org.entando.kubernetes.model.app.EntandoApp;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.infrastructure.EntandoClusterInfrastructure;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.link.EntandoAppPluginLink;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
-
+import org.entando.kubernetes.controller.database.EntandoDatabaseServiceController;
 public class EntandoControllerCoordinator {
 
     private final KubernetesClient client;
@@ -43,6 +44,7 @@ public class EntandoControllerCoordinator {
         addObserver(EntandoApp.class, this::startImage);
         addObserver(EntandoPlugin.class, this::startImage);
         addObserver(EntandoAppPluginLink.class, this::startImage);
+        addObserver(EntandoCompositeApp.class, this::startImage);
         addObserver(EntandoDatabaseService.class, this.abstractDbAwareController::processEvent);
         KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());
     }
