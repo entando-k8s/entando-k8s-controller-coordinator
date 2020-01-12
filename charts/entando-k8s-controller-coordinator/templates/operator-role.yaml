@@ -19,6 +19,8 @@ rules:
       - entandoapppluginlinks/finalizers
       - entandodatabaseservices
       - entandodatabaseservices/finalizers
+      - entandocompositeapps
+      - entandocompositeapps/finalizers
     verbs:
       - "*"
   - apiGroups:
