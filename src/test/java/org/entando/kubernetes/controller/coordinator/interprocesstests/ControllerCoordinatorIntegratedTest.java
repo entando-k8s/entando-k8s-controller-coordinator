@@ -61,17 +61,15 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
 
     @BeforeAll
     public static void prepareCoordinator() {
-        TestFixturePreparation.prepareTestFixture(staticGetClient(),
-                new TestFixtureRequest().deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
+        NamespacedKubernetesClient client = staticGetClient();
+        clearNamespace(client);
         if (EntandoOperatorTestConfig.getTestTarget() == TestTarget.STANDALONE) {
-            new EntandoControllerCoordinator(staticGetClient()).onStartup(new StartupEvent());
+            new EntandoControllerCoordinator(client).onStartup(new StartupEvent());
         } else {
             //Should be installed by helm chart in pipeline
         }
     }
+
 
     /**
      * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.
@@ -80,6 +78,7 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
     public void testExecuteCompositeAppControllerPod() throws JsonProcessingException {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
+        clearNamespace(client);
         //and the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
                 client.getNamespace());

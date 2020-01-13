@@ -10,6 +10,7 @@ import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
@@ -20,16 +21,19 @@ import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
+import org.entando.kubernetes.controller.integrationtest.support.TestFixtureRequest;
 import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsImageVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceBuilder;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceOperationFactory;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.junit.jupiter.api.Test;
 
 public abstract class AbstractControllerCoordinatorTest implements FluentIntegrationTesting, FluentTraversals, VariableReferenceAssertions {
@@ -47,8 +51,8 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
     @Test
     public void testExecuteKeycloakControllerPod() throws JsonProcessingException {
         //Given I have a clean namespace
-        TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
         KubernetesClient client = getClient();
+        clearNamespace(client);
         //and the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
                 client.getNamespace());
@@ -81,9 +85,11 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
 
     @Test
     public void testExecuteControllerObject() {
-        TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE));
+        //Given I have a clear namespace
+        clearNamespace(getClient());
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
                 getClient().getNamespace());
+        //When I create a new EntandoDatabaseService resource
         EntandoDatabaseService database = new EntandoDatabaseServiceBuilder()
                 .withNewMetadata().withName("test-database").withNamespace(getClient().getNamespace()).endMetadata()
                 .withNewSpec()
@@ -96,6 +102,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         EntandoDatabaseServiceOperationFactory.produceAllEntandoDatabaseServices(getClient())
                 .inNamespace(getClient().getNamespace()).create(database);
         afterCreate(database);
+        //Then I expect to see its Kubernetes service
         FilterWatchListDeletable<Service, ServiceList, Boolean, Watch, Watcher<Service>> listable = getClient()
                 .services()
                 .inNamespace(getClient().getNamespace()).withLabel("EntandoDatabaseService", database.getMetadata().getName());
@@ -107,6 +114,13 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
     protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
         return imageVersionPreparation.ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1");
+    }
+    protected static void clearNamespace(KubernetesClient client) {
+        TestFixturePreparation.prepareTestFixture(client,
+                new TestFixtureRequest().deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
     }
 
 }
