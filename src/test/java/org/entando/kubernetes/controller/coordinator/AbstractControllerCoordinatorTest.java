@@ -1,13 +1,10 @@
 package org.entando.kubernetes.controller.coordinator;
 
-import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Service;
@@ -17,9 +14,7 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
@@ -40,11 +35,9 @@ import org.junit.jupiter.api.Test;
 public abstract class AbstractControllerCoordinatorTest implements FluentIntegrationTesting, FluentTraversals, VariableReferenceAssertions {
 
     public static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("coordinator-test");
-    private static final String FALLBACK_KEYCLOAK_CONTROLLER_VERSION = "6.0.33";
-    private static final String FALLBACK_KEYCLOAK_CONTROLLER_IMAGE_INFO = format(
-            "{\"version\":\"%s\"}",
-            FALLBACK_KEYCLOAK_CONTROLLER_VERSION);
-    private static final String KEYCLOAK_CONTROLLER_IMAGE_NAME = "entando-k8s-keycloak-controller";
+    public static final String PLUGIN_NAME = EntandoOperatorTestConfig.calculateName("test-plugin");
+    public static final String KEYCLOAK_NAME = EntandoOperatorTestConfig.calculateName("test-keycloak");
+    public static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
 
     protected abstract KubernetesClient getClient();
 
@@ -52,7 +45,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
     protected abstract <T extends EntandoBaseCustomResource> void afterCreate(T resource);
 
     @Test
-    public void testExecuteControllerPod() throws JsonProcessingException {
+    public void testExecuteKeycloakControllerPod() throws JsonProcessingException {
         //Given I have a clean namespace
         TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
         KubernetesClient client = getClient();
@@ -86,55 +79,6 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
     }
 
-    protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
-        ConfigMap versionConfigMap = getClient().configMaps().inNamespace(getConfigMapNamespace()).withName(getVersionsConfigMapName())
-                .fromServer().get();
-        if (versionConfigMap == null) {
-            getClient().configMaps().inNamespace(getConfigMapNamespace()).createNew().withNewMetadata().withName(
-                    getVersionsConfigMapName()).endMetadata()
-                    .addToData(KEYCLOAK_CONTROLLER_IMAGE_NAME, FALLBACK_KEYCLOAK_CONTROLLER_IMAGE_INFO).done();
-            return FALLBACK_KEYCLOAK_CONTROLLER_VERSION;
-        } else {
-            return ensureImageInfoPresent(versionConfigMap);
-        }
-    }
-
-    private String getVersionsConfigMapName() {
-        return EntandoOperatorConfig.getEntandoDockerImageVersionsConfigMap();
-    }
-
-    private String getConfigMapNamespace() {
-        return EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(NAMESPACE);
-    }
-
-    private String ensureImageInfoPresent(ConfigMap versionConfigMap) throws JsonProcessingException {
-        String imageInfo = versionConfigMap.getData().get(KEYCLOAK_CONTROLLER_IMAGE_NAME);
-        if (imageInfo == null) {
-            getClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
-                    .withName(versionConfigMap.getMetadata().getName()).edit()
-                    .addToData(KEYCLOAK_CONTROLLER_IMAGE_NAME, FALLBACK_KEYCLOAK_CONTROLLER_IMAGE_INFO).done();
-            return FALLBACK_KEYCLOAK_CONTROLLER_VERSION;
-        } else {
-            return ensureVersionAttributePresent(versionConfigMap, imageInfo);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private String ensureVersionAttributePresent(ConfigMap versionConfigMap, String imageInfo) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> map = mapper.readValue(imageInfo, Map.class);
-        String version = (String) map.get("version");
-        if (version == null) {
-            map.put("version", FALLBACK_KEYCLOAK_CONTROLLER_VERSION);
-            getClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
-                    .withName(versionConfigMap.getMetadata().getName()).edit()
-                    .addToData(KEYCLOAK_CONTROLLER_IMAGE_NAME, mapper.writeValueAsString(map)).done();
-            return FALLBACK_KEYCLOAK_CONTROLLER_VERSION;
-        } else {
-            return version;
-        }
-    }
-
     @Test
     public void testExecuteControllerObject() {
         TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE));
@@ -159,4 +103,10 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         Service service = listable.list().getItems().get(0);
         assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
     }
+
+    protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
+        ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
+        return imageVersionPreparation.ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1");
+    }
+
 }

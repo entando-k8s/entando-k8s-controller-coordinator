@@ -59,7 +59,7 @@ public class EntandoResourceObserver<
 
     private boolean isNotOwnedByCompositeApp(R resource) {
         return resource.getMetadata().getOwnerReferences().stream().noneMatch(ownerReference -> ownerReference.getKind().equals(
-                EntandoCompositeApp.class.getName()));
+                EntandoCompositeApp.class.getSimpleName()));
     }
 
     @Override
