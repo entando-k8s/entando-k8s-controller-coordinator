@@ -74,7 +74,7 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
     }
 
     /**
-     * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy
+     * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.
      */
     @Test
     public void testExecuteCompositeAppControllerPod() throws JsonProcessingException {
