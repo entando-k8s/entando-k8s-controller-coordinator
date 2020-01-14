@@ -22,6 +22,7 @@ import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinato
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.model.DbmsImageVendor;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
@@ -56,6 +57,21 @@ public class ControllerCoordinatorEdgeConditionsTest implements FluentIntegratio
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         assertThrows(ConditionTimeoutException.class,
                 () -> await().ignoreExceptions().atMost(5, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() == 1));
+        //And that it will take 500 milliseconds for processing to start on the entandoApp
+        new Thread(() -> {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("Thread interrupted");
+            }
+            EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(getClient())
+                    .inNamespace(entandoKeycloakServer.getMetadata().getNamespace())
+                    .withName(entandoKeycloakServer.getMetadata().getName())
+                    .edit()
+                    .withPhase(EntandoDeploymentPhase.STARTED)
+                    .done();
+        }).start();
+
         //When I prepare the Coordinator
         prepareCoordinator();
 

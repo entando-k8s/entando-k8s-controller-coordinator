@@ -37,9 +37,11 @@ public class EntandoResourceObserver<
 
     private void processExistingRequestedEntandoResources(CustomResourceOperationsImpl<R, L, D> operations) {
         List<R> items = operations.list().getItems();
+        EntandoDeploymentPhaseWatcher<R, L, D> entandoDeploymentPhaseWatcher = new EntandoDeploymentPhaseWatcher<>(operations);
         for (R item : items) {
             if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
                 eventReceived(Action.ADDED, item);
+                entandoDeploymentPhaseWatcher.waitToBeProcessed(item);
             }
             cache.put(item.getMetadata().getUid(), item);
         }

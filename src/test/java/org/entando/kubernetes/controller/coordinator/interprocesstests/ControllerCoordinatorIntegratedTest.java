@@ -26,7 +26,6 @@ import org.entando.kubernetes.controller.creators.IngressCreator;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig.TestTarget;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
-import org.entando.kubernetes.controller.integrationtest.support.TestFixtureRequest;
 import org.entando.kubernetes.model.DbmsImageVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
@@ -34,7 +33,6 @@ import org.entando.kubernetes.model.compositeapp.DoneableEntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppBuilder;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.keycloakserver.DoneableEntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
@@ -69,7 +67,6 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
             //Should be installed by helm chart in pipeline
         }
     }
-
 
     /**
      * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.

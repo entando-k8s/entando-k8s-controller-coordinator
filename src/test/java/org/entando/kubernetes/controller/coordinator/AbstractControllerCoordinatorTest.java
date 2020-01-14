@@ -42,6 +42,14 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
     public static final String KEYCLOAK_NAME = EntandoOperatorTestConfig.calculateName("test-keycloak");
     public static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
 
+    protected static void clearNamespace(KubernetesClient client) {
+        TestFixturePreparation.prepareTestFixture(client,
+                new TestFixtureRequest().deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
+    }
+
     protected abstract KubernetesClient getClient();
 
     @SuppressWarnings("unchecked")
@@ -113,14 +121,6 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
     protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
         return imageVersionPreparation.ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1");
-    }
-
-    protected static void clearNamespace(KubernetesClient client) {
-        TestFixturePreparation.prepareTestFixture(client,
-                new TestFixtureRequest().deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
     }
 
 }
