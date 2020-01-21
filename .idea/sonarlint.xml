@@ -2,7 +2,7 @@
 <project version="4">
   <component name="SonarLintProjectSettings">
     <option name="bindingEnabled" value="true" />
-    <option name="projectKey" value="entando-k8s-infrastructure_entando-k8s-controller-coordinator" />
-    <option name="serverId" value="sonarcloud-entando-k8s-infrastructure" />
+    <option name="projectKey" value="entando-k8s_entando-k8s-controller-coordinator" />
+    <option name="serverId" value="sonarcloud-entando-k8s" />
   </component>
 </project>
