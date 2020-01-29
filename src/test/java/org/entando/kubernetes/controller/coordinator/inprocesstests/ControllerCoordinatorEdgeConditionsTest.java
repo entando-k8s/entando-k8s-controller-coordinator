@@ -112,7 +112,7 @@ public class ControllerCoordinatorEdgeConditionsTest implements FluentIntegratio
 
     protected void ensureImageVersionsConfigMap(KubernetesClient client) {
         String configMapNamespace = EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(NAMESPACE);
-        String versionsConfigMap = EntandoOperatorConfig.getEntandoDockerImageVersionsConfigMap();
+        String versionsConfigMap = EntandoOperatorConfig.getEntandoDockerImageInfoConfigMap();
         client.configMaps().inNamespace(configMapNamespace).createNew().withNewMetadata().withName(
                 versionsConfigMap).endMetadata()
                 .addToData("entando-k8s-keycloak-controller", "{\"version\":\"6.0.0\"}").done();

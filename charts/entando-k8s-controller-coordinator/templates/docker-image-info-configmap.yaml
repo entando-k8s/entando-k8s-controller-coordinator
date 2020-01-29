@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: entando-docker-image-info
+  namespace: {{ .Release.Namespace }}
+data:
+  digital-exchange: >-
+    {"version":"6.0.0","organization":"entando","registry":"docker.io"}
+  etando-app-builder-de: >-
+    {"version":"6.0.0","organization":"entando","registry":"docker.io"}
+  entando-component-manager: >-
+    {"version":"6.0.0","organization":"entando","registry":"docker.io"}
+  entando-de-app: >-
+    {"version":"6.0.8","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-de-app-eap: >-
+    {"version":"6.0.0","organization":"entando","registry":"docker.io"}
+  entando-de-app-wildfly: >-
+    {"version":"6.0.0","organization":"entando","registry":"docker.io"}
+  entando-k8s-app-controller: >-
+    {"version":"6.0.14","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-app-plugin-link-controller: >-
+    {"version":"6.0.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-cluster-infrastructure-controller: >-
+    {"version":"6.0.12","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-composite-app-controller: >-
+    {"version":"6.0.17","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-controller-coordinator: >-
+    {"version":"{{ .Values.image.tag }}"","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-dbjob: >-
+    {"version":"6.0.0","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-keycloak-controller: >-
+    {"version":"6.0.7","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-plugin-controller: >-
+    {"version":"6.0.7","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-service: >-
+    {"version":"6.0.0","organization":"entando","registry":"docker.io"}
+  entando-keycloak: >-
+    {"version":"6.0.0","organization":"entando","registry":"docker.io"}
