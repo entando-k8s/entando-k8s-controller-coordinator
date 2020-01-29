@@ -1,0 +1,48 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: entando-k8s-service
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups:
+      - entando.org
+    resources:
+      - entandokeycloakservers
+      - entandokeycloakservers/finalizers
+      - entandoclusterinfrastructures
+      - entandoclusterinfrastructures/finalizers
+      - entandoapps
+      - entandoapps/finalizers
+      - entandoplugins
+      - entandoplugins/finalizers
+      - entandoapppluginlinks
+      - entandoapppluginlinks/finalizers
+      - entandodatabaseservices
+      - entandodatabaseservices/finalizers
+      - entandocompositeapps
+      - entandocompositeapps/finalizers
+      - entandodebundles
+      - entandodebundles/finalizers
+    verbs:
+      - "*"
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - get
+      - delete
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - "*"
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get

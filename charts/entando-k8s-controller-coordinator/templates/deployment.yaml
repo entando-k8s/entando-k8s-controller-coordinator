@@ -1,6 +1,6 @@
 {{- if .Values.knativeDeploy }}
 {{- else }}
-apiVersion: extensions/v1beta1
+apiVersion: "{{- if .Values.supportOpenshift }}extensions/v1beta1{{- else }}apps/v1{{- end }}"
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}
@@ -9,33 +9,45 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
 spec:
   replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      draft: {{ default "draft-app" .Values.draft }}
+      app: {{ template "fullname" . }}
   template:
     metadata:
       labels:
         draft: {{ default "draft-app" .Values.draft }}
         app: {{ template "fullname" . }}
-{{- if .Values.podAnnotations }}
+  {{- if .Values.podAnnotations }}
       annotations:
-{{ toYaml .Values.podAnnotations | indent 8 }}
-{{- end }}
+  {{ toYaml .Values.podAnnotations | indent 8 }}
+  {{- end }}
     spec:
       serviceAccountName: entando-operator
       volumes:
+  {{- if .Values.tls.tlsCert }}
         - name: entando-tls-volume
           secret:
             secretName: entando-tls-secret
+  {{- end }}
+  {{- if .Values.tls.caCert }}
         - name: entando-ca-cert-volume
           secret:
             secretName: entando-ca-cert-secret
+  {{- end }}
       containers:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         volumeMounts:
+  {{- if .Values.tls.tlsCert }}
           - name: entando-tls-volume
             mountPath: /etc/entando/tls
+  {{- end }}
+  {{- if .Values.tls.caCert }}
           - name: entando-ca-cert-volume
             mountPath: /etc/entando/ca
+  {{- end}}
         env:
           - name: ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE
             value: {{ .Release.Namespace }}
@@ -45,10 +57,10 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.serviceAccountName
-{{- range $pkey, $pval := .Values.env }}
+  {{- range $pkey, $pval := .Values.env }}
           - name: {{ $pkey }}
             value: {{ quote $pval }}
-{{- end }}
+  {{- end }}
         livenessProbe:
           exec:
             command:
@@ -67,6 +79,6 @@ spec:
           successThreshold: {{ .Values.readinessProbe.successThreshold }}
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
         resources:
-{{ toYaml .Values.resources | indent 12 }}
+{{ toYaml .Values.resources | indent 10 }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
 {{- end }}
