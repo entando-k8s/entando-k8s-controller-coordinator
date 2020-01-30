@@ -52,14 +52,14 @@ pipelineConfig:
                 name: make-preview
               - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}ms --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}ms
                 name: jx-preview
-          - sh: run-inter-process-tests
-            name: run-inter-process-tests
+#          - sh: run-inter-process-tests
+#            name: run-inter-process-tests
       promote:
         replace: true
         steps:
         - dir: charts/entando-k8s-controller-coordinator
           steps:
-            - sh: jx step changelog --version v\$(cat ../../VERSION) -y false
+            - sh: jx step changelog --generate-yaml=false --version v\$(cat ../../VERSION)
               name: changelog
             - comment: release the helm chart
               sh: jx step helm release
