@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: entando-k8s-service-rolebinding
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: entando-k8s-service
+subjects:
+  - kind: ServiceAccount
+    name: entando-k8s-service
+    namespace: {{ .Release.Namespace }}
