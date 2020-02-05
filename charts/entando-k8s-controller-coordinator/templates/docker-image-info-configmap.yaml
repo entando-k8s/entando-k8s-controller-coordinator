@@ -21,7 +21,7 @@ data:
   entando-k8s-app-plugin-link-controller: >-
     {"version":"6.0.7","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-cluster-infrastructure-controller: >-
-    {"version":"6.0.20","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.21","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-composite-app-controller: >-
     {"version":"6.0.20","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-controller-coordinator: >-
@@ -31,7 +31,7 @@ data:
   entando-k8s-keycloak-controller: >-
     {"version":"6.0.23","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-plugin-controller: >-
-    {"version":"6.0.14","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.16","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-service: >-
     {"version":"6.0.0","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-keycloak: >-
