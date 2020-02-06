@@ -4,6 +4,7 @@ apiVersion: "{{- if .Values.supportOpenshift }}extensions/v1beta1{{- else }}apps
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     draft: {{ default "draft-app" .Values.draft }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
