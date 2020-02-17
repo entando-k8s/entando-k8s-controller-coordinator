@@ -44,9 +44,7 @@ rules:
       - "*"
   - apiGroups:
       - apps
-{{- if .Values.supportOpenshift }}
       - extensions
-{{- end}}
     resources:
       - deployments
     verbs:
