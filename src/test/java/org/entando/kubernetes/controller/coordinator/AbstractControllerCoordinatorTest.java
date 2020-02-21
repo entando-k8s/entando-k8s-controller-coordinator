@@ -1,3 +1,19 @@
+/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
 package org.entando.kubernetes.controller.coordinator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -23,7 +39,7 @@ import org.entando.kubernetes.controller.integrationtest.support.TestFixturePrep
 import org.entando.kubernetes.controller.integrationtest.support.TestFixtureRequest;
 import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
-import org.entando.kubernetes.model.DbmsImageVendor;
+import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
@@ -69,7 +85,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         EntandoKeycloakServer keycloakServer = new EntandoKeycloakServerBuilder()
                 .withNewMetadata().withName("test-keycloak").withNamespace(client.getNamespace()).endMetadata()
                 .withNewSpec()
-                .withDbms(DbmsImageVendor.NONE)
+                .withDbms(DbmsVendor.NONE)
                 .endSpec()
                 .build();
         EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(client)
@@ -100,7 +116,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         EntandoDatabaseService database = new EntandoDatabaseServiceBuilder()
                 .withNewMetadata().withName("test-database").withNamespace(getClient().getNamespace()).endMetadata()
                 .withNewSpec()
-                .withDbms(DbmsImageVendor.ORACLE)
+                .withDbms(DbmsVendor.ORACLE)
                 .withHost("somedatabase.com")
                 .withPort(5050)
                 .withSecretName("oracle-secret")

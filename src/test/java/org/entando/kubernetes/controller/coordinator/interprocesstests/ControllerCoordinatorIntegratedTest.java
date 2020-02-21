@@ -1,3 +1,19 @@
+/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
 package org.entando.kubernetes.controller.coordinator.interprocesstests;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,7 +42,7 @@ import org.entando.kubernetes.controller.creators.IngressCreator;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig.TestTarget;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
-import org.entando.kubernetes.model.DbmsImageVendor;
+import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.DoneableEntandoCompositeApp;
@@ -92,14 +108,14 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
                 .withNewMetadata().withName(KEYCLOAK_NAME).withNamespace(client.getNamespace()).endMetadata()
                 .withNewSpec()
                 .withDefault(true)
-                .withDbms(DbmsImageVendor.NONE)
+                .withDbms(DbmsVendor.NONE)
                 .withIngressHostName(KEYCLOAK_NAME + "." + getDomainSuffix())
                 .endSpec()
                 .endEntandoKeycloakServer()
                 .addNewEntandoPlugin()
                 .withNewMetadata().withName(PLUGIN_NAME).endMetadata().withNewSpec()
                 .withImage("entando/entando-avatar-plugin")
-                .withDbms(DbmsImageVendor.POSTGRESQL)
+                .withDbms(DbmsVendor.POSTGRESQL)
                 .withReplicas(1)
                 .withIngressHostName(PLUGIN_NAME + "." + getDomainSuffix())
                 .withHealthCheckPath("/management/health")
