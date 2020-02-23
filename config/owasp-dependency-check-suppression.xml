@@ -32,7 +32,10 @@
       ]]></notes>
         <gav regex="true">org\.keycloak:keycloak-.*:7\.0\.1</gav>
         <cve>CVE-2019-14832</cve>
+        <cve>CVE-2019-14837</cve>
         <cve>CVE-2019-14910</cve>
         <cve>CVE-2019-14909</cve>
+        <cve>CVE-2019-14820</cve>
+        <cve>CVE-2020-1697</cve>
     </suppress>
 </suppressions>
