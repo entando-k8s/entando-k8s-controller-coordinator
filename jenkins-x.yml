@@ -59,13 +59,13 @@ pipelineConfig:
         steps:
         - dir: charts/entando-k8s-controller-coordinator
           steps:
-            - sh: jx step changelog --generate-yaml=false --version v\$(cat ../../VERSION)
-              name: changelog
+#            - sh: jx step changelog --generate-yaml=false --version v\$(cat ../../VERSION)
+#              name: changelog
             - comment: release the helm chart
               sh: jx step helm release
               name: helm-release
-            - comment: promote through all 'Auto' promotion Environments
-              sh: jx promote -b --all-auto --timeout 1h --version \$(cat ../../VERSION)
-              name: jx-promote
+#            - comment: promote through all 'Auto' promotion Environments
+#              sh: jx promote -b --all-auto --timeout 1h --version \$(cat ../../VERSION)
+#              name: jx-promote
         - sh: publish-image-info
           name: update-image-map
