@@ -1,3 +1,19 @@
+/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -38,7 +54,7 @@ public class ControllerCoordinatorMockedTest extends AbstractControllerCoordinat
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
         }
-        coordinator.getObserver((Class<T>) resource.getClass()).eventReceived(Action.ADDED, resource);
+        coordinator.getObserver((Class<T>) resource.getClass()).get(0).eventReceived(Action.ADDED, resource);
     }
 
 }

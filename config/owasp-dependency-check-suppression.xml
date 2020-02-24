@@ -22,7 +22,7 @@
         this version of Quarkus has been linked to certain versions of K8S. The client only needs to upgrade to
         later versions of the K8S to avoid these vulnerabilities
       ]]></notes>
-        <gav>io.quarkus:quarkus-kubernetes-client:1.0.1.Final</gav>
+        <gav>io.quarkus:quarkus-kubernetes-client:1.2.0.Final</gav>
         <cpe>cpe:/a:kubernetes:kubernetes</cpe>
     </suppress>
     <suppress>
@@ -32,7 +32,10 @@
       ]]></notes>
         <gav regex="true">org\.keycloak:keycloak-.*:7\.0\.1</gav>
         <cve>CVE-2019-14832</cve>
+        <cve>CVE-2019-14837</cve>
         <cve>CVE-2019-14910</cve>
         <cve>CVE-2019-14909</cve>
+        <cve>CVE-2019-14820</cve>
+        <cve>CVE-2020-1697</cve>
     </suppress>
 </suppressions>

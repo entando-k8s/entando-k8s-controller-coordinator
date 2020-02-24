@@ -1,3 +1,19 @@
+/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.client.CustomResourceList;
@@ -5,6 +21,8 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
 import io.quarkus.runtime.StartupEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
@@ -28,7 +46,8 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 public class EntandoControllerCoordinator {
 
     private final KubernetesClient client;
-    private final Map<Class<? extends EntandoBaseCustomResource>, EntandoResourceObserver<?, ?, ?>> observers = new ConcurrentHashMap<>();
+    private final Map<Class<? extends EntandoBaseCustomResource>, List<?>> observers =
+            new ConcurrentHashMap<>();
     private final EntandoResourceOperationsRegistry entandoResourceOperationsRegistry;
     private final EntandoDatabaseServiceController abstractDbAwareController;
 
@@ -40,30 +59,37 @@ public class EntandoControllerCoordinator {
     }
 
     public void onStartup(@Observes StartupEvent event) {
-        addObserver(EntandoKeycloakServer.class, this::startImage);
-        addObserver(EntandoClusterInfrastructure.class, this::startImage);
-        addObserver(EntandoApp.class, this::startImage);
-        addObserver(EntandoPlugin.class, this::startImage);
-        addObserver(EntandoAppPluginLink.class, this::startImage);
-        addObserver(EntandoCompositeApp.class, this::startImage);
-        addObserver(EntandoDatabaseService.class, this.abstractDbAwareController::processEvent);
+        addObservers(EntandoKeycloakServer.class, this::startImage);
+        addObservers(EntandoClusterInfrastructure.class, this::startImage);
+        addObservers(EntandoApp.class, this::startImage);
+        addObservers(EntandoPlugin.class, this::startImage);
+        addObservers(EntandoAppPluginLink.class, this::startImage);
+        addObservers(EntandoCompositeApp.class, this::startImage);
+        addObservers(EntandoDatabaseService.class, this.abstractDbAwareController::processEvent);
         KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());
     }
 
     @SuppressWarnings("unchecked")
     public <R extends EntandoBaseCustomResource,
             L extends CustomResourceList<R>,
-            D extends DoneableEntandoCustomResource<D, R>> EntandoResourceObserver<R, L, D> getObserver(Class<R> clss) {
-        return (EntandoResourceObserver<R, L, D>) observers.get(clss);
+            D extends DoneableEntandoCustomResource<D, R>> List<EntandoResourceObserver<R, L, D>> getObserver(Class<R> clss) {
+        return (List<EntandoResourceObserver<R, L, D>>) observers.get(clss);
     }
 
     @SuppressWarnings("unchecked")
-    private <R extends EntandoBaseCustomResource> void addObserver(Class<R> type, BiConsumer<Action, R> consumer) {
+    private <R extends EntandoBaseCustomResource> void addObservers(Class<R> type, BiConsumer<Action, R> consumer) {
         CustomResourceOperationsImpl operations = this.entandoResourceOperationsRegistry.getOperations(type);
-        CustomResourceOperationsImpl namespacedOperations = EntandoOperatorConfig.getOperatorNamespaceToObserve()
-                .map(s -> (CustomResourceOperationsImpl) operations.inNamespace(s))
-                .orElse((CustomResourceOperationsImpl) operations.inAnyNamespace());
-        observers.put(operations.getType(), new EntandoResourceObserver<>(namespacedOperations, consumer));
+        List<String> namespaces = new ArrayList<>(EntandoOperatorConfig.getNamespacesToObserve());
+        EntandoOperatorConfig.getOperatorNamespaceToObserve().ifPresent(s -> namespaces.add(s));
+        if (namespaces.isEmpty()) {
+            namespaces.add(client.getNamespace());
+        }
+        List<EntandoResourceObserver<?, ?, ?>> observersForType = new ArrayList<>();
+        for (String namespace : namespaces) {
+            CustomResourceOperationsImpl namespacedOperations = (CustomResourceOperationsImpl) operations.inNamespace(namespace);
+            observersForType.add(new EntandoResourceObserver<>(namespacedOperations, consumer));
+        }
+        observers.put(type, observersForType);
     }
 
     private <T extends EntandoBaseCustomResource> void startImage(Action action, T resource) {
