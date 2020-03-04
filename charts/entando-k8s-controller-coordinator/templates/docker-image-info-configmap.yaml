@@ -13,7 +13,7 @@ data:
   entando-avatar-plugin: >-
     {"version":"6.0.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-component-manager: >-
-    {"version":"6.0.12","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.17","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app: >-
     {"version":"6.0.31","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app-eap: >-
@@ -37,7 +37,7 @@ data:
   entando-k8s-plugin-controller: >-
     {"version":"6.0.19","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-service: >-
-    {"version":"6.0.3","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.11","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-keycloak: >-
     {"version":"6.0.8","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-plugin-sidecar: >-
