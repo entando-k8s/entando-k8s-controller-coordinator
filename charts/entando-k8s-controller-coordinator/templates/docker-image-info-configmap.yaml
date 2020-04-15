@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   app-builder: >-
-    {"version":"6.0.97","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.99","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   digital-exchange: >-
     {"version":"6.0.0","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-app-builder-de: >-
@@ -17,9 +17,9 @@ data:
   entando-de-app: >-
     {"version":"6.0.31","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app-eap: >-
-    {"version":"6.0.43","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.45","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app-wildfly: >-
-    {"version":"6.0.43","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.45","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-app-controller: >-
     {"version":"6.0.33","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-app-plugin-link-controller: >-
@@ -29,9 +29,9 @@ data:
   entando-k8s-composite-app-controller: >-
     {"version":"6.0.22","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-controller-coordinator: >-
-    {"version":"6.0.66","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.74","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-dbjob: >-
-    {"version":"6.0.32","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.36","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-keycloak-controller: >-
     {"version":"6.0.33","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-plugin-controller: >-
