@@ -30,7 +30,7 @@ rules:
     resources:
       - ingresses
     verbs:
-      - '*'
+      - "*"
 {{- if .Values.supportOpenshift }}
   - apiGroups:
       - route.openshift.io
