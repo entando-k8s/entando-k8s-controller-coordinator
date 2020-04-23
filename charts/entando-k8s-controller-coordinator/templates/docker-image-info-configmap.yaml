@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   app-builder: >-
-    {"version":"6.1.8","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.1.9","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   digital-exchange: >-
     {"version":"6.0.0","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-app-builder-de: >-
@@ -13,7 +13,7 @@ data:
   entando-avatar-plugin: >-
     {"version":"6.0.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-component-manager: >-
-    {"version":"6.0.31","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.32","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app: >-
     {"version":"6.0.31","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app-eap: >-
