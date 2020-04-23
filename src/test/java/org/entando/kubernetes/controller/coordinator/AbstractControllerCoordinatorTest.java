@@ -192,8 +192,9 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> newListable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> newListable.list().getItems()
-                .stream().anyMatch(p -> theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(p)).equals(Action.DELETED.name())));
+        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> newListable.list().getItems().stream()
+                .anyMatch(p -> theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(p)).equals(Action.DELETED.name())));
+
         theControllerPod = newListable.list().getItems().stream()
                 .filter(p -> theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(p)).equals(Action.DELETED.name()))
                 .findFirst().get();
