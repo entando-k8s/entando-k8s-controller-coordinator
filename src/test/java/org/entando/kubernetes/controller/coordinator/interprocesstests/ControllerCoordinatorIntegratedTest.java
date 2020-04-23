@@ -201,6 +201,10 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
     protected <T extends EntandoBaseCustomResource> void afterCreate(T resource) {
     }
 
+    @Override
+    protected <T extends EntandoBaseCustomResource> void afterModified(T resource) {
+    }
+
     private String getDomainSuffix() {
         if (domainSuffix == null) {
             domainSuffix = IngressCreator.determineRoutingSuffix(DefaultIngressClient.resolveMasterHostname(this.getClient()));

@@ -18,10 +18,12 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
+import com.google.common.base.Strings;
 import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -91,6 +93,9 @@ public class EntandoResourceObserver<
             cache.put(resource.getMetadata().getUid(), resource);
             if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
                 executor.execute(() -> callback.accept(action, resource));
+            } else if (resource.getStatus().getEntandoDeploymentPhase().equals(EntandoDeploymentPhase.SUCCESSFUL) &&
+                    !Strings.isNullOrEmpty(resource.getMetadata().getDeletionTimestamp())) {
+                executor.execute(() -> callback.accept(Action.DELETED, resource));
             }
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
