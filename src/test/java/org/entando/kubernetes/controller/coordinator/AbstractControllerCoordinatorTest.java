@@ -30,6 +30,7 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
@@ -41,6 +42,7 @@ import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceBuilder;
@@ -135,6 +137,53 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
         Service service = listable.list().getItems().get(0);
         assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
+    }
+
+    @Test
+    public void testRunControllerWithDeleteAction() throws JsonProcessingException {
+        //Given I have a clear namespace
+        KubernetesClient client = getClient();
+        clearNamespace(client);
+        String namespace = client.getNamespace();
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
+                namespace);
+        //When I create a new EntandoDatabaseService resource
+        final String versionToExpect = ensureKeycloakControllerVersion();
+        //When I create a new EntandoKeycloakServer resource
+        EntandoKeycloakServer keycloakServer = new EntandoKeycloakServerBuilder()
+                .withNewMetadata()
+                .withName("test-keycloak").withNamespace(namespace)
+                .endMetadata()
+                .withNewSpec()
+                .withDbms(DbmsVendor.NONE)
+                .endSpec()
+                .build();
+        keycloakServer = EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(client)
+                .inNamespace(client.getNamespace()).create(keycloakServer);
+
+        String resourceVersion = keycloakServer.getMetadata().getResourceVersion();
+        keycloakServer.getMetadata().setDeletionTimestamp(LocalDateTime.now().toString());
+        keycloakServer.getMetadata().setResourceVersion(Integer.toString(Integer.parseInt(resourceVersion) + 1));
+        keycloakServer.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL);
+        afterModified(keycloakServer);
+
+        //Then I expect to see a keycloak deployer with delete event
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> newListable = client.pods()
+                .inNamespace(client.getNamespace())
+                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
+        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> newListable.list().getItems().stream()
+                .anyMatch(p -> theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(p)).equals(Action.DELETED.name())));
+
+        Pod theControllerPod = newListable.list().getItems().stream()
+                .filter(p -> theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(p)).equals(Action.DELETED.name()))
+                .findFirst().get();
+        assertThat(theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(theControllerPod)), is(Action.DELETED.name()));
+        assertThat(theVariableNamed("ENTANDO_RESOURCE_NAME").on(thePrimaryContainerOn(theControllerPod)),
+                is(keycloakServer.getMetadata().getName()));
+        assertThat(theVariableNamed("ENTANDO_RESOURCE_NAMESPACE").on(thePrimaryContainerOn(theControllerPod)),
+                is(keycloakServer.getMetadata().getNamespace()));
+        //With the correct version specified
+        assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
     }
 
     protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
