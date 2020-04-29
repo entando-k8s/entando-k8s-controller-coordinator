@@ -60,9 +60,6 @@ public class EntandoResourceObserver<
             if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
                 eventReceived(Action.ADDED, item);
                 entandoDeploymentPhaseWatcher.waitToBeProcessed(item);
-            } else if (!isEmpty(item.getMetadata().getDeletionTimestamp())) {
-                eventReceived(Action.DELETED, item);
-                entandoDeploymentPhaseWatcher.waitToBeProcessed(item);
             }
             cache.put(item.getMetadata().getUid(), item);
         }
@@ -96,9 +93,6 @@ public class EntandoResourceObserver<
             cache.put(resource.getMetadata().getUid(), resource);
             if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
                 executor.execute(() -> callback.accept(action, resource));
-            } else if (resource.getStatus().getEntandoDeploymentPhase().equals(EntandoDeploymentPhase.SUCCESSFUL)
-                    && !Strings.isNullOrEmpty(resource.getMetadata().getDeletionTimestamp())) {
-                executor.execute(() -> callback.accept(Action.DELETED, resource));
             }
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
