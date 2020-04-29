@@ -17,6 +17,7 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import com.google.common.base.Strings;
 import io.fabric8.kubernetes.client.CustomResourceList;
@@ -58,6 +59,9 @@ public class EntandoResourceObserver<
         for (R item : items) {
             if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
                 eventReceived(Action.ADDED, item);
+                entandoDeploymentPhaseWatcher.waitToBeProcessed(item);
+            }else if(!isEmpty(item.getMetadata().getDeletionTimestamp())){
+                eventReceived(Action.DELETED, item);
                 entandoDeploymentPhaseWatcher.waitToBeProcessed(item);
             }
             cache.put(item.getMetadata().getUid(), item);
