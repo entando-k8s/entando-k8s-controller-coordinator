@@ -60,7 +60,7 @@ public class EntandoResourceObserver<
             if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
                 eventReceived(Action.ADDED, item);
                 entandoDeploymentPhaseWatcher.waitToBeProcessed(item);
-            }else if(!isEmpty(item.getMetadata().getDeletionTimestamp())){
+            } else if (!isEmpty(item.getMetadata().getDeletionTimestamp())) {
                 eventReceived(Action.DELETED, item);
                 entandoDeploymentPhaseWatcher.waitToBeProcessed(item);
             }

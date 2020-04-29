@@ -60,7 +60,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-@Tag("inter-process")
+@Tag("end-to-end")
 public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorTest {
 
     private static NamespacedKubernetesClient client;
