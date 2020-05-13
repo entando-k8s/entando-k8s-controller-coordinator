@@ -35,6 +35,14 @@ The image version segment will be resolved as follows:
  * An entry in the standard ImageVersionsConfigMap against the image name, e.g. my-image:{version:6.0.14}, will be used when the aforementioned override  is absent
  * A default, e.g. ENTANDO_DOCKER_IMAGE_VERSION=6.0.14, will be used if nothing else was specified.
 
+### Other environment variables
+
+*  ENTANDO_DEFAULT_ROUTING_SUFFIX: This is the default domain name suffix that will be used to determine a valid hostname for those Entando Custom Resources that result in an Ingress being created. This is only needed as a 'fallback'  as all Entando Custom Resources that result in Ingress would also allow you to specify a custom Ingress hostname on the resource itself. When this property has not been provided on the Entando Custom Resource itself, a hostname will be generated using the name and the namespace of the resource separated by a `-`, e.g. `my-app-mynamespace.your-routing-suffix.com`
+*  ENTANDO_POD_READINESS_TIMEOUT_SECONDS: The time for the operator to wait for Pods that deploy a service before timing out
+*  ENTANDO_POD_COMPLETION_TIMEOUT_SECONDS: The time for the operator to wait for run-to-completion Pods
+*  ENTANDO_DISABLE_KEYCLOAK_SSL_REQUIREMENT: "true" if Keycloak does not need to suport HTTPS, such as for demos or POC's
+*  ENTANDO_K8S_OPERATOR_SECURITY_MODE: If it is "lenient", the Operator will attempt to create certain sensitive resources such as ServiceAccounts, Roles and RoleBindings as needed. If "strict" this Helm Chart itself should ensure they have already been created.
+
 ## `tls`
 
 This section is used to configuring global TLS settings for the Entando Operator being deployed. These settings are automatically propagated to individual Entando Kubernetes Controllers and are then applied to all Deployments that are created by the Entando Operator. Two sets of certificates are involved here, a custom trusted Certifying Authority, and the internal certificate/key pair to expose individual Ingresses securely using HTTPS.
