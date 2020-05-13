@@ -45,7 +45,7 @@ The certificate of a custom Certifying Authority (CA) that will be added to the 
 
 ### `tls.tlsCrt`
 
-The Certificate to use when exposing Ingresses over HTTPS. This should in fact be the entire Certificate chain that links your specific Certificate to one of the standard CA's, or alternatively to the the custom CA certificate provided above. IN most of our custom resources that result in an Ingress, you will be allowed to specify an alternative Kubernetes TLS secret to use, but where no such secret is specified, a Kubernetes TLS secret will be created using this propery to create a TLS secret to be used for the Ingress. As with all binary content in YAML, this property should be Base64 encoded.  If this property is absent, no default TLS secret will be created for Ingresses
+The Certificate to use when exposing Ingresses over HTTPS. This should in fact be the entire Certificate chain that links your specific Certificate to one of the standard CA's, or alternatively to the the custom CA certificate provided above. This Certificate could potentially be used for multiple domain names, so the most obvious use case for this property would be if you have a TLS Certificate that has been created for a wildcard Domain that ends with your environment's routing suffix. With most of our custom resources that result in an Ingress, you will also be allowed to specify an alternative Kubernetes TLS secret to use, but where no such secret is specified, a Kubernetes TLS secret will be created using this propery to create a TLS secret to be used for the Ingress. As with all binary content in YAML, this property should be Base64 encoded.  If this property is absent, no default TLS secret will be created for Ingresses
 
 ### `tls.tlsKey`
 
