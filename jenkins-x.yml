@@ -29,7 +29,7 @@ pipelineConfig:
                 name: make-preview
               - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER}
                 name: jx-preview
-          - sh: run-inter-process-tests
+          - sh: ENTANDO_K8S_OPERATOR_CONFIGMAP_NAMESPACE=${REPO_NAME}-${PIPELINE_CODE}pr${PULL_NUMBER} run-inter-process-tests
             name: run-inter-process-tests
     release:
       build:
@@ -52,7 +52,7 @@ pipelineConfig:
                 name: make-preview
               - sh: jx preview --name ${REPO_NAME}-${PIPELINE_CODE}ms --app $APP_NAME --dir ../.. --namespace ${REPO_NAME}-${PIPELINE_CODE}ms
                 name: jx-preview
-          - sh: run-inter-process-tests
+          - sh:  ENTANDO_K8S_OPERATOR_CONFIGMAP_NAMESPACE=${REPO_NAME}-${PIPELINE_CODE}ms run-inter-process-tests
             name: run-inter-process-tests
       promote:
         replace: true
