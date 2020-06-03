@@ -16,6 +16,7 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
+import com.google.common.base.Strings;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
@@ -54,7 +55,18 @@ public class ControllerCoordinatorMockedTest extends AbstractControllerCoordinat
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
         }
+        if (Strings.isNullOrEmpty(resource.getMetadata().getResourceVersion())) {
+            resource.getMetadata().setResourceVersion(Integer.toString(1));
+        }
         coordinator.getObserver((Class<T>) resource.getClass()).get(0).eventReceived(Action.ADDED, resource);
+    }
+
+    @Override
+    protected <T extends EntandoBaseCustomResource> void afterModified(T resource) {
+        if (resource.getMetadata().getUid() == null) {
+            resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
+        }
+        coordinator.getObserver((Class<T>) resource.getClass()).get(0).eventReceived(Action.MODIFIED, resource);
     }
 
 }

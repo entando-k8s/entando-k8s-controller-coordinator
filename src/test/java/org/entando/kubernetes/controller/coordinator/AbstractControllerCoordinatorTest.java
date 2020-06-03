@@ -30,6 +30,7 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
@@ -41,6 +42,7 @@ import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceBuilder;
@@ -70,6 +72,9 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
 
     @SuppressWarnings("unchecked")
     protected abstract <T extends EntandoBaseCustomResource> void afterCreate(T resource);
+
+    @SuppressWarnings("unchecked")
+    protected abstract <T extends EntandoBaseCustomResource> void afterModified(T resource);
 
     @Test
     public void testExecuteKeycloakControllerPod() throws JsonProcessingException {
@@ -133,6 +138,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         Service service = listable.list().getItems().get(0);
         assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
     }
+
 
     protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
