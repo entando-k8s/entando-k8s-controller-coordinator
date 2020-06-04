@@ -9,7 +9,7 @@ data:
   entando-avatar-plugin: >-
     {"version":"6.0.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-component-manager: >-
-    {"version":"6.0.34","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.35","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app-eap: >-
     {"version":"6.1.20","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app-wildfly: >-
