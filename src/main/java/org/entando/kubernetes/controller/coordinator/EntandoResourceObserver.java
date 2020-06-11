@@ -17,9 +17,7 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 
-import com.google.common.base.Strings;
 import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
@@ -49,6 +47,7 @@ public class EntandoResourceObserver<
 
     public EntandoResourceObserver(CustomResourceOperationsImpl<R, L, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
+
         processExistingRequestedEntandoResources(operations);
         operations.watch(this);
     }
