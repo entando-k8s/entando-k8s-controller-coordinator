@@ -5,17 +5,17 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   app-builder: >-
-    {"version":"6.1.84","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.1.117","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-avatar-plugin: >-
     {"version":"6.0.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-component-manager: >-
-    {"version":"6.0.45","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.52","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app-eap: >-
-    {"version":"6.1.47","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.1.65","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-de-app-wildfly: >-
-    {"version":"6.1.47","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.1.65","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-app-controller: >-
-    {"version":"6.1.3","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.1.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-app-plugin-link-controller: >-
     {"version":"6.1.1","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-cluster-infrastructure-controller: >-
@@ -31,7 +31,7 @@ data:
   entando-k8s-plugin-controller: >-
     {"version":"6.1.1","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-service: >-
-    {"version":"6.0.18","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.20","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-keycloak: >-
     {"version":"6.0.15","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-plugin-sidecar: >-
