@@ -31,7 +31,7 @@ spec:
           secret:
             secretName: entando-tls-secret
   {{- end }}
-  {{- if .Values.tls.caCrt }}
+  {{- if .Values.tls.caCrts }}
         - name: entando-ca-cert-volume
           secret:
             secretName: entando-ca-cert-secret
@@ -45,14 +45,14 @@ spec:
             - name: entando-tls-volume
               mountPath: /etc/entando/tls
   {{- end }}
-  {{- if .Values.tls.caCrt }}
+  {{- if .Values.tls.caCrts }}
             - name: entando-ca-cert-volume
               mountPath: /etc/entando/ca
   {{- end}}
           env:
-  {{- if .Values.tls.caCrt }}
+  {{- if .Values.tls.caCrts }}
             - name: ENTANDO_CA_CERT_PATHS
-              value: "/etc/entando/ca/ca.crt"
+              value: "{{- range $i, $pval := .Values.tls.caCrts }}/etc/entando/ca/ca{{ $i }}.crt{{ " " }}{{- end }}"
   {{- end}}
   {{- if .Values.tls.tlsCrt }}
             - name: ENTANDO_PATH_TO_TLS_KEYPAIR

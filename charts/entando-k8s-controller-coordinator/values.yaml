@@ -6,7 +6,6 @@ image:
   repository: draft
   tag: 6.0.47
   pullPolicy: Always
-
 # enable this flag to use knative serve to deploy the app
 knativeDeploy: false
 supportOpenshift: true
@@ -20,7 +19,7 @@ env:
   ENTANDO_DISABLE_KEYCLOAK_SSL_REQUIREMENT: "true"
   ENTANDO_K8S_OPERATOR_SECURITY_MODE: lenient
 tls:
-  caCrt:
+  caCrts:
   tlsCrt:
   tlsKey:
 resources:
