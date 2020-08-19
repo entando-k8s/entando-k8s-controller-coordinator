@@ -47,9 +47,9 @@ The image version segment will be resolved as follows:
 
 This section is used to configuring global TLS settings for the Entando Operator being deployed. These settings are automatically propagated to individual Entando Kubernetes Controllers and are then applied to all Deployments that are created by the Entando Operator. Two sets of certificates are involved here, a custom trusted Certifying Authority, and the internal certificate/key pair to expose individual Ingresses securely using HTTPS.
 
-### `tls.caCrt`
+### `tls.caCrts`
 
-The certificate of a custom Certifying Authority (CA) that will be added to the list of standard CA's generally acknowledged by Linux distributions and Java Virtual Machines. Only override this setting if your CA is not linked to the standard CA's via a certificate chain. This is particularly useful for scenarios where a self signed certificate is used as a Certificate Authority. As with all binary content in YAML, this property should be Base64 encoded.
+A list of certificates of custom Certifying Authorities (CA) that will be added to the list of standard CA's generally acknowledged by Linux distributions and Java Virtual Machines. Only override this setting if your CA is not linked to the standard CA's via a certificate chain. This is particularly useful for scenarios where a self signed certificate is used as a Certificate Authority. As with all binary content in YAML, this property should be Base64 encoded.
 
 ### `tls.tlsCrt`
 
