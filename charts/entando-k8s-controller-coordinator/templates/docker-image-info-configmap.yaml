@@ -29,7 +29,7 @@ data:
   entando-k8s-dbjob: >-
     {"version":"6.1.4","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-keycloak-controller: >-
-    {"version":"6.2.1","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.2.4","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-plugin-controller: >-
     {"version":"6.2.0","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-service: >-
