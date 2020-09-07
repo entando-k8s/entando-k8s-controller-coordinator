@@ -87,7 +87,7 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
     /**
      * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.
      */
-//    @Test
+    //    @Test
     public void testExecuteCompositeAppControllerPod() throws JsonProcessingException {
         //Given I have a clean namespace
         KubernetesClient client = getClient();

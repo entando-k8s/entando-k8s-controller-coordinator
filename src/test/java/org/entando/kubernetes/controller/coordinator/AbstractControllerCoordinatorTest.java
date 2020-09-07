@@ -111,7 +111,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
     }
 
-//    @Test
+    //    @Test
     public void testExecuteControllerObject() {
         //Given I have a clear namespace
         clearNamespace(getClient());
@@ -138,7 +138,6 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         Service service = listable.list().getItems().get(0);
         assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
     }
-
 
     protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
