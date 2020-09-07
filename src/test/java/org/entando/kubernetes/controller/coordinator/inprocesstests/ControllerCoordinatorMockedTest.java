@@ -28,9 +28,10 @@ import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.junit.Rule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
-@Tag("in-process")
+@Tags({@Tag("in-process"),@Tag("component")})
 @EnableRuleMigrationSupport
 public class ControllerCoordinatorMockedTest extends AbstractControllerCoordinatorTest {
 

@@ -45,6 +45,7 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 
 public class EntandoControllerCoordinator {
 
+    public static final String ALL_NAMESPACES = "*";
     private final KubernetesClient client;
     private final Map<Class<? extends EntandoBaseCustomResource>, List<?>> observers =
             new ConcurrentHashMap<>();
@@ -85,9 +86,14 @@ public class EntandoControllerCoordinator {
             namespaces.add(client.getNamespace());
         }
         List<EntandoResourceObserver<?, ?, ?>> observersForType = new ArrayList<>();
-        for (String namespace : namespaces) {
-            CustomResourceOperationsImpl namespacedOperations = (CustomResourceOperationsImpl) operations.inNamespace(namespace);
-            observersForType.add(new EntandoResourceObserver<>(namespacedOperations, consumer));
+        if (namespaces.stream().anyMatch(s -> s.equals(ALL_NAMESPACES))) {
+            //This code is essentially impossible to test in a shared cluster
+            observersForType.add(new EntandoResourceObserver<>((CustomResourceOperationsImpl) operations.inAnyNamespace(), consumer));
+        } else {
+            for (String namespace : namespaces) {
+                CustomResourceOperationsImpl namespacedOperations = (CustomResourceOperationsImpl) operations.inNamespace(namespace);
+                observersForType.add(new EntandoResourceObserver<>(namespacedOperations, consumer));
+            }
         }
         observers.put(type, observersForType);
     }

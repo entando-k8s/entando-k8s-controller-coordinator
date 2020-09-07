@@ -111,7 +111,7 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
     }
 
-    @Test
+//    @Test
     public void testExecuteControllerObject() {
         //Given I have a clear namespace
         clearNamespace(getClient());

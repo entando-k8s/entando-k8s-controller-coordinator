@@ -1,5 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Interprocess" type="JUnit" factoryName="JUnit">
+    <useClassPathOnly />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="ALTERNATIVE_JRE_PATH" value="11" />
     <option name="PACKAGE_NAME" value="" />
@@ -11,7 +12,7 @@
     <option name="TEST_SEARCH_SCOPE">
       <value defaultName="wholeProject" />
     </option>
-    <tag value="inter-process" />
+    <tag value="end-to-end" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

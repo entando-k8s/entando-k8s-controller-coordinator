@@ -44,10 +44,11 @@ import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
 import org.junit.Rule;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
-@Tag("in-process")
+@Tags({@Tag("in-process"),@Tag("component")})
 @EnableRuleMigrationSupport
 public class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting {
 
