@@ -139,7 +139,6 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
     }
 
-
     protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
         return imageVersionPreparation.ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1");

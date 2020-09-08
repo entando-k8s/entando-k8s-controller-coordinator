@@ -67,7 +67,7 @@ public class EntandoResourceObserver<
     @Override
     public void eventReceived(Action action, R resource) {
         try {
-            if (isNewEvent(resource) && isNotOwnedByCompositeApp(resource)) {
+            if (isNewEvent(resource) && isNotOwnedByCompositeApp(resource) && EntandoOperatorMatcher.matchesThisOperator(resource)) {
                 performCallback(action, resource);
             }
         } catch (Exception e) {

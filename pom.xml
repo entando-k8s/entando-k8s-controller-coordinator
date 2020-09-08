@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>6.2.0</version>
+        <version>6.2.1</version>
     </parent>
     <version>6.2.0-SNAPSHOT</version>
     <artifactId>entando-k8s-controller-coordinator</artifactId>
@@ -62,7 +62,7 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando.k8s.operator.common.version>6.2.7</entando.k8s.operator.common.version>
+        <entando.k8s.operator.common.version>6.2.8</entando.k8s.operator.common.version>
         <entando.k8s.custom.model.version>6.2.0</entando.k8s.custom.model.version>
         <preDeploymentTestGroups>in-process</preDeploymentTestGroups>
         <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
@@ -94,7 +94,10 @@
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-core</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.github.zafarkhaja</groupId>
+            <artifactId>java-semver</artifactId>
+        </dependency>
         <!-- </required-by dependency="org.keycloakserver:keycloakserver-admin-client"> -->
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
