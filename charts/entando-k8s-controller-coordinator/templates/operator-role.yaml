@@ -7,20 +7,7 @@ rules:
   - apiGroups:
       - entando.org
     resources:
-      - entandokeycloakservers
-      - entandokeycloakservers/finalizers
-      - entandoclusterinfrastructures
-      - entandoclusterinfrastructures/finalizers
-      - entandoapps
-      - entandoapps/finalizers
-      - entandoplugins
-      - entandoplugins/finalizers
-      - entandoapppluginlinks
-      - entandoapppluginlinks/finalizers
-      - entandodatabaseservices
-      - entandodatabaseservices/finalizers
-      - entandocompositeapps
-      - entandocompositeapps/finalizers
+      - "*"
     verbs:
       - "*"
   - apiGroups:
