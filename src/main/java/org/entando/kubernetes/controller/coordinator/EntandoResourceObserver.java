@@ -43,10 +43,12 @@ public class EntandoResourceObserver<
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
     private final Map<String, R> cache = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
+    private final CustomResourceOperationsImpl<R, L, D> operations;
     private Executor executor = Executors.newSingleThreadExecutor();
 
     public EntandoResourceObserver(CustomResourceOperationsImpl<R, L, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
+        this.operations=operations;
 
         processExistingRequestedEntandoResources(operations);
         operations.watch(this);
@@ -83,7 +85,12 @@ public class EntandoResourceObserver<
 
     @Override
     public void onClose(KubernetesClientException cause) {
-        LOGGER.log(Level.WARNING, cause, () -> "EntandoResourceObserver closed");
+        if(cause.getMessage().contains("resourceVersion") && cause.getMessage().contains("too old")){
+            LOGGER.log(Level.WARNING, () -> "EntandoResourceObserver closed due to out of date resourceVersion. Reconnecting ... ");
+            operations.watch(this);
+        }else{
+            LOGGER.log(Level.WARNING, cause, () -> "EntandoResourceObserver closed");
+        }
     }
 
     protected void performCallback(Action action, R resource) {

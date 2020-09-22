@@ -62,8 +62,8 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando.k8s.operator.common.version>6.2.8</entando.k8s.operator.common.version>
-        <entando.k8s.custom.model.version>6.2.0</entando.k8s.custom.model.version>
+        <entando.k8s.operator.common.version>6.2.12</entando.k8s.operator.common.version>
+        <entando.k8s.custom.model.version>6.2.1</entando.k8s.custom.model.version>
         <preDeploymentTestGroups>in-process</preDeploymentTestGroups>
         <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
     </properties>
