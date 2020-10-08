@@ -1,0 +1,65 @@
+{{- if .Values.clusterScope }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: entando-cluster-operator
+rules:
+  - apiGroups:
+      - entando.org
+    resources:
+      - "*"
+    verbs:
+      - "*"
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - services
+      - endpoints
+      - persistentvolumeclaims
+      - configmaps
+    verbs:
+      - "*"
+  - apiGroups:
+      - apps
+      - extensions
+    resources:
+      - deployments
+    verbs:
+      - "*"
+  - apiGroups:
+      - extensions
+    resources:
+      - ingresses
+    verbs:
+      - "*"
+{{- if .Values.supportOpenshift }}
+  - apiGroups:
+      - route.openshift.io
+    resources:
+      - "routes"
+      - "routes/custom-host"
+    verbs:
+      - "*"
+{{- end }}
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - serviceaccounts
+    verbs:
+      - get
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles
+      - rolebindings
+    verbs:
+      - get
+{{- end }}

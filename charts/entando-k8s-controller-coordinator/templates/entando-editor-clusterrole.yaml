@@ -1,0 +1,16 @@
+{{- if .Values.clusterScope }}
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: entando-editor
+  labels:
+    # Add these permissions to the "edit" default role.
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+  - apiGroups:
+      - entando.org
+    resources:
+      - "*"
+    verbs:
+      - "*"
+{{- end}}
