@@ -29,6 +29,7 @@ import java.util.function.BiConsumer;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import org.entando.kubernetes.controller.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.common.ControllerExecutor;
 import org.entando.kubernetes.controller.database.EntandoDatabaseServiceController;
@@ -60,6 +61,12 @@ public class EntandoControllerCoordinator {
     }
 
     public void onStartup(@Observes StartupEvent event) {
+        //TODO operator-common ENTANDO_K8S_OPERATOR_DISABLE_PVC_GC which currently reads the property inversely.
+        if ("true".equals(System.getenv("ENTANDO_K8S_OPERATOR_DISABLE_PVC_GARBAGE_COLLECTION"))) {
+            System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_DISABLE_PVC_GC.getJvmSystemProperty(), "false");
+        } else {
+            System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_DISABLE_PVC_GC.getJvmSystemProperty(), "true");
+        }
         addObservers(EntandoKeycloakServer.class, this::startImage);
         addObservers(EntandoClusterInfrastructure.class, this::startImage);
         addObservers(EntandoApp.class, this::startImage);
