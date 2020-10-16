@@ -40,16 +40,16 @@ import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
-@Tags({@Tag("in-process"),@Tag("unit")})
+@Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
 @EnableRuleMigrationSupport
-public class DeploymentPhaseWatcherTest {
+class DeploymentPhaseWatcherTest {
 
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
     private EntandoControllerCoordinator coordinator;
 
     @Test
-    public void testWatch() {
+    void testWatch() {
         //Given I have an EntandoApp
         CustomResourceOperationsImpl<EntandoApp, EntandoAppList, DoneableEntandoApp> operations = EntandoAppOperationFactory
                 .produceAllEntandoApps(server.getClient());

@@ -48,16 +48,17 @@ import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
-@Tags({@Tag("in-process"),@Tag("component")})
+@Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
 @EnableRuleMigrationSupport
-public class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting {
+@SuppressWarnings("java:S5778")//because Awaitility knows which invocation throws the exception
+class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting {
 
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
     private EntandoControllerCoordinator coordinator;
 
     @Test
-    public void testExistingResourcesProcessed() {
+    void testExistingResourcesProcessed() {
         //Given I have a clean namespace
         TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
         //and the Coordinator observes this namespace
@@ -97,7 +98,7 @@ public class ControllerCoordinatorEdgeConditionsTest implements FluentIntegratio
     }
 
     @Test
-    public void testDuplicatesIgnored() {
+    void testDuplicatesIgnored() {
         //Given I have a clean namespace
         TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
         //and the Coordinator observes this namespace

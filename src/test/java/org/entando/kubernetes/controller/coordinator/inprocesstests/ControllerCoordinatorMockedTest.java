@@ -31,9 +31,9 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
-@Tags({@Tag("in-process"),@Tag("component")})
+@Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
 @EnableRuleMigrationSupport
-public class ControllerCoordinatorMockedTest extends AbstractControllerCoordinatorTest {
+class ControllerCoordinatorMockedTest extends AbstractControllerCoordinatorTest {
 
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);

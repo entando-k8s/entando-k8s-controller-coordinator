@@ -58,10 +58,11 @@ import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tag("end-to-end")
-public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorTest {
+@Tags({@Tag("end-to-end"), @Tag("inter-process"), @Tag("smoke-test"), @Tag("post-deployment")})
+class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorTest {
 
     private static NamespacedKubernetesClient client;
     private String domainSuffix;
@@ -88,7 +89,7 @@ public class ControllerCoordinatorIntegratedTest extends AbstractControllerCoord
      * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.
      */
     @Test
-    public void testExecuteCompositeAppControllerPod() throws JsonProcessingException {
+    void testExecuteCompositeAppControllerPod() throws JsonProcessingException {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
         clearNamespace(client);
