@@ -30,7 +30,6 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
-import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
@@ -42,7 +41,6 @@ import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
-import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceBuilder;
@@ -53,6 +51,7 @@ import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperatio
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("java:S5786") // because it is used in subclasses in other packages
 public abstract class AbstractControllerCoordinatorTest implements FluentIntegrationTesting, FluentTraversals, VariableReferenceAssertions {
 
     public static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("coordinator-test");

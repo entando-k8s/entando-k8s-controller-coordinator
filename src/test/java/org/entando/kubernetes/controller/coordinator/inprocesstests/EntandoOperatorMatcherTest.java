@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tags({@Tag("in-process"), @Tag("unit")})
-public class EntandoOperatorMatcherTest {
+@Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
+class EntandoOperatorMatcherTest {
 
     @BeforeEach
     @AfterEach
@@ -41,7 +41,7 @@ public class EntandoOperatorMatcherTest {
     }
 
     @Test
-    public void testOperatorIdVariableMissing() {
+    void testOperatorIdVariableMissing() {
         EntandoApp entandoApp = new EntandoApp();
         assertTrue(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
         entandoApp.getMetadata().setAnnotations(new HashMap<>());
@@ -50,7 +50,7 @@ public class EntandoOperatorMatcherTest {
     }
 
     @Test
-    public void testOperatorIdAnnotationMissing() {
+    void testOperatorIdAnnotationMissing() {
         EntandoApp entandoApp = new EntandoApp();
         assertTrue(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID.getJvmSystemProperty(), "myid");
@@ -58,7 +58,7 @@ public class EntandoOperatorMatcherTest {
     }
 
     @Test
-    public void testOperatorIdActiveAndMatching() {
+    void testOperatorIdActiveAndMatching() {
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID.getJvmSystemProperty(), "myid");
         EntandoApp entandoApp = new EntandoApp();
         entandoApp.getMetadata().setAnnotations(Collections.singletonMap(EntandoOperatorMatcher.OPERATOR_ID_ANNOTATION, "myid"));
@@ -66,7 +66,7 @@ public class EntandoOperatorMatcherTest {
     }
 
     @Test
-    public void testOperatorActiveAndNotMatching() {
+    void testOperatorActiveAndNotMatching() {
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID.getJvmSystemProperty(), "myid");
         EntandoApp entandoApp = new EntandoApp();
         entandoApp.getMetadata().setAnnotations(Collections.singletonMap(EntandoOperatorMatcher.OPERATOR_ID_ANNOTATION, "someid"));
@@ -74,14 +74,14 @@ public class EntandoOperatorMatcherTest {
     }
 
     @Test
-    public void testVersionRangeInactive() {
+    void testVersionRangeInactive() {
         EntandoApp entandoApp = new EntandoApp();
         entandoApp.setApiVersion("entando.org/v1");
         assertTrue(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
     }
 
     @Test
-    public void testVersionRangeActive() {
+    void testVersionRangeActive() {
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE.getJvmSystemProperty(), "1-2");
         EntandoApp entandoApp = new EntandoApp();
         entandoApp.getMetadata().setAnnotations(new HashMap<>());
@@ -94,7 +94,7 @@ public class EntandoOperatorMatcherTest {
     }
 
     @Test
-    public void testNullVersionDefaultsToOne() {
+    void testNullVersionDefaultsToOne() {
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE.getJvmSystemProperty(), "1");
         EntandoApp entandoApp = new EntandoApp();
         entandoApp.setApiVersion(null);
