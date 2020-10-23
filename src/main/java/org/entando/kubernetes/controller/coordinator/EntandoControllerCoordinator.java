@@ -32,7 +32,6 @@ import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.common.ControllerExecutor;
-import org.entando.kubernetes.controller.database.EntandoDatabaseServiceController;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
@@ -51,29 +50,21 @@ public class EntandoControllerCoordinator {
     private final Map<Class<? extends EntandoBaseCustomResource>, List<?>> observers =
             new ConcurrentHashMap<>();
     private final EntandoResourceOperationsRegistry entandoResourceOperationsRegistry;
-    private final EntandoDatabaseServiceController abstractDbAwareController;
 
     @Inject
     public EntandoControllerCoordinator(KubernetesClient client) {
         this.entandoResourceOperationsRegistry = new EntandoResourceOperationsRegistry(client);
         this.client = client;
-        abstractDbAwareController = new EntandoDatabaseServiceController(client);
     }
 
     public void onStartup(@Observes StartupEvent event) {
-        //TODO operator-common ENTANDO_K8S_OPERATOR_DISABLE_PVC_GC which currently reads the property inversely.
-        if ("true".equals(System.getenv("ENTANDO_K8S_OPERATOR_DISABLE_PVC_GARBAGE_COLLECTION"))) {
-            System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_DISABLE_PVC_GC.getJvmSystemProperty(), "false");
-        } else {
-            System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_DISABLE_PVC_GC.getJvmSystemProperty(), "true");
-        }
         addObservers(EntandoKeycloakServer.class, this::startImage);
         addObservers(EntandoClusterInfrastructure.class, this::startImage);
         addObservers(EntandoApp.class, this::startImage);
         addObservers(EntandoPlugin.class, this::startImage);
         addObservers(EntandoAppPluginLink.class, this::startImage);
         addObservers(EntandoCompositeApp.class, this::startImage);
-        addObservers(EntandoDatabaseService.class, this.abstractDbAwareController::processEvent);
+        addObservers(EntandoDatabaseService.class, this::startImage);
         KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());
     }
 
