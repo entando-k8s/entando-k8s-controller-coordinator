@@ -17,21 +17,21 @@ data:
   entando-de-app-wildfly: >-
     {"version":"6.2.2","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-app-controller: >-
-    {"version":"6.2.4","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.2.6","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-app-plugin-link-controller: >-
     {"version":"6.1.2","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-cluster-infrastructure-controller: >-
-    {"version":"6.2.3","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.2.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-composite-app-controller: >-
-    {"version":"6.2.3","executable-type":"jvm","registry":"docker.io","organization":"entando"}
-  entando-k8s-controller-coordinator: >-
-    {"version":"6.2.10","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.2.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-k8s-database-service-controller: >-
+    {"version":"6.2.2","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-dbjob: >-
     {"version":"6.1.4","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-keycloak-controller: >-
-    {"version":"6.2.9","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.2.10","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-plugin-controller: >-
-    {"version":"6.2.3","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.2.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-service: >-
     {"version":"6.2.0","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-keycloak: >-
