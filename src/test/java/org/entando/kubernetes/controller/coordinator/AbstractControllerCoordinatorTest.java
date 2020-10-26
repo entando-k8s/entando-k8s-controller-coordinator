@@ -110,34 +110,6 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
         assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
     }
 
-    @Test
-    public void testExecuteControllerObject() {
-        //Given I have a clear namespace
-        clearNamespace(getClient());
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
-                getClient().getNamespace());
-        //When I create a new EntandoDatabaseService resource
-        EntandoDatabaseService database = new EntandoDatabaseServiceBuilder()
-                .withNewMetadata().withName("test-database").withNamespace(getClient().getNamespace()).endMetadata()
-                .withNewSpec()
-                .withDbms(DbmsVendor.ORACLE)
-                .withHost("somedatabase.com")
-                .withPort(5050)
-                .withSecretName("oracle-secret")
-                .endSpec()
-                .build();
-        EntandoDatabaseServiceOperationFactory.produceAllEntandoDatabaseServices(getClient())
-                .inNamespace(getClient().getNamespace()).create(database);
-        afterCreate(database);
-        //Then I expect to see its Kubernetes service
-        FilterWatchListDeletable<Service, ServiceList, Boolean, Watch, Watcher<Service>> listable = getClient()
-                .services()
-                .inNamespace(getClient().getNamespace()).withLabel("EntandoDatabaseService", database.getMetadata().getName());
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
-        Service service = listable.list().getItems().get(0);
-        assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
-    }
-
     protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
         return imageVersionPreparation.ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1");
