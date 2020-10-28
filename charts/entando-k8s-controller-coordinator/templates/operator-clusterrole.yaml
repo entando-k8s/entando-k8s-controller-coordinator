@@ -65,7 +65,13 @@ rules:
       - rbac.authorization.k8s.io
     resources:
       - roles
+    verbs:
+      - get
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
       - rolebindings
     verbs:
       - get
+      - create
 {{- end }}
