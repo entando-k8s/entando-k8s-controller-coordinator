@@ -63,6 +63,7 @@ class ControllerCoordinatorMockedTest extends AbstractControllerCoordinatorTest 
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected <T extends EntandoBaseCustomResource> void afterModified(T resource) {
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
