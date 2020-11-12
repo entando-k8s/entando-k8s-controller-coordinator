@@ -21,6 +21,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
 import io.quarkus.runtime.StartupEvent;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,8 @@ public class EntandoControllerCoordinator {
     }
 
     public void onStartup(@Observes StartupEvent event) {
+        //TODO extract TLS and CA certs and write them to the standard secret names
+
         addObservers(EntandoKeycloakServer.class, this::startImage);
         addObservers(EntandoClusterInfrastructure.class, this::startImage);
         addObservers(EntandoApp.class, this::startImage);
@@ -95,10 +98,11 @@ public class EntandoControllerCoordinator {
         }
         observers.put(type, observersForType);
     }
-
+    @SuppressWarnings("unchecked")
     private <T extends EntandoBaseCustomResource> void startImage(Action action, T resource) {
         ControllerExecutor executor = new ControllerExecutor(client.getNamespace(), client);
-        executor.startControllerFor(action, resource, executor.resolveLatestImageFor(resource.getClass()).orElseThrow(
+        executor.startControllerFor(action, resource, executor.resolveLatestImageFor(
+                (Class<? extends EntandoBaseCustomResource<? extends Serializable>>) resource.getClass()).orElseThrow(
                 IllegalStateException::new));
     }
 

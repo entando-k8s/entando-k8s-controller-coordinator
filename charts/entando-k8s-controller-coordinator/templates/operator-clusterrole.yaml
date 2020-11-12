@@ -30,6 +30,7 @@ rules:
       - endpoints
       - persistentvolumeclaims
       - configmaps
+      - serviceaccounts
     verbs:
       - "*"
   - apiGroups:
@@ -58,7 +59,6 @@ rules:
       - ""
     resources:
       - namespaces
-      - serviceaccounts
     verbs:
       - get
   - apiGroups:

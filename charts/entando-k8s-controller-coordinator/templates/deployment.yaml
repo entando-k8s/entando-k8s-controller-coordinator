@@ -9,7 +9,7 @@ metadata:
     draft: {{ default "draft-app" .Values.draft }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
       draft: {{ default "draft-app" .Values.draft }}
@@ -26,37 +26,37 @@ spec:
     spec:
       serviceAccountName: entando-operator
       volumes:
-  {{- if .Values.tls.tlsCrt }}
-        - name: entando-tls-volume
+  {{- if .Values.tls.tlsSecretName }}
+        - name: "{{ .Values.tls.tlsSecretName }}-volume"
           secret:
-            secretName: entando-tls-secret
+            secretName: "{{ .Values.tls.tlsSecretName }}"
   {{- end }}
-  {{- if .Values.tls.caCrts }}
-        - name: entando-ca-cert-volume
+  {{- if .Values.tls.caCertSecretName }}
+        - name: "{{ .Values.tls.caCertSecretName }}-volume"
           secret:
-            secretName: entando-ca-cert-secret
+            secretName: "{{ .Values.tls.caCertSecretName }}"
   {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
-  {{- if .Values.tls.tlsCrt }}
-            - name: entando-tls-volume
-              mountPath: /etc/entando/tls
+  {{- if .Values.tls.tlsSecretName }}
+            - name: "{{ .Values.tls.tlsSecretName }}-volume"
+              mountPath: "/etc/entando/tls"
   {{- end }}
-  {{- if .Values.tls.caCrts }}
-            - name: entando-ca-cert-volume
-              mountPath: /etc/entando/ca
+  {{- if .Values.tls.caSecretName }}
+            - name: "{{ .Values.tls.caSecretName }}-volume"
+              mountPath: "/etc/entando/ca"
   {{- end}}
           env:
-  {{- if .Values.tls.caCrts }}
-            - name: ENTANDO_CA_CERT_PATHS
-              value: "{{- range $i, $pval := .Values.tls.caCrts }}/etc/entando/ca/ca{{ $i }}.crt{{ " " }}{{- end }}"
-  {{- end}}
   {{- if .Values.tls.tlsCrt }}
             - name: ENTANDO_PATH_TO_TLS_KEYPAIR
               value: "/etc/entando/tls"
+  {{- end}}
+  {{- if .Values.tls.caCertSecretName }}
+            - name: ENTANDO_CA_CERT_ROOT_FOLDER
+              value: "/etc/entando/ca"
   {{- end}}
             - name: ENTANDO_K8S_OPERATOR_SERVICEACCOUNT
               valueFrom:
