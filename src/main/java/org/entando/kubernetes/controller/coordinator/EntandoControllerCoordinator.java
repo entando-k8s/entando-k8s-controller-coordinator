@@ -30,7 +30,6 @@ import java.util.function.BiConsumer;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import org.entando.kubernetes.controller.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.common.ControllerExecutor;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
@@ -98,6 +97,7 @@ public class EntandoControllerCoordinator {
         }
         observers.put(type, observersForType);
     }
+
     @SuppressWarnings("unchecked")
     private <T extends EntandoBaseCustomResource> void startImage(Action action, T resource) {
         ControllerExecutor executor = new ControllerExecutor(client.getNamespace(), client);
