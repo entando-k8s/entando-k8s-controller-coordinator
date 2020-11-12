@@ -181,7 +181,7 @@ class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorT
         //With the correct version specified
         assertTrue(thePrimaryContainerOn(thePluginControllerPod).getImage().endsWith(pluginControllerVersionToExpect));
         //And its status reflecting on the EntandoCompositeApp
-        await().ignoreExceptions().atMost(180, TimeUnit.SECONDS).until(
+        await().ignoreExceptions().atMost(240, TimeUnit.SECONDS).until(
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(PLUGIN_NAME).get().getPodStatus() != null
         );
         //And the EntandoCompositeApp is in a finished state
