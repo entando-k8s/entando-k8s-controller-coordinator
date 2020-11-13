@@ -45,12 +45,12 @@ spec:
             - name: "{{ .Values.tls.tlsSecretName }}-volume"
               mountPath: "/etc/entando/tls"
   {{- end }}
-  {{- if .Values.tls.caSecretName }}
-            - name: "{{ .Values.tls.caSecretName }}-volume"
+  {{- if .Values.tls.caCertSecretName }}
+            - name: "{{ .Values.tls.caCertSecretName }}-volume"
               mountPath: "/etc/entando/ca"
   {{- end}}
           env:
-  {{- if .Values.tls.tlsCrt }}
+  {{- if .Values.tls.tlsSecretName }}
             - name: ENTANDO_PATH_TO_TLS_KEYPAIR
               value: "/etc/entando/tls"
   {{- end}}
