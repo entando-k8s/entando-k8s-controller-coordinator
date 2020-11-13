@@ -1,0 +1,15 @@
+{{- if .Values.clusterScope }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-viewer
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - "list"
+      - "get"
+      - "watch"
+{{- end }}

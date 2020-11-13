@@ -32,9 +32,12 @@ import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.quarkus.runtime.StartupEvent;
 import java.util.concurrent.TimeUnit;
+import org.awaitility.Awaitility;
 import org.entando.kubernetes.client.DefaultIngressClient;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.PodResult;
+import org.entando.kubernetes.controller.PodResult.State;
 import org.entando.kubernetes.controller.coordinator.AbstractControllerCoordinatorTest;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
@@ -81,7 +84,11 @@ class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorT
         if (EntandoOperatorTestConfig.getTestTarget() == TestTarget.STANDALONE) {
             new EntandoControllerCoordinator(client).onStartup(new StartupEvent());
         } else {
-            //Should be installed by helm chart in pipeline
+            //Should be installed by helm chart in pipeline. Sometimes pulling the image takes long.
+            Awaitility.await().ignoreExceptions().atMost(10, TimeUnit.MINUTES).until(() ->
+                    staticGetClient().pods().inNamespace(NAMESPACE).list().getItems().size() > 0
+                            && PodResult.of(staticGetClient().pods().inNamespace(NAMESPACE).list().getItems().get(0)).getState()
+                            == State.READY);
         }
     }
 
@@ -181,7 +188,7 @@ class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorT
         //With the correct version specified
         assertTrue(thePrimaryContainerOn(thePluginControllerPod).getImage().endsWith(pluginControllerVersionToExpect));
         //And its status reflecting on the EntandoCompositeApp
-        await().ignoreExceptions().atMost(180, TimeUnit.SECONDS).until(
+        await().ignoreExceptions().atMost(240, TimeUnit.SECONDS).until(
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(PLUGIN_NAME).get().getPodStatus() != null
         );
         //And the EntandoCompositeApp is in a finished state
