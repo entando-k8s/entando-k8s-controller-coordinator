@@ -47,17 +47,16 @@ The image version segment will be resolved as follows:
 
 This section is used to configuring global TLS settings for the Entando Operator being deployed. These settings are automatically propagated to individual Entando Kubernetes Controllers and are then applied to all Deployments that are created by the Entando Operator. Two sets of certificates are involved here, a custom trusted Certifying Authority, and the internal certificate/key pair to expose individual Ingresses securely using HTTPS.
 
-### `tls.caCrts`
+### `tls.caCertSecretName`
 
-A list of certificates of custom Certifying Authorities (CA) that will be added to the list of standard CA's generally acknowledged by Linux distributions and Java Virtual Machines. Only override this setting if your CA is not linked to the standard CA's via a certificate chain. This is particularly useful for scenarios where a self signed certificate is used as a Certificate Authority. As with all binary content in YAML, this property should be Base64 encoded.
+The name of an Opaque Secret that contains single certificates for every key. There is no constraint on the name of
+the keys here, as long as every entry only contains a single certificate.   
 
-### `tls.tlsCrt`
+### `tls.tlsSecretName`
 
-The Certificate to use when exposing Ingresses over HTTPS. This should in fact be the entire Certificate chain that links your specific Certificate to one of the standard CA's, or alternatively to the the custom CA certificate provided above. This Certificate could potentially be used for multiple domain names, so the most obvious use case for this property would be if you have a TLS Certificate that has been created for a wildcard Domain that ends with your environment's routing suffix. With most of our custom resources that result in an Ingress, you will also be allowed to specify an alternative Kubernetes TLS secret to use, but where no such secret is specified, a Kubernetes TLS secret will be created using this propery to create a TLS secret to be used for the Ingress. As with all binary content in YAML, this property should be Base64 encoded.  If this property is absent, no default TLS secret will be created for Ingresses
+The name of a standard TLS Secret that contains two keys: tls.crt and tls.key. This certificate will be used for all
 
-### `tls.tlsKey`
 
-The private key used when the above TLS certificate was created. This will be used as the private key when exposing Ingresses over HTTPS.  As above, you will be allowed to specify an alternative Kubernetes TLS secret for your HTTPS Ingresses. As with all binary content in YAML, this property should be Base64 encoded. If this property is absent, no default TLS secret will be created for Ingresses
 
 
 
