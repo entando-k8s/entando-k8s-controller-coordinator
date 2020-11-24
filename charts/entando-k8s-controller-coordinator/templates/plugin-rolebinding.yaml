@@ -12,4 +12,4 @@ subjects:
   - kind: ServiceAccount
     name: entando-plugin
     namespace: {{ .Release.Namespace }}
-  {{- end }}
+{{- end }}
