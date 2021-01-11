@@ -31,7 +31,7 @@ data:
   entando-k8s-keycloak-controller: >-
     {"version":"6.2.14","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-plugin-controller: >-
-    {"version":"6.2.10","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.2.8","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-service: >-
     {"version":"6.2.2","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-keycloak: >-

@@ -105,7 +105,8 @@ class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorT
                 client.getNamespace());
         //And I have a config map with the Entando KeycloakController's image information
         final String keycloakControllerVersionToExpect = ensureKeycloakControllerVersion();
-        final String pluginControllerVersionToExpect = ensurePluginControllerVersion();
+        //final String pluginControllerVersionToExpect = ensurePluginControllerVersion();
+        final String pluginControllerVersionToExpect = "6.2.8";
         final String compositeAppControllerVersionToExpect = ensureCompositeAppControllerVersion();
         //When I create a new EntandoCompositeApp with an EntandoKeycloakServer and EntandoPlugin component
 
