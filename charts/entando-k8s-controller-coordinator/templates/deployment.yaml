@@ -58,7 +58,10 @@ spec:
             - name: ENTANDO_CA_CERT_ROOT_FOLDER
               value: "/etc/entando/ca"
   {{- end}}
-            - name: ENTANDO_K8S_OPERATOR_SERVICEACCOUNT
+            - name: ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS
+              value: "{{ - range $pval := .Values.imagePullSecrets }}{{if $index}},{{end}}{{ $pval }}{{ - end }}"
+
+  - name: ENTANDO_K8S_OPERATOR_SERVICEACCOUNT
               valueFrom:
                 fieldRef:
                   fieldPath: spec.serviceAccountName
