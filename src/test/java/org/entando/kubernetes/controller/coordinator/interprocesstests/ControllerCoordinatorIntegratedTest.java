@@ -31,6 +31,7 @@ import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.quarkus.runtime.StartupEvent;
+import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.entando.kubernetes.client.DefaultIngressClient;
@@ -206,11 +207,11 @@ class ControllerCoordinatorIntegratedTest extends AbstractControllerCoordinatorT
     }
 
     @Override
-    protected <T extends EntandoBaseCustomResource> void afterCreate(T resource) {
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterCreate(R resource) {
     }
 
     @Override
-    protected <T extends EntandoBaseCustomResource> void afterModified(T resource) {
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterModified(R resource) {
     }
 
     private String getDomainSuffix() {

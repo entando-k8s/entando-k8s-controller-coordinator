@@ -47,7 +47,7 @@ public class EntandoControllerCoordinator {
 
     public static final String ALL_NAMESPACES = "*";
     private final KubernetesClient client;
-    private final Map<Class<? extends EntandoBaseCustomResource>, List<?>> observers =
+    private final Map<Class<? extends EntandoBaseCustomResource<?>>, List<?>> observers =
             new ConcurrentHashMap<>();
     private final EntandoResourceOperationsRegistry entandoResourceOperationsRegistry;
 
@@ -71,39 +71,43 @@ public class EntandoControllerCoordinator {
     }
 
     @SuppressWarnings("unchecked")
-    public <R extends EntandoBaseCustomResource,
+    public <S extends Serializable,
+            R extends EntandoBaseCustomResource<S>,
             L extends CustomResourceList<R>,
-            D extends DoneableEntandoCustomResource<D, R>> List<EntandoResourceObserver<R, L, D>> getObserver(Class<R> clss) {
-        return (List<EntandoResourceObserver<R, L, D>>) observers.get(clss);
+            D extends DoneableEntandoCustomResource<D, R>> List<EntandoResourceObserver<S, R, L, D>> getObserver(Class<R> clss) {
+        return (List<EntandoResourceObserver<S, R, L, D>>) observers.get(clss);
     }
 
     @SuppressWarnings("unchecked")
-    private <R extends EntandoBaseCustomResource> void addObservers(Class<R> type, BiConsumer<Action, R> consumer) {
-        CustomResourceOperationsImpl operations = this.entandoResourceOperationsRegistry.getOperations(type);
+    private <S extends Serializable,
+            R extends EntandoBaseCustomResource<S>,
+            L extends CustomResourceList<R>,
+            D extends DoneableEntandoCustomResource<D, R>> void addObservers(Class<R> type, BiConsumer<Action, R> consumer) {
+        CustomResourceOperationsImpl<R, L, D> operations = (CustomResourceOperationsImpl<R, L, D>) this.entandoResourceOperationsRegistry
+                .getOperations(type);
         List<String> namespaces = new ArrayList<>(EntandoOperatorConfig.getNamespacesToObserve());
-        EntandoOperatorConfig.getOperatorNamespaceToObserve().ifPresent(s -> namespaces.add(s));
+        EntandoOperatorConfig.getOperatorNamespaceToObserve().ifPresent(namespaces::add);
         if (namespaces.isEmpty()) {
             namespaces.add(client.getNamespace());
         }
-        List<EntandoResourceObserver<?, ?, ?>> observersForType = new ArrayList<>();
+        List<EntandoResourceObserver<S, R, L, D>> observersForType = new ArrayList<>();
         if (namespaces.stream().anyMatch(s -> s.equals(ALL_NAMESPACES))) {
             //This code is essentially impossible to test in a shared cluster
-            observersForType.add(new EntandoResourceObserver<>((CustomResourceOperationsImpl) operations.inAnyNamespace(), consumer));
+            observersForType.add(new EntandoResourceObserver<>(
+                    (CustomResourceOperationsImpl<R, L, D>) operations.inAnyNamespace(), consumer));
         } else {
             for (String namespace : namespaces) {
-                CustomResourceOperationsImpl namespacedOperations = (CustomResourceOperationsImpl) operations.inNamespace(namespace);
+                CustomResourceOperationsImpl<R, L, D> namespacedOperations = (CustomResourceOperationsImpl<R, L, D>) operations
+                        .inNamespace(namespace);
                 observersForType.add(new EntandoResourceObserver<>(namespacedOperations, consumer));
             }
         }
         observers.put(type, observersForType);
     }
 
-    @SuppressWarnings("unchecked")
-    private <T extends EntandoBaseCustomResource> void startImage(Action action, T resource) {
+    private <S extends Serializable, T extends EntandoBaseCustomResource<S>> void startImage(Action action, T resource) {
         ControllerExecutor executor = new ControllerExecutor(client.getNamespace(), client);
-        executor.startControllerFor(action, resource, executor.resolveLatestImageFor(
-                (Class<? extends EntandoBaseCustomResource<? extends Serializable>>) resource.getClass()).orElseThrow(
-                IllegalStateException::new));
+        executor.startControllerFor(action, resource, null);
     }
 
 }

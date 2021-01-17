@@ -16,8 +16,8 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +35,7 @@ class EntandoOperatorMatcherTest {
 
     @BeforeEach
     @AfterEach
-    public void removeJvmSytemProperty() {
+    public void removeJvmSystemProperties() {
         System.getProperties().remove(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE.getJvmSystemProperty());
         System.getProperties().remove(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID.getJvmSystemProperty());
     }

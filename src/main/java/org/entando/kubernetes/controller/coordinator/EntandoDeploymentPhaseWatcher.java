@@ -22,13 +22,17 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
+import java.io.Serializable;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 
-public class EntandoDeploymentPhaseWatcher<R extends EntandoBaseCustomResource,
+public class EntandoDeploymentPhaseWatcher<
+        S extends Serializable,
+        R extends EntandoBaseCustomResource<S>,
         L extends CustomResourceList<R>,
-        D extends DoneableEntandoCustomResource<D, R>> implements Watcher<R> {
+        D extends DoneableEntandoCustomResource<D, R>
+        > implements Watcher<R> {
 
     private final long start = System.currentTimeMillis();
     private final CustomResourceOperationsImpl<R, L, D> operations;

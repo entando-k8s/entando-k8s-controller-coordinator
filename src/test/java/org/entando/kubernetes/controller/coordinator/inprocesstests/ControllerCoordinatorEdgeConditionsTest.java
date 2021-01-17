@@ -28,6 +28,8 @@ import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.awaitility.core.ConditionTimeoutException;
@@ -43,6 +45,7 @@ import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
 import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -50,12 +53,19 @@ import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
 @Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
 @EnableRuleMigrationSupport
-@SuppressWarnings("java:S5778")//because Awaitility knows which invocation throws the exception
+//because Awaitility knows which invocation throws the exception
+@SuppressWarnings("java:S5778")
 class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting {
 
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
     private EntandoControllerCoordinator coordinator;
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+    @AfterEach
+    void shutdownSchedulers() {
+        scheduler.shutdownNow();
+    }
 
     @Test
     void testExistingResourcesProcessed() {
@@ -76,19 +86,14 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         assertThrows(ConditionTimeoutException.class,
                 () -> await().ignoreExceptions().atMost(5, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() == 1));
         //And that it will take 500 milliseconds for processing to start on the entandoApp
-        new Thread(() -> {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                throw new IllegalStateException("Thread interrupted");
-            }
+        scheduler.schedule(() -> {
             EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(getClient())
                     .inNamespace(entandoKeycloakServer.getMetadata().getNamespace())
                     .withName(entandoKeycloakServer.getMetadata().getName())
                     .edit()
                     .withPhase(EntandoDeploymentPhase.STARTED)
                     .done();
-        }).start();
+        }, 500, TimeUnit.MILLISECONDS);
 
         //When I prepare the Coordinator
         prepareCoordinator();

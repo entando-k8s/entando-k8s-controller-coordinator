@@ -19,7 +19,7 @@ package org.entando.kubernetes.controller.coordinator;
 import com.github.zafarkhaja.semver.Version;
 import java.util.Optional;
 import java.util.logging.Logger;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 
@@ -55,7 +55,7 @@ public class EntandoOperatorMatcher {
     }
 
     private static boolean isPropertyActive(EntandoOperatorConfigProperty property) {
-        return EntandoOperatorConfig.lookupProperty(property).orElse("").trim().length() > 0;
+        return EntandoOperatorConfigBase.lookupProperty(property).orElse("").trim().length() > 0;
     }
 
     private static boolean isVersionCheckingActive() {
@@ -65,15 +65,15 @@ public class EntandoOperatorMatcher {
     private static boolean hasMyAnnotation(EntandoBaseCustomResource<?> r) {
         String resourceOperatorId = Optional.ofNullable(r.getMetadata().getAnnotations()).map(anns -> anns.get(OPERATOR_ID_ANNOTATION))
                 .orElse(null);
-        String myOperatorId = EntandoOperatorConfig.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID).orElse(null);
+        String myOperatorId = EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID).orElse(null);
         return resourceOperatorId != null && resourceOperatorId.equals(myOperatorId);
     }
 
     private static boolean isInMyVersionRange(EntandoBaseCustomResource<?> r) {
         Version crdVersion = Version.valueOf(
                 Optional.ofNullable(r.getApiVersion()).map(s -> fillSemVer(r)).orElse("1.0.0"));
-        return EntandoOperatorConfig.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE)
-                .map(versionRange -> crdVersion.satisfies(versionRange)).orElse(true);
+        return EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE)
+                .map(crdVersion::satisfies).orElse(true);
     }
 
     private static String fillSemVer(EntandoBaseCustomResource<?> r) {

@@ -22,6 +22,7 @@ import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,7 +37,8 @@ import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 
 public class EntandoResourceObserver<
-        R extends EntandoBaseCustomResource,
+        S extends Serializable,
+        R extends EntandoBaseCustomResource<S>,
         L extends CustomResourceList<R>,
         D extends DoneableEntandoCustomResource<D, R>> implements Watcher<R> {
 
@@ -44,7 +46,7 @@ public class EntandoResourceObserver<
     private final Map<String, R> cache = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
     private final CustomResourceOperationsImpl<R, L, D> operations;
-    private Executor executor = Executors.newSingleThreadExecutor();
+    private final Executor executor = Executors.newSingleThreadExecutor();
 
     public EntandoResourceObserver(CustomResourceOperationsImpl<R, L, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
@@ -56,7 +58,8 @@ public class EntandoResourceObserver<
 
     private void processExistingRequestedEntandoResources(CustomResourceOperationsImpl<R, L, D> operations) {
         List<R> items = operations.list().getItems();
-        EntandoDeploymentPhaseWatcher<R, L, D> entandoDeploymentPhaseWatcher = new EntandoDeploymentPhaseWatcher<>(operations);
+        EntandoDeploymentPhaseWatcher<S, R, L, D> entandoDeploymentPhaseWatcher = new EntandoDeploymentPhaseWatcher<>(
+                operations);
         for (R item : items) {
             if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
                 eventReceived(Action.ADDED, item);

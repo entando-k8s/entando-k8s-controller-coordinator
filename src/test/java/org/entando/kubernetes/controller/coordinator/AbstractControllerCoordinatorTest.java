@@ -30,6 +30,7 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
@@ -70,10 +71,10 @@ public abstract class AbstractControllerCoordinatorTest implements FluentIntegra
     protected abstract KubernetesClient getClient();
 
     @SuppressWarnings("unchecked")
-    protected abstract <T extends EntandoBaseCustomResource> void afterCreate(T resource);
+    protected abstract <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterCreate(R resource);
 
     @SuppressWarnings("unchecked")
-    protected abstract <T extends EntandoBaseCustomResource> void afterModified(T resource);
+    protected abstract <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterModified(R resource);
 
     @Test
     public void testExecuteKeycloakControllerPod() throws JsonProcessingException {

@@ -24,6 +24,9 @@ import static org.hamcrest.Matchers.lessThan;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.EntandoDeploymentPhaseWatcher;
 import org.entando.kubernetes.model.DbmsVendor;
@@ -34,7 +37,9 @@ import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.app.EntandoAppBuilder;
 import org.entando.kubernetes.model.app.EntandoAppList;
 import org.entando.kubernetes.model.app.EntandoAppOperationFactory;
+import org.entando.kubernetes.model.app.EntandoAppSpec;
 import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -47,8 +52,15 @@ class DeploymentPhaseWatcherTest {
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
     private EntandoControllerCoordinator coordinator;
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+    @AfterEach
+    void shutdownSchedulers() {
+        scheduler.shutdownNow();
+    }
 
     @Test
+    @SuppressWarnings("unchecked")
     void testWatch() {
         //Given I have an EntandoApp
         CustomResourceOperationsImpl<EntandoApp, EntandoAppList, DoneableEntandoApp> operations = EntandoAppOperationFactory
@@ -58,20 +70,15 @@ class DeploymentPhaseWatcherTest {
                 .withNewSpec().withStandardServerImage(JeeServer.WILDFLY).withDbms(DbmsVendor.POSTGRESQL).endSpec()
                 .build());
         //And I will be watching the deploymentPhase on this app
-        EntandoDeploymentPhaseWatcher<EntandoApp, EntandoAppList, DoneableEntandoApp> watcher = new EntandoDeploymentPhaseWatcher<>(
-                operations);
+        EntandoDeploymentPhaseWatcher<EntandoAppSpec, EntandoApp, EntandoAppList, DoneableEntandoApp> watcher =
+                new EntandoDeploymentPhaseWatcher<>(operations);
         //And that it will take 500 milliseconds for processing to start on the entandoApp
-        new Thread(() -> {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                throw new IllegalStateException("Thread interrupted");
-            }
+        scheduler.schedule(() -> {
             operations.inNamespace(entandoApp.getMetadata().getNamespace()).withName(entandoApp.getMetadata().getName()).edit()
                     .withPhase(EntandoDeploymentPhase.STARTED)
                     .done();
             watcher.eventReceived(Action.MODIFIED, entandoApp);
-        }).start();
+        }, 500, TimeUnit.MILLISECONDS);
         long start = System.currentTimeMillis();
         //When I wait for the EntandoApp to be processed.
         watcher.waitToBeProcessed(entandoApp);

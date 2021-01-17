@@ -21,6 +21,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
+import java.io.Serializable;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.controller.coordinator.AbstractControllerCoordinatorTest;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
@@ -52,23 +53,23 @@ class ControllerCoordinatorMockedTest extends AbstractControllerCoordinatorTest 
 
     @Override
     @SuppressWarnings("unchecked")
-    protected <T extends EntandoBaseCustomResource> void afterCreate(T resource) {
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterCreate(R resource) {
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
         }
         if (Strings.isNullOrEmpty(resource.getMetadata().getResourceVersion())) {
             resource.getMetadata().setResourceVersion(Integer.toString(1));
         }
-        coordinator.getObserver((Class<T>) resource.getClass()).get(0).eventReceived(Action.ADDED, resource);
+        coordinator.getObserver((Class<R>) resource.getClass()).get(0).eventReceived(Action.ADDED, resource);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    protected <T extends EntandoBaseCustomResource> void afterModified(T resource) {
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterModified(R resource) {
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
         }
-        coordinator.getObserver((Class<T>) resource.getClass()).get(0).eventReceived(Action.MODIFIED, resource);
+        coordinator.getObserver((Class<R>) resource.getClass()).get(0).eventReceived(Action.MODIFIED, resource);
     }
 
 }
