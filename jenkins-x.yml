@@ -5,10 +5,21 @@ pipelineConfig:
       value: carc
     - name: TEST_DEPLOYMENT
       value: "true"
-    - name: SKIP_CHECKSTYLE
-      value: "true"
     - name: ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP
-      value: "entando-docker-image-info-v6.1"
+      value: "entando-docker-image-info-v6.3"
+    - name: RELATED_IMAGE_ENTANDO_K8S_DBJOB
+      value: entando/entando-k8s-dbjob@sha256:660d3af5b44fb3d443b36f58515b880210517fa4e3061925a41c46ea552d61d2
+    - name: RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER
+      value: entando/entando-k8s-keycloak-controller@sha256:98070aec165a236ae63330f91aae3c67ac1395f68643b30afd6578eb120b6d73
+    - name: RELATED_IMAGE_ENTANDO_REDHAT_SSO
+      value: entando/entando-redhat-sso@sha256:a67ca13039479dbc13cd68380e4e33fa316397df20e96375c9b77e6022bd442e
+    - name: RELATED_IMAGE_RHEL8_POSTGRESQL_12
+      value: registry.redhat.io/rhel8/postgresql-12@sha256:c6b6da4f762c2f68bfe558efe954739438ffa2e9aae1c617b50011fb0eed8347
+    - name: ENTANDO_TEST_REDHAT_REGISTRY_CREDENTIALS
+      valueFrom:
+        secretKeyRef:
+          key: redhat.registry.credentials
+          name: entando-jx-common-secret
     - name: EXECUTABLE_TYPE
       valueFrom:
         secretKeyRef:

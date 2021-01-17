@@ -33,7 +33,7 @@ public class ImageVersionPreparation {
         this.kubernetesClient = kubernetesClient;
     }
 
-    public String ensureImageVersion(String imageName, String fallbackVersion) throws JsonProcessingException {
+    public String ensureImageVersion(String imageName, String fallbackVersion) {
         ConfigMap versionConfigMap = getKubernetesClient().configMaps().inNamespace(getConfigMapNamespace())
                 .withName(getVersionsConfigMapName())
                 .fromServer().get();
@@ -61,8 +61,7 @@ public class ImageVersionPreparation {
         return EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(kubernetesClient.getNamespace());
     }
 
-    private String ensureImageInfoPresent(ConfigMap versionConfigMap, String imageName, String fallbackVersion)
-            throws JsonProcessingException {
+    private String ensureImageInfoPresent(ConfigMap versionConfigMap, String imageName, String fallbackVersion) {
         String imageInfo = versionConfigMap.getData().get(imageName);
         if (imageInfo == null) {
             getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
@@ -77,19 +76,23 @@ public class ImageVersionPreparation {
     }
 
     @SuppressWarnings("unchecked")
-    private String ensureVersionAttributePresent(ConfigMap versionConfigMap, String imageInfo, String imageName, String fallbackVersion)
-            throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> map = mapper.readValue(imageInfo, Map.class);
-        String version = (String) map.get("version");
-        if (version == null) {
-            map.put("version", fallbackVersion);
-            getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
-                    .withName(versionConfigMap.getMetadata().getName()).edit()
-                    .addToData(imageName, mapper.writeValueAsString(map)).done();
-            return fallbackVersion;
-        } else {
-            return version;
+    private String ensureVersionAttributePresent(ConfigMap versionConfigMap, String imageInfo, String imageName, String fallbackVersion) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> map = mapper.readValue(imageInfo, Map.class);
+            String version = (String) map.get("version");
+            if (version == null) {
+                map.put("version", fallbackVersion);
+                getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
+                        .withName(versionConfigMap.getMetadata().getName()).edit()
+                        .addToData(imageName, mapper.writeValueAsString(map)).done();
+                return fallbackVersion;
+            } else {
+                return version;
+            }
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
         }
+
     }
 }

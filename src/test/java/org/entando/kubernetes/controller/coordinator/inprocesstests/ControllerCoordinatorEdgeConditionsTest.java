@@ -16,7 +16,6 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
-import static org.entando.kubernetes.controller.coordinator.AbstractControllerCoordinatorTest.NAMESPACE;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.fabric8.kubernetes.api.model.Pod;
@@ -37,6 +36,7 @@ import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
+import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.model.DbmsVendor;
@@ -56,6 +56,7 @@ import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 //because Awaitility knows which invocation throws the exception
 @SuppressWarnings("java:S5778")
 class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting {
+    public static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("coordinator-test");
 
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
