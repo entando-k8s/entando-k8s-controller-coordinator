@@ -373,7 +373,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         return domainSuffix;
     }
 
-    protected String ensurePluginControllerVersion() throws JsonProcessingException {
+    protected String ensurePluginControllerVersion()  {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
         return imageVersionPreparation.ensureImageVersion("entando-k8s-plugin-controller", "6.0.2");
     }
