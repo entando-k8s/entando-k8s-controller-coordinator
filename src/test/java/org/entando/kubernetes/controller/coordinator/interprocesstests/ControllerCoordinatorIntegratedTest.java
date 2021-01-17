@@ -171,12 +171,12 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //and the database containers have been created
         helper.keycloak().waitForServicePod(new ServicePodWaiter().limitReadinessTo(Duration.ofSeconds(150)), keycloakServer
                 .getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-db");
-        verifyKeycloakDatabaseDeployment(keycloakServer, complianceMode);
         //and the database preparation has completed
         helper.keycloak().waitForDbJobPod(new JobPodWaiter().limitCompletionTo(Duration.ofSeconds(60)), keycloakServer, "server");
         //and the Keycloak server container has been deployed
         helper.keycloak().waitForServicePod((new ServicePodWaiter()).limitReadinessTo(Duration.ofSeconds(300)),
                 keycloakServer.getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-server");
+        verifyKeycloakDatabaseDeployment(keycloakServer, complianceMode);
         StandardKeycloakImage standardServerImage;
         if (complianceMode == EntandoOperatorComplianceMode.COMMUNITY) {
             standardServerImage = StandardKeycloakImage.KEYCLOAK;
