@@ -6,7 +6,7 @@ cleanup:
     helm.sh/hook-delete-policy: hook-succeeded
 redhatRegistryCredentials:
 preview:
-  pullSecrets:
+  imagePullSecrets:
     - redhat-registry
   image:
     repository:
