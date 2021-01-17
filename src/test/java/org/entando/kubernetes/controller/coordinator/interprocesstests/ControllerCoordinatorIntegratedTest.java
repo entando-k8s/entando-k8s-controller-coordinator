@@ -324,10 +324,10 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     }
 
     protected void verifyKeycloakDeployment(EntandoKeycloakServer entandoKeycloakServer, StandardKeycloakImage standardKeycloakImage) {
-        K8SIntegrationTestHelper helper = new K8SIntegrationTestHelper();
         String http = HttpTestHelper.getDefaultProtocol();
         await().atMost(15, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).ignoreExceptions().until(() -> HttpTestHelper
-                .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "." + helper.getDomainSuffix()
+                .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "-" + entandoKeycloakServer.getMetadata()
+                        .getNamespace() + "." + helper.getDomainSuffix()
                         + "/auth"));
         Deployment deployment = client.apps().deployments().inNamespace(entandoKeycloakServer.getMetadata().getNamespace())
                 .withName(entandoKeycloakServer.getMetadata().getName() + "-server-deployment").get();
@@ -372,7 +372,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         return domainSuffix;
     }
 
-    protected String ensurePluginControllerVersion()  {
+    protected String ensurePluginControllerVersion() {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getClient());
         return imageVersionPreparation.ensureImageVersion("entando-k8s-plugin-controller", "6.0.2");
     }
