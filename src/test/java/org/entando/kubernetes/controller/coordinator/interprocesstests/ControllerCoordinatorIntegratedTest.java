@@ -61,7 +61,6 @@ import org.entando.kubernetes.controller.integrationtest.support.EntandoOperator
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.integrationtest.support.HttpTestHelper;
 import org.entando.kubernetes.controller.integrationtest.support.K8SIntegrationTestHelper;
-import org.entando.kubernetes.controller.integrationtest.support.KeycloakIntegrationTestHelper;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixtureRequest;
 import org.entando.kubernetes.controller.test.support.FluentTraversals;
@@ -203,12 +202,12 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         assertThat(theContainerNamed("db-container").on(deployment).getImage(), containsString(dockerVendorStrategy.getRegistry()));
         assertThat(theContainerNamed("db-container").on(deployment).getImage(), containsString(dockerVendorStrategy.getImageRepository()));
         assertThat(theContainerNamed("db-container").on(deployment).getImage(), containsString(dockerVendorStrategy.getOrganization()));
-        Service service = client.services().inNamespace(KeycloakIntegrationTestHelper.KEYCLOAK_NAMESPACE).withName(
-                KeycloakIntegrationTestHelper.KEYCLOAK_NAME + "-db-service").get();
+        Service service = client.services().inNamespace(keycloakServer.getMetadata().getNamespace()).withName(
+                keycloakServer.getMetadata().getName() + "-db-service").get();
         assertThat(thePortNamed(DB_PORT).on(service).getPort(), equalTo(5432));
         assertThat(deployment.getStatus().getReadyReplicas(), greaterThanOrEqualTo(1));
         assertThat("It has a db status", helper.keycloak().getOperations()
-                .inNamespace(KeycloakIntegrationTestHelper.KEYCLOAK_NAMESPACE).withName(KeycloakIntegrationTestHelper.KEYCLOAK_NAME)
+                .inNamespace(keycloakServer.getMetadata().getNamespace()).withName(keycloakServer.getMetadata().getName())
                 .fromServer().get().getStatus().forDbQualifiedBy("db").isPresent());
     }
 
