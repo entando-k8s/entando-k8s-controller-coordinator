@@ -20,6 +20,11 @@ preview:
     ENTANDO_DISABLE_KEYCLOAK_SSL_REQUIREMENT: "false"
     ENTANDO_K8S_OPERATOR_SCOPE: namespace
     ENTANDO_K8S_OPERATOR_SECURITY_MODE: strict
+    RELATED_IMAGE_ENTANDO_K8S_DBJOB: entando/entando-k8s-dbjob@sha256:660d3af5b44fb3d443b36f58515b880210517fa4e3061925a41c46ea552d61d2
+    RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER: entando/entando-k8s-keycloak-controller@sha256:98070aec165a236ae63330f91aae3c67ac1395f68643b30afd6578eb120b6d73
+    RELATED_IMAGE_ENTANDO_REDHAT_SSO: entando/entando-redhat-sso@sha256:a67ca13039479dbc13cd68380e4e33fa316397df20e96375c9b77e6022bd442e
+    RELATED_IMAGE_RHEL8_POSTGRESQL_12: registry.redhat.io/rhel8/postgresql-12@sha256:c6b6da4f762c2f68bfe558efe954739438ffa2e9aae1c617b50011fb0eed8347
+
   tls:
     tlsSecretName: test-tls-secret
     caCertSecretName: test-ca-cert-secret
