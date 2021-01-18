@@ -35,13 +35,7 @@ import org.entando.kubernetes.controller.common.ControllerExecutor;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
-import org.entando.kubernetes.model.app.EntandoApp;
-import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
-import org.entando.kubernetes.model.infrastructure.EntandoClusterInfrastructure;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
-import org.entando.kubernetes.model.link.EntandoAppPluginLink;
-import org.entando.kubernetes.model.plugin.EntandoPlugin;
 
 public class EntandoControllerCoordinator {
 
@@ -61,12 +55,12 @@ public class EntandoControllerCoordinator {
         //TODO extract TLS and CA certs and write them to the standard secret names
 
         addObservers(EntandoKeycloakServer.class, this::startImage);
-//        addObservers(EntandoClusterInfrastructure.class, this::startImage);
-//        addObservers(EntandoApp.class, this::startImage);
-//        addObservers(EntandoPlugin.class, this::startImage);
-//        addObservers(EntandoAppPluginLink.class, this::startImage);
-//        addObservers(EntandoCompositeApp.class, this::startImage);
-//        addObservers(EntandoDatabaseService.class, this::startImage);
+        //        addObservers(EntandoClusterInfrastructure.class, this::startImage);
+        //        addObservers(EntandoApp.class, this::startImage);
+        //        addObservers(EntandoPlugin.class, this::startImage);
+        //        addObservers(EntandoAppPluginLink.class, this::startImage);
+        //        addObservers(EntandoCompositeApp.class, this::startImage);
+        //        addObservers(EntandoDatabaseService.class, this::startImage);
         KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());
     }
 
