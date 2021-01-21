@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>6.3.6</version>
+        <version>6.3.8</version>
         <relativePath/>
     </parent>
     <version>6.3.0-SNAPSHOT</version>
@@ -63,8 +63,8 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando-k8s-operator-common.version>0.0.0-SNAPSHOT-PR-53-26</entando-k8s-operator-common.version>
-        <entando-k8s-custom-model.version>0.0.0-SNAPSHOT-PR-37-2</entando-k8s-custom-model.version>
+        <entando-k8s-operator-common.version>0.0.0-SNAPSHOT-PR-53-34</entando-k8s-operator-common.version>
+        <entando-k8s-custom-model.version>0.0.0-SNAPSHOT-PR-37-5</entando-k8s-custom-model.version>
         <preDeploymentTestGroups>in-process</preDeploymentTestGroups>
         <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
     </properties>
@@ -171,17 +171,19 @@
         </profile>
     </profiles>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.8.2</version></plugin>
-    
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0-M1</version></plugin>
-    </plugins>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.8.2</version>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M1</version>
+            </plugin>
+        </plugins>
     </build>
-  </project>
+</project>

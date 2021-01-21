@@ -10,7 +10,7 @@ LABEL name="Entando K8S Controller Coordinator" \
                    container to process the event in question."
 ENV JAVA_OPTIONS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
-COPY LICENSE /licences/entando-lgpl.txt
+COPY target/generated-resources/licenses /licenses
 COPY target/lib/* /deployments/lib/
 COPY target/*-runner.jar /deployments/app.jar
 ENTRYPOINT [ "/deployments/run-java.sh" ]

@@ -7,6 +7,8 @@ LABEL name="Entando K8S Controller Coordinator" \
       summary="This container is the entrypoint for the Entando Operator and launches delegate containers to process Entando custom resources." \
       description="This is container runs background threads that observe events occurring against Entando custom resources. \
                    When it detects an event against a known Entando custom resource, it spawns the appropriate run-to-completion \
-                   container to process the event in question."COPY target/*-runner /work/application
+                   container to process the event in question."
+COPY target/*-runner /work/application
+COPY target/generated-resources/licenses /licenses
 RUN chmod 775 /work/application
 CMD ["./application","-Djava.library.path=/work/lib"]

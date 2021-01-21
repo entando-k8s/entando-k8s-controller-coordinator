@@ -31,16 +31,17 @@ import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
-import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 
 public class EntandoResourceObserver<
         S extends Serializable,
         R extends EntandoBaseCustomResource<S>,
         L extends CustomResourceList<R>,
-        D extends DoneableEntandoCustomResource<D, R>> implements Watcher<R> {
+        D extends DoneableEntandoCustomResource<R, D>> implements Watcher<R> {
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
     private final Map<String, R> cache = new ConcurrentHashMap<>();
@@ -51,34 +52,39 @@ public class EntandoResourceObserver<
     public EntandoResourceObserver(CustomResourceOperationsImpl<R, L, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
         this.operations = operations;
-
         processExistingRequestedEntandoResources(operations);
         operations.watch(this);
     }
 
     private void processExistingRequestedEntandoResources(CustomResourceOperationsImpl<R, L, D> operations) {
         List<R> items = operations.list().getItems();
-        EntandoDeploymentPhaseWatcher<S, R, L, D> entandoDeploymentPhaseWatcher = new EntandoDeploymentPhaseWatcher<>(
-                operations);
-        for (R item : items) {
-            if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
-                eventReceived(Action.ADDED, item);
-                entandoDeploymentPhaseWatcher.waitToBeProcessed(item);
-            }
-            cache.put(item.getMetadata().getUid(), item);
+        for (R resource : items) {
+            eventReceived(Action.MODIFIED, resource);
+            cache.put(resource.getMetadata().getUid(), resource);
         }
     }
 
     @Override
     public void eventReceived(Action action, R resource) {
         try {
-            if (isNewEvent(resource) && isNotOwnedByCompositeApp(resource) && EntandoOperatorMatcher.matchesThisOperator(resource)) {
+            if (performCriteriaProcessing(resource)) {
                 performCallback(action, resource);
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, e, () -> format("Could not process the %s %s/%s", resource.getKind(),
-                    resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
+            logFailure(resource, e);
         }
+    }
+
+    private void logFailure(R resource, Exception e) {
+        LOGGER.log(Level.SEVERE, e, () -> format("Could not process the %s %s/%s", resource.getKind(),
+                resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
+    }
+
+    private boolean performCriteriaProcessing(R resource) {
+        return hasNewResourceVersion(resource)
+                && isNotOwnedByCompositeApp(resource)
+                && EntandoOperatorMatcher.matchesThisOperator(resource)
+                && processGenerationIncrement(resource);
     }
 
     private boolean isNotOwnedByCompositeApp(R resource) {
@@ -97,36 +103,56 @@ public class EntandoResourceObserver<
     }
 
     protected void performCallback(Action action, R resource) {
-        logAction(Level.INFO, "Received %s for resource %s %s/%s", action, resource);
+        logResource(Level.INFO, "Received " + action.name() + " for the %s %s/%s", resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
             cache.put(resource.getMetadata().getUid(), resource);
-            if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {
-                executor.execute(() -> callback.accept(action, resource));
-            }
+            executor.execute(() -> callback.accept(action, resource));
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
         } else {
-            logAction(Level.WARNING, "EntandoResourceObserver could not process the %s action on the %s %s/%s", action, resource);
+            logResource(Level.WARNING, "EntandoResourceObserver could not process the action " + action.name() + " on the %s %s/%s",
+                    resource);
         }
     }
 
-    private void logAction(Level info, String format, Action action, R resource) {
+    private void logResource(Level info, String format, R resource) {
         LOGGER.log(info,
-                () -> format(format, action.name(), resource.getKind(), resource.getMetadata().getNamespace(),
+                () -> format(format, resource.getKind(), resource.getMetadata().getNamespace(),
                         resource.getMetadata().getName()));
     }
 
-    protected boolean isNewEvent(R newResource) {
-        boolean isNewEvent = true;
+    private boolean processGenerationIncrement(R newResource) {
+        OperatorProcessingInstruction instruction = KubeUtils.resolveProcessingInstruction(newResource);
+        if (instruction == OperatorProcessingInstruction.FORCE) {
+            //Remove to avoid recursive updates
+            operations.inNamespace(newResource.getMetadata().getNamespace())
+                    .withName(newResource.getMetadata().getName())
+                    .edit()
+                    .editMetadata()
+                    .removeFromAnnotations(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME)
+                    .endMetadata()
+                    .done();
+            return true;
+        } else if (instruction == OperatorProcessingInstruction.DEFER || instruction == OperatorProcessingInstruction.IGNORE) {
+            return false;
+        } else {
+            return newResource.getStatus().getObservedGeneration() == null
+                    || newResource.getMetadata().getGeneration() == null
+                    || newResource.getStatus().getObservedGeneration() < newResource.getMetadata().getGeneration();
+        }
+    }
+
+    private boolean hasNewResourceVersion(R newResource) {
         if (cache.containsKey(newResource.getMetadata().getUid())) {
             R oldResource = cache.get(newResource.getMetadata().getUid());
             int knownResourceVersion = Integer.parseInt(oldResource.getMetadata().getResourceVersion());
-            int receivedResourceVersion = Integer.parseInt(newResource.getMetadata().getResourceVersion());
-            if (knownResourceVersion > receivedResourceVersion) {
-                isNewEvent = false;
+            int receivedVersion = Integer.parseInt(newResource.getMetadata().getResourceVersion());
+            if (knownResourceVersion > receivedVersion) {
+                logResource(Level.WARNING, "Duplicate event for %s %s/%s. ResourceVersion=" + receivedVersion, newResource);
+                return false;
             }
         }
-        return isNewEvent;
+        return true;
     }
 
 }

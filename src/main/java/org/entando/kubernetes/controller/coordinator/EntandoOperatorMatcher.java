@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.logging.Logger;
 import org.entando.kubernetes.controller.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
+import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 
 public class EntandoOperatorMatcher {
@@ -50,8 +51,8 @@ public class EntandoOperatorMatcher {
 
     private static boolean shouldEnforceOperatorId(EntandoBaseCustomResource<?> r) {
         //Enforce operatorId checking if either the resource has the annotation or this operator has been configured with an operatorId
-        return isPropertyActive(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID) || Optional
-                .ofNullable(r.getMetadata().getAnnotations()).map(anns -> anns.containsKey(OPERATOR_ID_ANNOTATION)).orElse(false);
+        return isPropertyActive(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID)
+                || KubeUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION).isPresent();
     }
 
     private static boolean isPropertyActive(EntandoOperatorConfigProperty property) {
@@ -63,10 +64,12 @@ public class EntandoOperatorMatcher {
     }
 
     private static boolean hasMyAnnotation(EntandoBaseCustomResource<?> r) {
-        String resourceOperatorId = Optional.ofNullable(r.getMetadata().getAnnotations()).map(anns -> anns.get(OPERATOR_ID_ANNOTATION))
-                .orElse(null);
-        String myOperatorId = EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID).orElse(null);
-        return resourceOperatorId != null && resourceOperatorId.equals(myOperatorId);
+        return KubeUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION)
+                .map(s ->
+                        EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID)
+                                .map(s::equals)
+                                .orElse(false))
+                .orElse(false);
     }
 
     private static boolean isInMyVersionRange(EntandoBaseCustomResource<?> r) {

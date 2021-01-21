@@ -35,11 +35,12 @@ import org.entando.kubernetes.controller.common.ControllerExecutor;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
+import org.entando.kubernetes.model.infrastructure.EntandoClusterInfrastructure;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 
 public class EntandoControllerCoordinator {
 
-    public static final String ALL_NAMESPACES = "*";
     private final KubernetesClient client;
     private final Map<Class<? extends EntandoBaseCustomResource<?>>, List<?>> observers =
             new ConcurrentHashMap<>();
@@ -55,11 +56,11 @@ public class EntandoControllerCoordinator {
         //TODO extract TLS and CA certs and write them to the standard secret names
 
         addObservers(EntandoKeycloakServer.class, this::startImage);
-        //        addObservers(EntandoClusterInfrastructure.class, this::startImage);
+        addObservers(EntandoClusterInfrastructure.class, this::startImage);
         //        addObservers(EntandoApp.class, this::startImage);
         //        addObservers(EntandoPlugin.class, this::startImage);
         //        addObservers(EntandoAppPluginLink.class, this::startImage);
-        //        addObservers(EntandoCompositeApp.class, this::startImage);
+        addObservers(EntandoCompositeApp.class, this::startImage);
         //        addObservers(EntandoDatabaseService.class, this::startImage);
         KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());
     }
@@ -68,7 +69,7 @@ public class EntandoControllerCoordinator {
     public <S extends Serializable,
             R extends EntandoBaseCustomResource<S>,
             L extends CustomResourceList<R>,
-            D extends DoneableEntandoCustomResource<D, R>> List<EntandoResourceObserver<S, R, L, D>> getObserver(Class<R> clss) {
+            D extends DoneableEntandoCustomResource<R, D>> List<EntandoResourceObserver<S, R, L, D>> getObserver(Class<R> clss) {
         return (List<EntandoResourceObserver<S, R, L, D>>) observers.get(clss);
     }
 
@@ -76,20 +77,19 @@ public class EntandoControllerCoordinator {
     private <S extends Serializable,
             R extends EntandoBaseCustomResource<S>,
             L extends CustomResourceList<R>,
-            D extends DoneableEntandoCustomResource<D, R>> void addObservers(Class<R> type, BiConsumer<Action, R> consumer) {
+            D extends DoneableEntandoCustomResource<R, D>> void addObservers(Class<R> type, BiConsumer<Action, R> consumer) {
         CustomResourceOperationsImpl<R, L, D> operations = (CustomResourceOperationsImpl<R, L, D>) this.entandoResourceOperationsRegistry
                 .getOperations(type);
-        List<String> namespaces = new ArrayList<>(EntandoOperatorConfig.getNamespacesToObserve());
-        EntandoOperatorConfig.getOperatorNamespaceToObserve().ifPresent(namespaces::add);
-        if (namespaces.isEmpty()) {
-            namespaces.add(client.getNamespace());
-        }
         List<EntandoResourceObserver<S, R, L, D>> observersForType = new ArrayList<>();
-        if (namespaces.stream().anyMatch(s -> s.equals(ALL_NAMESPACES))) {
+        if (EntandoOperatorConfig.isClusterScopedDeployment()) {
             //This code is essentially impossible to test in a shared cluster
             observersForType.add(new EntandoResourceObserver<>(
                     (CustomResourceOperationsImpl<R, L, D>) operations.inAnyNamespace(), consumer));
         } else {
+            List<String> namespaces = EntandoOperatorConfig.getNamespacesToObserve();
+            if (namespaces.isEmpty()) {
+                namespaces.add(client.getNamespace());
+            }
             for (String namespace : namespaces) {
                 CustomResourceOperationsImpl<R, L, D> namespacedOperations = (CustomResourceOperationsImpl<R, L, D>) operations
                         .inNamespace(namespace);

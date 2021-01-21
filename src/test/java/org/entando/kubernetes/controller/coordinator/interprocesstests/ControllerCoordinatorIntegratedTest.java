@@ -24,7 +24,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
@@ -84,7 +83,6 @@ import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
 import org.hamcrest.core.Is;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -141,7 +139,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         clearNamespace(client);
         //and the Coordinator observes this namespace
 
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
                 client.getNamespace());
         //And I have a config map with the Entando KeycloakController's image information
         final String versionToExpect = ensureKeycloakControllerVersion();
@@ -167,7 +165,11 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAMESPACE").on(thePrimaryContainerOn(theControllerPod)),
                 is(keycloakServer.getMetadata().getNamespace()));
         //With the correct version specified
-        assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
+        if (EntandoOperatorConfigBase.lookupProperty("RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER").isPresent()) {
+            assertThat(thePrimaryContainerOn(theControllerPod).getImage(), containsString("@sha:"));
+        } else {
+            assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
+        }
         //and the database containers have been created
         helper.keycloak().waitForServicePod(new ServicePodWaiter().limitReadinessTo(Duration.ofSeconds(150)), keycloakServer
                 .getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-db");
@@ -223,13 +225,12 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
      * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.
      */
     @Test
-    @Disabled("Until all these images have been migrated to OLM")
-    void testExecuteCompositeAppControllerPod() throws JsonProcessingException {
+    void testExecuteCompositeAppControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
         clearNamespace(client);
         //and the Coordinator observes this namespace
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
                 client.getNamespace());
         //And I have a config map with the Entando KeycloakController's image information
         final String keycloakControllerVersionToExpect = ensureKeycloakControllerVersion();
@@ -285,7 +286,11 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAMESPACE").on(thePrimaryContainerOn(theKeycloakControllerPod)),
                 is(app.getMetadata().getNamespace()));
         //With the correct version of the controller image specified
-        assertTrue(thePrimaryContainerOn(theKeycloakControllerPod).getImage().endsWith(keycloakControllerVersionToExpect));
+        if (EntandoOperatorConfigBase.lookupProperty("RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER").isPresent()) {
+            assertThat(thePrimaryContainerOn(theKeycloakControllerPod).getImage(), containsString("@sha:"));
+        } else {
+            assertTrue(thePrimaryContainerOn(theKeycloakControllerPod).getImage().endsWith(keycloakControllerVersionToExpect));
+        }
         //And its status reflecting on the EntandoCompositeApp
         Resource<EntandoCompositeApp, DoneableEntandoCompositeApp> appGettable =
                 EntandoCompositeAppOperationFactory
@@ -314,7 +319,11 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAMESPACE").on(thePrimaryContainerOn(thePluginControllerPod)),
                 is(app.getMetadata().getNamespace()));
         //With the correct version specified
-        assertTrue(thePrimaryContainerOn(thePluginControllerPod).getImage().endsWith(pluginControllerVersionToExpect));
+        if (EntandoOperatorConfigBase.lookupProperty("RELATED_IMAGE_ENTANDO_K8S_PLUGIN_CONTROLLER").isPresent()) {
+            assertThat(thePrimaryContainerOn(thePluginControllerPod).getImage(), containsString("@sha:"));
+        } else {
+            assertTrue(thePrimaryContainerOn(thePluginControllerPod).getImage().endsWith(pluginControllerVersionToExpect));
+        }
         //And its status reflecting on the EntandoCompositeApp
         await().ignoreExceptions().atMost(240, TimeUnit.SECONDS).until(
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(PLUGIN_NAME).get().getPodStatus() != null

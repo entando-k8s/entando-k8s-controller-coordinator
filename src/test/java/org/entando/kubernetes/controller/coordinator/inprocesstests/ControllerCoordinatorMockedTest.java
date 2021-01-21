@@ -104,7 +104,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         KubernetesClient client = getClient();
         clearNamespace(client);
         //and the Coordinator observes this namespace
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
                 client.getNamespace());
         //And I have a config map with the Entando KeycloakController's image information
         final String versionToExpect = ensureKeycloakControllerVersion();
