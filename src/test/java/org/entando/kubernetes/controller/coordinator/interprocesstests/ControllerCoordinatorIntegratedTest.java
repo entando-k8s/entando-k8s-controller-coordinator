@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.entando.kubernetes.client.DefaultIngressClient;
 import org.entando.kubernetes.controller.EntandoOperatorComplianceMode;
+import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
@@ -86,8 +87,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 @Tags({@Tag("end-to-end"), @Tag("inter-process"), @Tag("smoke-test"), @Tag("post-deployment")})
 class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, FluentTraversals,
@@ -128,12 +127,8 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         }
     }
 
-    @ParameterizedTest
-    @EnumSource(value = EntandoOperatorComplianceMode.class, names = {"REDHAT"})
-    void testExecuteKeycloakControllerPod(EntandoOperatorComplianceMode complianceMode) {
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE.getJvmSystemProperty(),
-                complianceMode.name().toLowerCase());
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS.getJvmSystemProperty(), "redhat-registry");
+    @Test
+    void testExecuteKeycloakControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
         clearNamespace(client);
@@ -178,9 +173,9 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //and the Keycloak server container has been deployed
         helper.keycloak().waitForServicePod((new ServicePodWaiter()).limitReadinessTo(Duration.ofSeconds(300)),
                 keycloakServer.getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-server");
-        verifyKeycloakDatabaseDeployment(keycloakServer, complianceMode);
+        verifyKeycloakDatabaseDeployment(keycloakServer, EntandoOperatorConfig.getComplianceMode());
         StandardKeycloakImage standardServerImage;
-        if (complianceMode == EntandoOperatorComplianceMode.COMMUNITY) {
+        if (EntandoOperatorConfig.getComplianceMode() == EntandoOperatorComplianceMode.COMMUNITY) {
             standardServerImage = StandardKeycloakImage.KEYCLOAK;
         } else {
             standardServerImage = StandardKeycloakImage.REDHAT_SSO;
@@ -338,12 +333,19 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "-" + entandoKeycloakServer.getMetadata()
                         .getNamespace() + "." + helper.getDomainSuffix()
                         + "/auth"));
+        await().atMost(30, SECONDS).ignoreExceptions().until(() -> helper.keycloak().getOperations()
+                .inNamespace(entandoKeycloakServer.getMetadata().getNamespace())
+                .withName(entandoKeycloakServer.getMetadata().getName())
+                .fromServer()
+                .get()
+                .getStatus()
+                .getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL
+        );
         Deployment deployment = client.apps().deployments().inNamespace(entandoKeycloakServer.getMetadata().getNamespace())
                 .withName(entandoKeycloakServer.getMetadata().getName() + "-server-deployment").get();
         assertThat(thePortNamed("server-port")
-                        .on(theContainerNamed("server-container").on(deployment))
-                        .getContainerPort(),
-                Is.is(8080));
+                .on(theContainerNamed("server-container").on(deployment))
+                .getContainerPort(), is(8080));
         assertThat(theContainerNamed("server-container").on(deployment).getImage(),
                 containsString(standardKeycloakImage.name().toLowerCase().replace("_", "-")));
         Service service = client.services().inNamespace(entandoKeycloakServer.getMetadata().getNamespace()).withName(
@@ -392,9 +394,6 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     }
 
     protected String ensureKeycloakControllerVersion() {
-        return EntandoOperatorConfigBase.lookupProperty("RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER")
-                .map(s -> s.substring(s.indexOf("@")))
-                .orElseGet(
-                        () -> new ImageVersionPreparation(getClient()).ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1"));
+        return new ImageVersionPreparation(getClient()).ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1");
     }
 }
