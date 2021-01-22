@@ -38,6 +38,7 @@ import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.infrastructure.EntandoClusterInfrastructure;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
 
 public class EntandoControllerCoordinator {
 
@@ -58,7 +59,7 @@ public class EntandoControllerCoordinator {
         addObservers(EntandoKeycloakServer.class, this::startImage);
         addObservers(EntandoClusterInfrastructure.class, this::startImage);
         //        addObservers(EntandoApp.class, this::startImage);
-        //        addObservers(EntandoPlugin.class, this::startImage);
+        addObservers(EntandoPlugin.class, this::startImage);
         //        addObservers(EntandoAppPluginLink.class, this::startImage);
         addObservers(EntandoCompositeApp.class, this::startImage);
         //        addObservers(EntandoDatabaseService.class, this::startImage);
