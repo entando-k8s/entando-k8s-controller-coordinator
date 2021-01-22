@@ -166,7 +166,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 is(keycloakServer.getMetadata().getNamespace()));
         //With the correct version specified
         if (EntandoOperatorConfigBase.lookupProperty("RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER").isPresent()) {
-            assertThat(thePrimaryContainerOn(theControllerPod).getImage(), containsString("@sha:"));
+            assertThat(thePrimaryContainerOn(theControllerPod).getImage(), containsString("@sha256:"));
         } else {
             assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
         }
@@ -287,7 +287,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 is(app.getMetadata().getNamespace()));
         //With the correct version of the controller image specified
         if (EntandoOperatorConfigBase.lookupProperty("RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER").isPresent()) {
-            assertThat(thePrimaryContainerOn(theKeycloakControllerPod).getImage(), containsString("@sha:"));
+            assertThat(thePrimaryContainerOn(theKeycloakControllerPod).getImage(), containsString("@sha256:"));
         } else {
             assertTrue(thePrimaryContainerOn(theKeycloakControllerPod).getImage().endsWith(keycloakControllerVersionToExpect));
         }
@@ -320,7 +320,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 is(app.getMetadata().getNamespace()));
         //With the correct version specified
         if (EntandoOperatorConfigBase.lookupProperty("RELATED_IMAGE_ENTANDO_K8S_PLUGIN_CONTROLLER").isPresent()) {
-            assertThat(thePrimaryContainerOn(thePluginControllerPod).getImage(), containsString("@sha:"));
+            assertThat(thePrimaryContainerOn(thePluginControllerPod).getImage(), containsString("@sha256:"));
         } else {
             assertTrue(thePrimaryContainerOn(thePluginControllerPod).getImage().endsWith(pluginControllerVersionToExpect));
         }
