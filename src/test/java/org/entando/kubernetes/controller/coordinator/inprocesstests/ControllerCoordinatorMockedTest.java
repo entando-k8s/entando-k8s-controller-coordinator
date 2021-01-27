@@ -33,15 +33,15 @@ import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.entando.kubernetes.controller.EntandoOperatorConfigBase;
-import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixtureRequest;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsVendor;
@@ -99,7 +99,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     }
 
     @Test
-    public void testExecuteKeycloakControllerPod() {
+    void testExecuteKeycloakControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
         clearNamespace(client);

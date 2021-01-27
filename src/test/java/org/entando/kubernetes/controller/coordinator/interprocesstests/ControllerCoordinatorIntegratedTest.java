@@ -42,18 +42,8 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.entando.kubernetes.client.DefaultIngressClient;
-import org.entando.kubernetes.controller.EntandoOperatorComplianceMode;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.EntandoOperatorConfigBase;
-import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.KubeUtils;
-import org.entando.kubernetes.controller.PodResult;
-import org.entando.kubernetes.controller.PodResult.State;
-import org.entando.kubernetes.controller.common.KeycloakName;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
-import org.entando.kubernetes.controller.creators.IngressCreator;
-import org.entando.kubernetes.controller.database.DbmsDockerVendorStrategy;
 import org.entando.kubernetes.controller.integrationtest.podwaiters.JobPodWaiter;
 import org.entando.kubernetes.controller.integrationtest.podwaiters.ServicePodWaiter;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
@@ -63,6 +53,18 @@ import org.entando.kubernetes.controller.integrationtest.support.HttpTestHelper;
 import org.entando.kubernetes.controller.integrationtest.support.K8SIntegrationTestHelper;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixtureRequest;
+import org.entando.kubernetes.controller.spi.common.DbmsDockerVendorStrategy;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMode;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
+import org.entando.kubernetes.controller.spi.common.NameUtils;
+import org.entando.kubernetes.controller.spi.common.PodResult;
+import org.entando.kubernetes.controller.spi.common.PodResult.State;
+import org.entando.kubernetes.controller.spi.common.SecretUtils;
+import org.entando.kubernetes.controller.spi.container.KeycloakName;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.controller.support.creators.IngressCreator;
 import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsVendor;
@@ -173,9 +175,9 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //and the Keycloak server container has been deployed
         helper.keycloak().waitForServicePod((new ServicePodWaiter()).limitReadinessTo(Duration.ofSeconds(300)),
                 keycloakServer.getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-server");
-        verifyKeycloakDatabaseDeployment(keycloakServer, EntandoOperatorConfig.getComplianceMode());
+        verifyKeycloakDatabaseDeployment(keycloakServer, EntandoOperatorSpiConfig.getComplianceMode());
         StandardKeycloakImage standardServerImage;
-        if (EntandoOperatorConfig.getComplianceMode() == EntandoOperatorComplianceMode.COMMUNITY) {
+        if (EntandoOperatorSpiConfig.getComplianceMode() == EntandoOperatorComplianceMode.COMMUNITY) {
             standardServerImage = StandardKeycloakImage.KEYCLOAK;
         } else {
             standardServerImage = StandardKeycloakImage.REDHAT_SSO;
@@ -361,14 +363,14 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 .withName(KeycloakName.forTheAdminSecret(entandoKeycloakServer))
                 .get();
         assertNotNull(adminSecret);
-        assertTrue(adminSecret.getData().containsKey(KubeUtils.USERNAME_KEY));
-        assertTrue(adminSecret.getData().containsKey(KubeUtils.PASSSWORD_KEY));
+        assertTrue(adminSecret.getData().containsKey(SecretUtils.USERNAME_KEY));
+        assertTrue(adminSecret.getData().containsKey(SecretUtils.PASSSWORD_KEY));
         ConfigMap configMap = client.configMaps()
                 .inNamespace(client.getNamespace())
                 .withName(KeycloakName.forTheConnectionConfigMap(entandoKeycloakServer))
                 .get();
         assertNotNull(configMap);
-        assertTrue(configMap.getData().containsKey(KubeUtils.URL_KEY));
+        assertTrue(configMap.getData().containsKey(NameUtils.URL_KEY));
     }
 
     private String ensureCompositeAppControllerVersion() {

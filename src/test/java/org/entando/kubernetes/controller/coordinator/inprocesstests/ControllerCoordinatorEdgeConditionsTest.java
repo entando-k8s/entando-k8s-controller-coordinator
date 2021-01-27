@@ -37,18 +37,20 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.awaitility.core.ConditionTimeoutException;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.KubeUtils;
-import org.entando.kubernetes.controller.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
+import org.entando.kubernetes.controller.spi.common.ResourceUtils;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
+import org.entando.kubernetes.model.debundle.EntandoDeBundleOperationFactory;
 import org.entando.kubernetes.model.keycloakserver.DoneableEntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
@@ -195,7 +197,7 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
                 .withName(entandoKeycloakServer.getMetadata().getName())
                 .edit()
                 .editMetadata()
-                .addToOwnerReferences(KubeUtils.buildOwnerReference(compositeApp))
+                .addToOwnerReferences(ResourceUtils.buildOwnerReference(compositeApp))
                 .endMetadata()
                 .done();
         //when I start the Coordinator Controller
@@ -295,6 +297,40 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //no new pod gets created
         await().ignoreExceptions().atMost(8, TimeUnit.SECONDS).until(() ->
                 getClient().pods().inNamespace(entandoKeycloakServer.getMetadata().getNamespace()).list().getItems().size() > 0);
+    }
+
+    @Test
+    void testEntandoDeBundle() {
+        //Given I have a clean namespace
+        TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
+        //and the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
+                getClient().getNamespace());
+        //And I have a config map with the Entando KeycloakController's image information
+        ensureImageVersionsConfigMap(getClient());
+
+        //And I have created an EntandoDeBundle resource
+        EntandoDeBundleOperationFactory.produceAllEntandoDeBundles(getClient())
+                .inNamespace(NAMESPACE)
+                .createNew()
+                .withNewMetadata()
+                .withNamespace(NAMESPACE)
+                .withResourceVersion("123")
+                .withGeneration(1L)
+                .withUid(UUID.randomUUID().toString())
+                .withName("my-de-bundle")
+                .endMetadata()
+                .done();
+
+        //when I start the Coordinator Controller
+        prepareCoordinator();
+        //no new pod gets created
+        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() ->
+                EntandoDeBundleOperationFactory.produceAllEntandoDeBundles(getClient())
+                        .inNamespace(NAMESPACE)
+                        .withName("my-de-bundle")
+                        .fromServer()
+                        .get().getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL);
     }
 
     private CustomResourceOperationsImpl<EntandoKeycloakServer, EntandoKeycloakServerList, DoneableEntandoKeycloakServer> keycloaks() {

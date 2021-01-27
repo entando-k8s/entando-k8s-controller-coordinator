@@ -29,16 +29,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.KubeUtils;
-import org.entando.kubernetes.controller.common.ControllerExecutor;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
+import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
+import org.entando.kubernetes.model.debundle.EntandoDeBundle;
+import org.entando.kubernetes.model.debundle.EntandoDeBundleOperationFactory;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.infrastructure.EntandoClusterInfrastructure;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
+import org.entando.kubernetes.model.link.EntandoAppPluginLink;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 
 public class EntandoControllerCoordinator {
@@ -62,9 +67,19 @@ public class EntandoControllerCoordinator {
         addObservers(EntandoPlugin.class, this::startImage);
         addObservers(EntandoCompositeApp.class, this::startImage);
         addObservers(EntandoDatabaseService.class, this::startImage);
-        //        addObservers(EntandoApp.class, this::startImage);
-        //        addObservers(EntandoAppPluginLink.class, this::startImage);
+        addObservers(EntandoApp.class, this::startImage);
+        addObservers(EntandoAppPluginLink.class, this::startImage);
+        addObservers(EntandoDeBundle.class, (action, entandoDeBundle) -> updateEntandoDeBundleStatus(entandoDeBundle));
         KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());
+    }
+
+    private void updateEntandoDeBundleStatus(EntandoDeBundle entandoDeBundle) {
+        entandoDeBundle.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, entandoDeBundle.getMetadata().getGeneration());
+        EntandoDeBundleOperationFactory.produceAllEntandoDeBundles(client)
+                .inNamespace(entandoDeBundle.getMetadata().getNamespace())
+                .withName(entandoDeBundle.getMetadata().getName())
+                .updateStatus(entandoDeBundle);
+
     }
 
     @SuppressWarnings("unchecked")

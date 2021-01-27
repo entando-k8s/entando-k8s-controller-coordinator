@@ -19,9 +19,9 @@ package org.entando.kubernetes.controller.coordinator;
 import com.github.zafarkhaja.semver.Version;
 import java.util.Optional;
 import java.util.logging.Logger;
-import org.entando.kubernetes.controller.EntandoOperatorConfigBase;
-import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 
 public class EntandoOperatorMatcher {
