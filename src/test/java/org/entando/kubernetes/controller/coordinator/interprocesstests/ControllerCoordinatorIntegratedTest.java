@@ -84,8 +84,10 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
 import org.hamcrest.core.Is;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -221,7 +223,8 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     /**
      * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.
      */
-    @Test
+    @Ignore
+    @Disabled
     void testExecuteCompositeAppControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
