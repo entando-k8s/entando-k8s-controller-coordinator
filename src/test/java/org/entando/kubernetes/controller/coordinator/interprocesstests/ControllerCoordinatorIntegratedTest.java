@@ -223,8 +223,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     /**
      * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.
      */
-    @Ignore
-    @Disabled
+    @Test
     void testExecuteCompositeAppControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
