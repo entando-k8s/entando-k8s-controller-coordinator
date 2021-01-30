@@ -36,11 +36,11 @@ pipelineConfig:
     - name: RELATED_IMAGE_ENTANDO_K8S_CLUSTER_INFRASTRUCTURE_CONTROLLER
       value: entando/entando-k8s-cluster-infrastructure-controller@sha256:be0089b3c7c164081ad60a3decccbaf5b73a5eb01ab9ff052819909cc6279730
     - name: RELATED_IMAGE_ENTANDO_K8S_COMPOSITE_APP_CONTROLLER
-      value: entando/entando-k8s-composite-app-controller@sha256:c7edecb9601e3391f14bd1dec6db4d94364fe5cddc21551d19c6ea6bedef7a4b
+      value: entando/entando-k8s-composite-app-controller@sha256:07d3329f4c049960fcdb0169a32e4075869365028b37d0e0663a9126cf9ce956
     - name: RELATED_IMAGE_ENTANDO_K8S_DATABASE_SERVICE_CONTROLLER
       value: entando/entando-k8s-database-service-controller@sha256:ea7bdc126b6726ee61023cd37d8530c3b8cc44721925ff794508b808f5a52f39
     - name: RELATED_IMAGE_ENTANDO_K8S_APP_CONTROLLER
-      value: entando/entando-k8s-app-controller@sha256:1b7b74bcdde6502c8f47df50d0983e799c56e0ed3ed3b10e5c0e64be38f63b3b
+      value: entando/entando-k8s-app-controller@sha256:0657a98a39dca0ede0c3c214f1145b3f0823a82d4f2604595483aab6e11e867c
     - name: RELATED_IMAGE_ENTANDO_K8S_APP_PLUGIN_LINK_CONTROLLER
       value: entando/entando-k8s-app-plugin-link-controller@sha256:e7614d9d7b84620531ff21f34fdc77751b450023b801035ccd91c19911071f5b
     - name: ENTANDO_TEST_REDHAT_REGISTRY_CREDENTIALS

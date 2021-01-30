@@ -49,8 +49,7 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 public class EntandoControllerCoordinator {
 
     private final KubernetesClient client;
-    private final Map<Class<? extends EntandoBaseCustomResource<?>>, List<?>> observers =
-            new ConcurrentHashMap<>();
+    private final Map<Class<? extends EntandoBaseCustomResource<?>>, List<?>> observers = new ConcurrentHashMap<>();
     private final EntandoResourceOperationsRegistry entandoResourceOperationsRegistry;
 
     @Inject
