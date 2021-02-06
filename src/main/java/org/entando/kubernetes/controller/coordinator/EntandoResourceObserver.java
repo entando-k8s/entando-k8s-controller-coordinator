@@ -52,12 +52,12 @@ public class EntandoResourceObserver<
     public EntandoResourceObserver(CustomResourceOperationsImpl<R, L, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
         this.operations = operations;
-        processExistingRequestedEntandoResources(operations);
-        operations.watch(this);
+        processExistingRequestedEntandoResources();
+        this.operations.watch(this);
     }
 
-    private void processExistingRequestedEntandoResources(CustomResourceOperationsImpl<R, L, D> operations) {
-        List<R> items = operations.list().getItems();
+    private void processExistingRequestedEntandoResources() {
+        List<R> items = this.operations.list().getItems();
         for (R resource : items) {
             eventReceived(Action.MODIFIED, resource);
             cache.put(resource.getMetadata().getUid(), resource);
