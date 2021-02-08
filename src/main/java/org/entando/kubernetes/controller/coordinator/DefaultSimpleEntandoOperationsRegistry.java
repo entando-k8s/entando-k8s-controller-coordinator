@@ -21,11 +21,11 @@ import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoCustomResource;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
 
-public class DefaultSimpleEntandoOperationsFactory implements SimpleEntandoOperationsRegistry {
+public class DefaultSimpleEntandoOperationsRegistry implements SimpleEntandoOperationsRegistry {
 
     private final EntandoResourceOperationsRegistry registry;
 
-    public DefaultSimpleEntandoOperationsFactory(KubernetesClient client) {
+    public DefaultSimpleEntandoOperationsRegistry(KubernetesClient client) {
         this.registry = new EntandoResourceOperationsRegistry(client);
     }
 

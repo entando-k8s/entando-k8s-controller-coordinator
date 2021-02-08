@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
+@Tags({@Tag("in-process"), @Tag("unit"), @Tag("pre-deployment")})
 class EntandoOperatorMatcherTest {
 
     @BeforeEach

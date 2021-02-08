@@ -16,7 +16,6 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.quarkus.runtime.StartupEvent;
@@ -54,7 +53,7 @@ public class EntandoControllerCoordinator {
 
     @Inject
     public EntandoControllerCoordinator(KubernetesClient client) {
-        this(new DefaultSimpleK8SClient(client), new DefaultSimpleEntandoOperationsFactory(client));
+        this(new DefaultSimpleK8SClient(client), new DefaultSimpleEntandoOperationsRegistry(client));
     }
 
     public EntandoControllerCoordinator(SimpleK8SClient<?> client, SimpleEntandoOperationsRegistry registry) {
@@ -82,7 +81,6 @@ public class EntandoControllerCoordinator {
 
     @SuppressWarnings("unchecked")
     public <R extends EntandoCustomResource,
-            L extends CustomResourceList<R>,
             D extends DoneableEntandoCustomResource<R, D>> List<EntandoResourceObserver<R, D>> getObserver(Class<R> clss) {
         return (List<EntandoResourceObserver<R, D>>) observers.get(clss);
     }
