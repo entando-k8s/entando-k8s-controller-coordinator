@@ -35,7 +35,6 @@ import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinato
 import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher;
 import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher.EntandoOperatorMatcherProperty;
 import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.EntandoResourceClientDouble;
-import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
@@ -61,7 +60,7 @@ import org.junit.jupiter.api.Test;
 class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting, CommonLabels {
 
     public static final String CONTROLLER_NAMESPACE = EntandoResourceClientDouble.CONTROLLER_NAMESPACE;
-    public static final String OBSERVED_NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("observed-namespace");
+    public static final String OBSERVED_NAMESPACE = "observed-namespace";
     private final CoordinatorK8SClientDouble clientDouble = new CoordinatorK8SClientDouble();
     private final EntandoControllerCoordinator coordinator = new EntandoControllerCoordinator(clientDouble,
             clientDouble.getOperationsRegistry());
