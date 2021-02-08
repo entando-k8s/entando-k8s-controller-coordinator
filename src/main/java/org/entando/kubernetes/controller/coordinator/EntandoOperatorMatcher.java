@@ -19,21 +19,39 @@ package org.entando.kubernetes.controller.coordinator;
 import com.github.zafarkhaja.semver.Version;
 import java.util.Optional;
 import java.util.logging.Logger;
+import org.entando.kubernetes.controller.spi.common.ConfigProperty;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
-import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoCustomResource;
 
 public class EntandoOperatorMatcher {
 
     public static final String OPERATOR_ID_ANNOTATION = "entando.org/operator-id";
+    public static final String ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION = "entando.org/processed-by-version";
     private static final Logger LOGGER = Logger.getLogger(EntandoOperatorMatcher.class.getName());
+
+    public enum EntandoOperatorMatcherProperty implements ConfigProperty {
+        ENTANDO_K8S_OPERATOR_VERSION("entando.k8s.operator.version"),
+        ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE("entando.k8s.operator.version.to.replace");
+
+        private final String jvmSystemProperty;
+
+        EntandoOperatorMatcherProperty(String s) {
+            this.jvmSystemProperty = s;
+        }
+
+        @Override
+        public String getJvmSystemProperty() {
+            return jvmSystemProperty;
+        }
+    }
 
     private EntandoOperatorMatcher() {
 
     }
 
-    public static boolean matchesThisOperator(EntandoBaseCustomResource<?> r) {
+    public static boolean matchesThisOperator(EntandoCustomResource r) {
         if (shouldEnforceOperatorId(r) && !hasMyAnnotation(r)) {
             LOGGER.warning(() -> String
                     .format("Operator ID mismatch. Ignoring resource %s:%s/%s", r.getKind(), r.getMetadata().getNamespace(),
@@ -49,7 +67,7 @@ public class EntandoOperatorMatcher {
         return true;
     }
 
-    private static boolean shouldEnforceOperatorId(EntandoBaseCustomResource<?> r) {
+    private static boolean shouldEnforceOperatorId(EntandoCustomResource r) {
         //Enforce operatorId checking if either the resource has the annotation or this operator has been configured with an operatorId
         return isPropertyActive(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID)
                 || KubeUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION).isPresent();
@@ -63,7 +81,7 @@ public class EntandoOperatorMatcher {
         return isPropertyActive(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE);
     }
 
-    private static boolean hasMyAnnotation(EntandoBaseCustomResource<?> r) {
+    private static boolean hasMyAnnotation(EntandoCustomResource r) {
         return KubeUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION)
                 .map(s ->
                         EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID)
@@ -72,14 +90,14 @@ public class EntandoOperatorMatcher {
                 .orElse(false);
     }
 
-    private static boolean isInMyVersionRange(EntandoBaseCustomResource<?> r) {
+    private static boolean isInMyVersionRange(EntandoCustomResource r) {
         Version crdVersion = Version.valueOf(
                 Optional.ofNullable(r.getApiVersion()).map(s -> fillSemVer(r)).orElse("1.0.0"));
         return EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE)
                 .map(crdVersion::satisfies).orElse(true);
     }
 
-    private static String fillSemVer(EntandoBaseCustomResource<?> r) {
+    private static String fillSemVer(EntandoCustomResource r) {
         String version = r.getApiVersion().substring("entando.org/v".length());
         long count = version.chars().filter(i -> i == '.').count();
         if (count == 0) {

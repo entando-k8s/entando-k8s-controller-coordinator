@@ -18,46 +18,50 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
-import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
-import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher.EntandoOperatorMatcherProperty;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoCustomResource;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 
-public class EntandoResourceObserver<
-        S extends Serializable,
-        R extends EntandoBaseCustomResource<S>,
-        L extends CustomResourceList<R>,
-        D extends DoneableEntandoCustomResource<R, D>> implements Watcher<R> {
+public class EntandoResourceObserver<R extends EntandoCustomResource, D extends DoneableEntandoCustomResource<R, D>> implements Watcher<R> {
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
     private final Map<String, R> cache = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
-    private final CustomResourceOperationsImpl<R, L, D> operations;
-    private final Executor executor = Executors.newSingleThreadExecutor();
+    private final SimpleEntandoOperations<R, D> operations;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    public EntandoResourceObserver(CustomResourceOperationsImpl<R, L, D> operations, BiConsumer<Action, R> callback) {
+    public EntandoResourceObserver(SimpleEntandoOperations<R, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
         this.operations = operations;
         processExistingRequestedEntandoResources();
         this.operations.watch(this);
     }
 
+    private boolean requiresUpgrade(EntandoCustomResource resource) {
+        return EntandoOperatorConfigBase.lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
+                .flatMap(versionToReplace ->
+                        KubeUtils.resolveAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION)
+                                .map(versionToReplace::equals))
+                .orElse(false);
+    }
+
     private void processExistingRequestedEntandoResources() {
-        List<R> items = this.operations.list().getItems();
+        List<R> items = this.operations.list();
         for (R resource : items) {
             eventReceived(Action.MODIFIED, resource);
             cache.put(resource.getMetadata().getUid(), resource);
@@ -81,10 +85,11 @@ public class EntandoResourceObserver<
     }
 
     private boolean performCriteriaProcessing(R resource) {
-        return hasNewResourceVersion(resource)
+        return requiresUpgrade(resource)
+                || (hasNewResourceVersion(resource)
                 && isNotOwnedByCompositeApp(resource)
                 && EntandoOperatorMatcher.matchesThisOperator(resource)
-                && processGenerationIncrement(resource);
+                && processGenerationIncrement(resource));
     }
 
     private boolean isNotOwnedByCompositeApp(R resource) {
@@ -106,6 +111,11 @@ public class EntandoResourceObserver<
         logResource(Level.INFO, "Received " + action.name() + " for the %s %s/%s", resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
             cache.put(resource.getMetadata().getUid(), resource);
+            EntandoOperatorConfigBase
+                    .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION)
+                    .ifPresent(
+                            s -> operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s)
+                    );
             executor.execute(() -> callback.accept(action, resource));
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
@@ -125,13 +135,8 @@ public class EntandoResourceObserver<
         OperatorProcessingInstruction instruction = KubeUtils.resolveProcessingInstruction(newResource);
         if (instruction == OperatorProcessingInstruction.FORCE) {
             //Remove to avoid recursive updates
-            operations.inNamespace(newResource.getMetadata().getNamespace())
-                    .withName(newResource.getMetadata().getName())
-                    .edit()
-                    .editMetadata()
-                    .removeFromAnnotations(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME)
-                    .endMetadata()
-                    .done();
+            final R latestResource = operations.removeAnnotation(newResource, KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME);
+            cache.put(latestResource.getMetadata().getResourceVersion(), latestResource);
             return true;
         } else if (instruction == OperatorProcessingInstruction.DEFER || instruction == OperatorProcessingInstruction.IGNORE) {
             return false;
@@ -155,4 +160,8 @@ public class EntandoResourceObserver<
         return true;
     }
 
+    public void shutDownAndWait(long i, TimeUnit timeUnit) throws InterruptedException {
+        executor.shutdown();
+        executor.awaitTermination(i, timeUnit);
+    }
 }
