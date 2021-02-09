@@ -8,13 +8,13 @@ curl -f -o versions.yaml https://raw.githubusercontent.com/entando-k8s/entando-k
 retcode=$?
 if [ $retcode -ne 0 ]; then
   echo "Retrieving configmap from Openshift"
-  oc get configmap -o yaml -n entando "entando-docker-image-info-v${1}" > versions.yaml
+  oc get configmap -o yaml -n entando "entando-docker-image-info-v${version}" > versions.yaml
 fi
 
 if $DRY_RUN; then
-  "docker pull entando/entando-k8s-controller-coordinator:${version}"
-  "docker tag  entando/entando-k8s-controller-coordinator:${version} ${registry}/entando/entando-k8s-controller-coordinator:${version}"
-  "docker push ${registry}/entando/entando-k8s-controller-coordinator:${version}"
+  echo "docker pull entando/entando-k8s-controller-coordinator:${version}"
+  echo "docker tag  entando/entando-k8s-controller-coordinator:${version} ${registry}/entando/entando-k8s-controller-coordinator:${version}"
+  echo "docker push ${registry}/entando/entando-k8s-controller-coordinator:${version}"
 else
   docker pull "entando/entando-k8s-controller-coordinator:${version}"
   docker tag  "entando/entando-k8s-controller-coordinator:${version}" "${registry}/entando/entando-k8s-controller-coordinator:${version}"

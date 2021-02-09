@@ -10,6 +10,7 @@ fi
 
 rm relatedImages.yaml
 rm RELATED_IMAGES.yaml
+rm images-to-certify.txt
 IFS=$'\n'
 rows=($(yq eval '.data' versions.yaml))
 ignored_images="entando-de-app-wildfly entando-keycloak"
@@ -32,5 +33,6 @@ for row in "${rows[@]}"; do
     env_var=$(echo ${key^^} | tr '-' '_')
     echo "                     - name: RELATED_IMAGE_${env_var} #${version} " >> RELATED_IMAGES.yaml
     echo "                       value: ${name}@${digest}" >> RELATED_IMAGES.yaml
+    echo "docker.io/entando/${key}:${version}" >> images-to-certify.txt
   fi
 done
