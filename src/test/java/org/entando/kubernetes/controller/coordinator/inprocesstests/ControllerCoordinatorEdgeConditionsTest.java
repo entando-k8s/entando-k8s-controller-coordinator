@@ -16,148 +16,312 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
-import static org.entando.kubernetes.controller.coordinator.AbstractControllerCoordinatorTest.NAMESPACE;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.Watch;
-import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
-import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
-import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.awaitility.core.ConditionTimeoutException;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
+import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher;
+import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher.EntandoOperatorMatcherProperty;
+import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.EntandoResourceClientDouble;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
-import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
+import org.entando.kubernetes.controller.spi.common.ResourceUtils;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
+import org.entando.kubernetes.controller.test.support.CommonLabels;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppBuilder;
+import org.entando.kubernetes.model.debundle.EntandoDeBundle;
+import org.entando.kubernetes.model.debundle.EntandoDeBundleBuilder;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
-import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
-import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
 @Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
-@EnableRuleMigrationSupport
-@SuppressWarnings("java:S5778")//because Awaitility knows which invocation throws the exception
-class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting {
+//because Awaitility knows which invocation throws the exception
+@SuppressWarnings("java:S5778")
+class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting, CommonLabels {
 
-    @Rule
-    public KubernetesServer server = new KubernetesServer(false, true);
-    private EntandoControllerCoordinator coordinator;
+    public static final String CONTROLLER_NAMESPACE = EntandoResourceClientDouble.CONTROLLER_NAMESPACE;
+    public static final String OBSERVED_NAMESPACE = "observed-namespace";
+    private final CoordinatorK8SClientDouble clientDouble = new CoordinatorK8SClientDouble();
+    private final EntandoControllerCoordinator coordinator = new EntandoControllerCoordinator(clientDouble,
+            clientDouble.getOperationsRegistry());
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+    @AfterEach
+    void shutdownSchedulers() {
+        scheduler.shutdownNow();
+        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
+        System.clearProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
+        System.clearProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
+    }
 
     @Test
     void testExistingResourcesProcessed() {
-        //Given I have a clean namespace
-        TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
-        //and the Coordinator observes this namespace
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
-                getClient().getNamespace());
-        //And I have a config map with the Entando KeycloakController's image information
-        ensureImageVersionsConfigMap(getClient());
+        //Given the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
 
         //And I have created an EntandoKeycloakServer resource
-        EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("2");
-        //And no Pods have been created for it
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = getClient().pods()
-                .inNamespace(getClient().getNamespace())
-                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
-        assertThrows(ConditionTimeoutException.class,
-                () -> await().ignoreExceptions().atMost(5, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() == 1));
-        //And that it will take 500 milliseconds for processing to start on the entandoApp
-        new Thread(() -> {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                throw new IllegalStateException("Thread interrupted");
-            }
-            EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(getClient())
-                    .inNamespace(entandoKeycloakServer.getMetadata().getNamespace())
-                    .withName(entandoKeycloakServer.getMetadata().getName())
-                    .edit()
-                    .withPhase(EntandoDeploymentPhase.STARTED)
-                    .done();
-        }).start();
-
+        EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("2", 1L);
         //When I prepare the Coordinator
-        prepareCoordinator();
+        coordinator.onStartup(new StartupEvent());
 
         //A controller pod gets created for the existing resource
-        await().ignoreExceptions().atMost(5, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() == 1);
+        await().atMost(3, TimeUnit.SECONDS)
+                .until(() -> clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
     }
 
     @Test
-    void testDuplicatesIgnored() {
-        //Given I have a clean namespace
-        TestFixturePreparation.prepareTestFixture(getClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
-        //and the Coordinator observes this namespace
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
-                getClient().getNamespace());
-        prepareCoordinator();
-        //And I have a config map with the Entando KeycloakController's image information
-        ensureImageVersionsConfigMap(getClient());
-
+    void testDuplicatesIgnored() throws InterruptedException {
+        //Given the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+        coordinator.onStartup(new StartupEvent());
         //And I have created an EntandoKeycloakServer resource
-        EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("2");
+        EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("2", 1L);
         coordinator.getObserver(EntandoKeycloakServer.class).get(0).eventReceived(Action.ADDED, entandoKeycloakServer);
 
         //And its controller pod has been created
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = getClient().pods()
-                .inNamespace(getClient().getNamespace())
-                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
-        await().ignoreExceptions().atMost(5, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() == 1);
+        await().ignoreExceptions().atMost(3, TimeUnit.SECONDS)
+                .until(() -> clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+        Pod oldPod = clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer));
         //when I submit a duplicate event
-        EntandoKeycloakServer oldVersionOfKeycloakServer = EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(
-                getClient())
-                .inNamespace(getClient().getNamespace()).withName(entandoKeycloakServer.getMetadata().getName()).get();
-        oldVersionOfKeycloakServer.getMetadata().setResourceVersion("1");
+        EntandoKeycloakServer oldVersionOfKeycloakServer = new EntandoKeycloakServerBuilder(entandoKeycloakServer)
+                .editMetadata()
+                .withResourceVersion("1")
+                .endMetadata()
+                .build();
         coordinator.getObserver(EntandoKeycloakServer.class).get(0).eventReceived(Action.ADDED, oldVersionOfKeycloakServer);
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
         //no new pod gets created
-        assertThrows(ConditionTimeoutException.class,
-                () -> await().ignoreExceptions().atMost(5, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 1));
+        assertThat(clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(sameInstance(oldPod)));
     }
 
-    protected void ensureImageVersionsConfigMap(KubernetesClient client) {
-        String configMapNamespace = EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(NAMESPACE);
-        String versionsConfigMap = EntandoOperatorConfig.getEntandoDockerImageInfoConfigMap();
-        client.configMaps().inNamespace(configMapNamespace).createNew().withNewMetadata().withName(
-                versionsConfigMap).endMetadata()
-                .addToData("entando-k8s-keycloak-controller", "{\"version\":\"6.0.0\"}").done();
+    @Test
+    void testIgnoreInstruction() throws InterruptedException {
+        //Given e Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+
+        //And I have created an EntandoKeycloakServer resource
+        EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 1L);
+        entandoKeycloakServer.getMetadata().setAnnotations(new HashMap<>());
+        entandoKeycloakServer.getMetadata().getAnnotations().put(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME,
+                OperatorProcessingInstruction.IGNORE.name().toLowerCase(Locale.ROOT));
+        //when I start the Coordinator Controller
+        coordinator.onStartup(new StartupEvent());
+        //no new pod gets created
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        assertThat(clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
+
     }
 
-    protected EntandoKeycloakServer createEntandoKeycloakServer(String resourceVersion) {
+    @Test
+    void testIgnoredWhenOwnedByCompositeApp() throws InterruptedException {
+        //Given  the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+        //And I have created an EntandoKeycloakServer resource
+        EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 1L);
+        //But it  has an ignored EntandoCompositeApp as an owner
+        EntandoCompositeApp compositeApp = new EntandoCompositeAppBuilder()
+                .editMetadata()
+                .withNamespace(OBSERVED_NAMESPACE)
+                .withName("composite-app")
+                .withUid(UUID.randomUUID().toString())
+                .withResourceVersion("123")
+                .addToAnnotations(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME,
+                        OperatorProcessingInstruction.IGNORE.name().toLowerCase(Locale.ROOT))
+                .endMetadata()
+                .withNewSpec()
+                .addToEntandoKeycloakServers(entandoKeycloakServer)
+                .endSpec()
+                .build();
+        clientDouble.entandoResources().createOrPatchEntandoResource(compositeApp);
+        clientDouble.entandoResources().createOrPatchEntandoResource(new EntandoKeycloakServerBuilder(entandoKeycloakServer)
+                .editMetadata()
+                .addToOwnerReferences(ResourceUtils.buildOwnerReference(compositeApp))
+                .endMetadata()
+                .build());
+        //when I start the Coordinator Controller
+        coordinator.onStartup(new StartupEvent());
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        //no new pod gets created
+        assertThat(clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
+    }
+
+    @Test
+    void testGenerationObservedIsCurrent() throws InterruptedException {
+        //Given the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+        //And I have created an EntandoKeycloakServer resource
+        final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
+        //But the generation in the metadata is the same as the observedGeneration in the status
+        entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.STARTED, 10L);
+        //when I start the Coordinator Controller
+        coordinator.onStartup(new StartupEvent());
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        //no new pod gets created
+        assertThat(clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
+    }
+
+    @Test
+    void testGenerationObservedIsCurrentButForceInstructed() throws InterruptedException {
+        //Given the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+        //And I have created an EntandoKeycloakServer resource
+        final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
+        //But the generation in the metadata is the same as the observedGeneration in the status
+        entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.STARTED, 10L);
+        //but the FORCE ProcessingInstruction is issued
+
+        entandoKeycloakServer.getMetadata().setAnnotations(new HashMap<>());
+        entandoKeycloakServer.getMetadata().getAnnotations().put(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME,
+                OperatorProcessingInstruction.FORCE.name().toLowerCase(Locale.ROOT));
+        clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
+        //when I start the Coordinator Controller
+        coordinator.onStartup(new StartupEvent());
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+
+        //a new pod gets created
+        await().ignoreExceptions().atMost(3, TimeUnit.SECONDS)
+                .until(() -> clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+        //and the FORCED instruction has been removed
+        final EntandoKeycloakServer latestKeycloakServer = clientDouble.entandoResources()
+                .load(EntandoKeycloakServer.class, entandoKeycloakServer.getMetadata().getNamespace(),
+                        entandoKeycloakServer.getMetadata().getName());
+        assertThat(KubeUtils.resolveProcessingInstruction(latestKeycloakServer), is(OperatorProcessingInstruction.NONE));
+    }
+
+    @Test
+    void testGenerationObservedIsBehind() throws InterruptedException {
+        //Given Ihe Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+        //And I have created an EntandoKeycloakServer resource
+        final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
+        //But the  observedGeneration in the status is behind generation in the metadata
+        entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 9L);
+        clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
+        //when I start the Coordinator Controller
+        coordinator.onStartup(new StartupEvent());
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        //then a new controller pod gets created
+        await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
+                clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+    }
+
+    @Test
+    void testProcessedByVersion() throws InterruptedException {
+        //Given the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+        //And the current version of the operator is 6,3,1
+        System.setProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
+        //And I have created an EntandoKeycloakServer resource
+        final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
+        clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
+        //when I start the Coordinator Controller
+        coordinator.onStartup(new StartupEvent());
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        //then a new controller pod gets created
+        await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
+                clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+        //And the EntandoKeycloakServer has been annotated with the version 6.3.1
+        EntandoKeycloakServer latestKeycloakServer = clientDouble.entandoResources()
+                .load(EntandoKeycloakServer.class,
+                        entandoKeycloakServer.getMetadata().getNamespace(),
+                        entandoKeycloakServer.getMetadata().getName());
+        assertThat(
+                KubeUtils.resolveAnnotation(latestKeycloakServer, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION).get(),
+                is("6.3.1"));
+    }
+
+    @Test
+    void testUpgrade() throws InterruptedException {
+        //Given the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+        //And the current version of the operator is 6,3,1
+        System.setProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
+        //And the version of the operator to replace 6,3,1
+        System.setProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty(), "6.3.0");
+        //And I have created an EntandoKeycloakServer resource
+        final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
+        entandoKeycloakServer.getMetadata().setAnnotations(new HashMap<>());
+        //That has been annotated as processed by version 6.3.0
+        entandoKeycloakServer.getMetadata().getAnnotations().put(EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, "6.3.0");
+        //And it has been successfully synced previously
+        entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 10L);
+        clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
+        //when I start the Coordinator Controller
+        coordinator.onStartup(new StartupEvent());
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        //then a new controller pod gets created
+        await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
+                clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+        //And the EntandoKeycloakServer has been annotated with the version 6.3.1
+        EntandoKeycloakServer latestKeycloakServer = clientDouble.entandoResources()
+                .load(EntandoKeycloakServer.class,
+                        entandoKeycloakServer.getMetadata().getNamespace(),
+                        entandoKeycloakServer.getMetadata().getName());
+        assertThat(
+                KubeUtils.resolveAnnotation(latestKeycloakServer, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION).get(),
+                is("6.3.1"));
+    }
+
+    @Test
+    void testEntandoDeBundle() {
+        //Given the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+        //And I have created an EntandoDeBundle resource
+        clientDouble.entandoResources().createOrPatchEntandoResource(new EntandoDeBundleBuilder().withNewMetadata()
+                .withNamespace(OBSERVED_NAMESPACE)
+                .withResourceVersion("123")
+                .withGeneration(1L)
+                .withUid(UUID.randomUUID().toString())
+                .withName("my-de-bundle")
+                .endMetadata()
+                .build());
+
+        //when I start the Coordinator Controller
+        coordinator.onStartup(new StartupEvent());
+        //THe status is updated
+        await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
+                clientDouble.entandoResources().load(EntandoDeBundle.class, OBSERVED_NAMESPACE, "my-de-bundle").getStatus()
+                        .getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL);
+    }
+
+    protected EntandoKeycloakServer createEntandoKeycloakServer(String resourceVersion, Long generation) {
         EntandoKeycloakServer keycloakServer = new EntandoKeycloakServerBuilder()
                 .withNewMetadata()
+                .withGeneration(generation)
                 .withUid(RandomStringUtils.randomAlphanumeric(12))
                 .withResourceVersion(resourceVersion)
-                .withName("test-keycloak").withNamespace(getClient().getNamespace()).endMetadata()
+                .withName("test-keycloak")
+                .withNamespace(OBSERVED_NAMESPACE)
+                .endMetadata()
                 .withNewSpec()
                 .withDbms(DbmsVendor.NONE)
                 .endSpec()
                 .build();
-        EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(getClient())
-                .inNamespace(getClient().getNamespace()).create(keycloakServer);
+        getClient().entandoResources().createOrPatchEntandoResource(keycloakServer);
         return keycloakServer;
     }
 
-    private void prepareCoordinator() {
-        this.coordinator = new EntandoControllerCoordinator(getClient());
-        coordinator.onStartup(new StartupEvent());
+    public CoordinatorK8SClientDouble getClient() {
+        return clientDouble;
     }
-
-    private KubernetesClient getClient() {
-        return server.getClient().inNamespace(NAMESPACE);
-    }
-
 }

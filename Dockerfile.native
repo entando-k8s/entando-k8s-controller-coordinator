@@ -1,4 +1,14 @@
-FROM entando/entando-graalvm-base:6.0.0
+FROM registry.access.redhat.com/ubi8/ubi-minimal
+ARG VERSION
+LABEL name="Entando K8S Controller Coordinator" \
+      vendor="Entando" \
+      version="v${VERSION}" \
+      release="6" \
+      summary="This container is the entrypoint for the Entando Operator and launches delegate containers to process Entando custom resources." \
+      description="This is container runs background threads that observe events occurring against Entando custom resources. \
+                   When it detects an event against a known Entando custom resource, it spawns the appropriate run-to-completion \
+                   container to process the event in question."
 COPY target/*-runner /work/application
+COPY target/generated-resources/licenses /licenses
 RUN chmod 775 /work/application
 CMD ["./application","-Djava.library.path=/work/lib"]

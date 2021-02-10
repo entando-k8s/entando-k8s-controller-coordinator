@@ -5,10 +5,19 @@ pipelineConfig:
       value: carc
     - name: TEST_DEPLOYMENT
       value: "true"
-    - name: SKIP_CHECKSTYLE
-      value: "true"
     - name: ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP
-      value: "entando-docker-image-info-v6.1"
+      value: "entando-docker-image-info-v6.3"
+    - name: ENTANDO_K8S_OPERATOR_SECURITY_MODE
+      value: strict
+    - name: ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE
+      value: redhat
+    - name: ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS
+      value: redhat-registry
+    - name: ENTANDO_TEST_REDHAT_REGISTRY_CREDENTIALS
+      valueFrom:
+        secretKeyRef:
+          key: redhat.registry.credentials.base64
+          name: entando-jx-common-secret
     - name: EXECUTABLE_TYPE
       valueFrom:
         secretKeyRef:

@@ -1,6 +1,16 @@
-FROM fabric8/java-alpine-openjdk8-jre
-ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+FROM fabric8/java-ubi-openjdk11-jdk
+ARG VERSION
+LABEL name="Entando K8S Controller Coordinator" \
+      vendor="Entando" \
+      version="v${VERSION}" \
+      release="6" \
+      summary="This container is the entrypoint for the Entando Operator and launches delegate containers to process Entando custom resources." \
+      description="This is container runs background threads that observe events occurring against Entando custom resources. \
+                   When it detects an event against a known Entando custom resource, it spawns the appropriate run-to-completion \
+                   container to process the event in question."
+ENV JAVA_OPTIONS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
+COPY target/generated-resources/licenses /licenses
 COPY target/lib/* /deployments/lib/
 COPY target/*-runner.jar /deployments/app.jar
 ENTRYPOINT [ "/deployments/run-java.sh" ]
