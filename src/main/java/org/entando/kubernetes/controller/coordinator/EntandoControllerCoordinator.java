@@ -30,7 +30,6 @@ import javax.inject.Inject;
 import org.entando.kubernetes.client.DefaultSimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
@@ -72,7 +71,7 @@ public class EntandoControllerCoordinator {
         addObservers(EntandoApp.class, this::startImage);
         addObservers(EntandoAppPluginLink.class, this::startImage);
         addObservers(EntandoDeBundle.class, (action, entandoDeBundle) -> updateEntandoDeBundleStatus(entandoDeBundle));
-        KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());
+        Liveness.alive();
     }
 
     private void updateEntandoDeBundleStatus(EntandoDeBundle entandoDeBundle) {

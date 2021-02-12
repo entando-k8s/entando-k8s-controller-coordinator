@@ -103,7 +103,8 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
             LOGGER.log(Level.WARNING, () -> "EntandoResourceObserver closed due to out of date resourceVersion. Reconnecting ... ");
             operations.watch(this);
         } else {
-            LOGGER.log(Level.WARNING, cause, () -> "EntandoResourceObserver closed");
+            LOGGER.log(Level.SEVERE, cause, () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
+            Liveness.dead();
         }
     }
 
