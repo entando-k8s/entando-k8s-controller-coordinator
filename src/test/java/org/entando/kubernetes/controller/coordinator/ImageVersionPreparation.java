@@ -58,8 +58,7 @@ public class ImageVersionPreparation {
     }
 
     private String getConfigMapNamespace() {
-        //TODO temporary fix until we can use the latest operator-common. The pipeline is not out of sync with operator-common
-        return "entando";// EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(kubernetesClient.getNamespace());
+        return EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(kubernetesClient.getNamespace());
     }
 
     private String ensureImageInfoPresent(ConfigMap versionConfigMap, String imageName, String fallbackVersion) {
