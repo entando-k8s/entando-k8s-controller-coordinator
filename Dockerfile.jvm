@@ -1,4 +1,4 @@
-FROM exit
+FROM entando/entando-k8s-operator-common:6.3.1
 ARG VERSION
 LABEL name="Entando K8S Controller Coordinator" \
       vendor="Entando" \
