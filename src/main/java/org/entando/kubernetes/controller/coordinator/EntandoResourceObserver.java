@@ -52,12 +52,18 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         this.operations.watch(this);
     }
 
-    private boolean requiresUpgrade(EntandoCustomResource resource) {
-        return EntandoOperatorConfigBase.lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
+    private boolean requiresUpgrade(R resource) {
+        final boolean requiresUpgrade = EntandoOperatorConfigBase
+                .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
                 .flatMap(versionToReplace ->
                         KubeUtils.resolveAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION)
                                 .map(versionToReplace::equals))
                 .orElse(false);
+        if (requiresUpgrade) {
+            logResource(Level.WARNING, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
+                    .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION).orElse("latest"), resource);
+        }
+        return requiresUpgrade;
     }
 
     private void processExistingRequestedEntandoResources() {
@@ -93,8 +99,14 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
     }
 
     private boolean isNotOwnedByCompositeApp(R resource) {
-        return resource.getMetadata().getOwnerReferences().stream().noneMatch(ownerReference -> ownerReference.getKind().equals(
-                EntandoCompositeApp.class.getSimpleName()));
+        final boolean topLevel = resource.getMetadata().getOwnerReferences().stream()
+                .noneMatch(ownerReference -> ownerReference.getKind().equals(
+                        EntandoCompositeApp.class.getSimpleName()));
+        if (topLevel) {
+            logResource(Level.WARNING, "%s %s/%s is a top level resource", resource);
+
+        }
+        return topLevel;
     }
 
     @Override
@@ -137,14 +149,21 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         if (instruction == OperatorProcessingInstruction.FORCE) {
             //Remove to avoid recursive updates
             final R latestResource = operations.removeAnnotation(newResource, KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME);
-            cache.put(latestResource.getMetadata().getResourceVersion(), latestResource);
+            cache.put(latestResource.getMetadata().getUid(), latestResource);
+            logResource(Level.WARNING, "Processing of %s %s/%s has been forced using entando.org/processing-instruction.", newResource);
             return true;
         } else if (instruction == OperatorProcessingInstruction.DEFER || instruction == OperatorProcessingInstruction.IGNORE) {
+            logResource(Level.WARNING, "Processing of %s %s/%s has been deferred or ignored using entando.org/processing-instruction.",
+                    newResource);
             return false;
         } else {
-            return newResource.getStatus().getObservedGeneration() == null
+            final boolean needsObservation = newResource.getStatus().getObservedGeneration() == null
                     || newResource.getMetadata().getGeneration() == null
                     || newResource.getStatus().getObservedGeneration() < newResource.getMetadata().getGeneration();
+            if (needsObservation) {
+                logResource(Level.WARNING, "%s %s/%s is processed after a metadata.generation increment.", newResource);
+            }
+            return needsObservation;
         }
     }
 
@@ -153,16 +172,19 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
             R oldResource = cache.get(newResource.getMetadata().getUid());
             int knownResourceVersion = Integer.parseInt(oldResource.getMetadata().getResourceVersion());
             int receivedVersion = Integer.parseInt(newResource.getMetadata().getResourceVersion());
-            if (knownResourceVersion > receivedVersion) {
+            if (knownResourceVersion >= receivedVersion) {
                 logResource(Level.WARNING, "Duplicate event for %s %s/%s. ResourceVersion=" + receivedVersion, newResource);
                 return false;
             }
         }
+        logResource(Level.WARNING, "%s %s/%s has a new resource version: " + newResource.getMetadata().getResourceVersion(), newResource);
         return true;
     }
 
     public void shutDownAndWait(long i, TimeUnit timeUnit) throws InterruptedException {
         executor.shutdown();
-        executor.awaitTermination(i, timeUnit);
+        if (!executor.awaitTermination(i, timeUnit)) {
+            LOGGER.log(Level.WARNING, "Could not sure EntandoResourceObserver down.");
+        }
     }
 }
