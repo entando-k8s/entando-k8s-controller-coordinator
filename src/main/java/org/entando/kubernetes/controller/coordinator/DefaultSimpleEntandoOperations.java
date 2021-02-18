@@ -19,6 +19,9 @@ package org.entando.kubernetes.controller.coordinator;
 import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
 import java.util.List;
+import java.util.Map;
+import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoCustomResource;
 
@@ -27,21 +30,23 @@ public class DefaultSimpleEntandoOperations<
         D extends DoneableEntandoCustomResource<R, D>
         > implements SimpleEntandoOperations<R, D> {
 
+    private final SimpleK8SClient<?> client;
     CustomResourceOperationsImpl<R, CustomResourceList<R>, D> operations;
 
-    public DefaultSimpleEntandoOperations(CustomResourceOperationsImpl<R, CustomResourceList<R>, D> operations) {
+    public DefaultSimpleEntandoOperations(SimpleK8SClient<?> client, CustomResourceOperationsImpl<R, CustomResourceList<R>, D> operations) {
+        this.client = client;
         this.operations = operations;
     }
 
     @Override
     public SimpleEntandoOperations<R, D> inNamespace(String namespace) {
-        return new DefaultSimpleEntandoOperations<>(
+        return new DefaultSimpleEntandoOperations<>(client,
                 (CustomResourceOperationsImpl<R, CustomResourceList<R>, D>) operations.inNamespace(namespace));
     }
 
     @Override
     public SimpleEntandoOperations<R, D> inAnyNamespace() {
-        return new DefaultSimpleEntandoOperations<>(
+        return new DefaultSimpleEntandoOperations<>(client,
                 (CustomResourceOperationsImpl<R, CustomResourceList<R>, D>) operations.inAnyNamespace());
     }
 
@@ -58,5 +63,13 @@ public class DefaultSimpleEntandoOperations<
     @Override
     public D edit(R r) {
         return operations.inNamespace(r.getMetadata().getNamespace()).withName(r.getMetadata().getName()).edit();
+    }
+
+    @Override
+    public void removeSuccessfullyCompletedPods(R resource) {
+        this.client.pods().removeSuccessfullyCompletedPods(operations.getNamespace(), Map.of(
+                KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
+                KubeUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
+                resource.getKind(), resource.getMetadata().getName()));
     }
 }

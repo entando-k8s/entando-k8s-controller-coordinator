@@ -19,9 +19,9 @@ package org.entando.kubernetes.controller.coordinator.inprocesstests;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
-import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.EntandoResourceClientDouble;
-import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.NamespaceDouble;
-import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.SimpleK8SClientDouble;
+import org.entando.kubernetes.controller.support.client.doubles.EntandoResourceClientDouble;
+import org.entando.kubernetes.controller.support.client.doubles.NamespaceDouble;
+import org.entando.kubernetes.controller.support.client.doubles.SimpleK8SClientDouble;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.debundle.EntandoDeBundle;
 

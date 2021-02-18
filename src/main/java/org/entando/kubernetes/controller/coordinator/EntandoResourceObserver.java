@@ -22,6 +22,7 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,10 +32,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher.EntandoOperatorMatcherProperty;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 
 public class EntandoResourceObserver<R extends EntandoCustomResource, D extends DoneableEntandoCustomResource<R, D>> implements Watcher<R> {
@@ -79,10 +82,24 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         try {
             if (performCriteriaProcessing(resource)) {
                 performCallback(action, resource);
+            } else if (needsToRemoveSuccessfullyCompletedPods(resource)) {
+                removeSuccessfullyCompletedPods(resource);
             }
         } catch (Exception e) {
             logFailure(resource, e);
         }
+    }
+
+    private void removeSuccessfullyCompletedPods(R resource) {
+        operations.removeSuccessfullyCompletedPods(resource);
+    }
+
+    private boolean needsToRemoveSuccessfullyCompletedPods(R resource) {
+        return EntandoOperatorConfig.garbageCollectSuccessfullyCompletedPods()
+                && Optional.ofNullable(resource.getMetadata().getGeneration())
+                .map(aLong -> aLong.equals(resource.getMetadata().getGeneration()))
+                .orElse(false)
+                && resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL;
     }
 
     private void logFailure(R resource, Exception e) {

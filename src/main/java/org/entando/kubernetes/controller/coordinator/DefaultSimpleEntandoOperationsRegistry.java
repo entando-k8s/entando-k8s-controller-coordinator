@@ -17,6 +17,7 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.entando.kubernetes.client.DefaultSimpleK8SClient;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoCustomResource;
 import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
@@ -24,15 +25,17 @@ import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
 public class DefaultSimpleEntandoOperationsRegistry implements SimpleEntandoOperationsRegistry {
 
     private final EntandoResourceOperationsRegistry registry;
+    private final DefaultSimpleK8SClient client;
 
     public DefaultSimpleEntandoOperationsRegistry(KubernetesClient client) {
         this.registry = new EntandoResourceOperationsRegistry(client);
+        this.client = new DefaultSimpleK8SClient(client);
     }
 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <R extends EntandoCustomResource, D extends DoneableEntandoCustomResource<R, D>> SimpleEntandoOperations<R, D> getOperations(
             Class<R> clzz) {
-        return new DefaultSimpleEntandoOperations(registry.getOperations(clzz));
+        return new DefaultSimpleEntandoOperations(client, registry.getOperations(clzz));
     }
 }
