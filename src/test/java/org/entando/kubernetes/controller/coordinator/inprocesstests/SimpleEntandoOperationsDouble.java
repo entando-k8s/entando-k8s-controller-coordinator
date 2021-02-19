@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 import org.entando.kubernetes.controller.coordinator.EntandoResourceObserver;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
-import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.AbstractK8SClientDouble;
-import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.NamespaceDouble;
+import org.entando.kubernetes.controller.support.client.doubles.AbstractK8SClientDouble;
+import org.entando.kubernetes.controller.support.client.doubles.NamespaceDouble;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoCustomResource;
 
@@ -77,5 +77,10 @@ public class SimpleEntandoOperationsDouble<R extends EntandoCustomResource, D ex
         } catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    @Override
+    public void removeSuccessfullyCompletedPods(R resource) {
+
     }
 }

@@ -53,4 +53,5 @@ public interface SimpleEntandoOperations<
 
     }
 
+    void removeSuccessfullyCompletedPods(R resource);
 }

@@ -1,4 +1,4 @@
-FROM fabric8/java-ubi-openjdk11-jdk
+FROM entando/entando-k8s-operator-common:6.3.4
 ARG VERSION
 LABEL name="Entando K8S Controller Coordinator" \
       vendor="Entando" \
@@ -10,7 +10,5 @@ LABEL name="Entando K8S Controller Coordinator" \
                    container to process the event in question."
 ENV JAVA_OPTIONS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
-COPY target/generated-resources/licenses /licenses
-COPY target/lib/* /deployments/lib/
 COPY target/*-runner.jar /deployments/app.jar
 ENTRYPOINT [ "/deployments/run-java.sh" ]

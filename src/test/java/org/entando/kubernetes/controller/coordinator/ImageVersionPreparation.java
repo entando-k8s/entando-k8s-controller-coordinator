@@ -58,7 +58,7 @@ public class ImageVersionPreparation {
     }
 
     private String getConfigMapNamespace() {
-        return EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(kubernetesClient.getNamespace());
+        return EntandoOperatorConfig.getEntandoDockerImageInfoNamespace().orElse(kubernetesClient.getNamespace());
     }
 
     private String ensureImageInfoPresent(ConfigMap versionConfigMap, String imageName, String fallbackVersion) {

@@ -33,26 +33,30 @@ import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.entando.kubernetes.client.EntandoOperatorTestConfig;
+import org.entando.kubernetes.client.integrationtesthelpers.FluentIntegrationTesting;
+import org.entando.kubernetes.client.integrationtesthelpers.TestFixturePreparation;
+import org.entando.kubernetes.client.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
-import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
-import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
-import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
-import org.entando.kubernetes.controller.integrationtest.support.TestFixtureRequest;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
-import org.entando.kubernetes.controller.test.support.FluentTraversals;
-import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.test.common.FluentTraversals;
+import org.entando.kubernetes.test.common.PodBehavior;
+import org.entando.kubernetes.test.common.VariableReferenceAssertions;
 import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
@@ -62,7 +66,7 @@ import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 @Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
 @EnableRuleMigrationSupport
 class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, FluentTraversals,
-        VariableReferenceAssertions {
+        VariableReferenceAssertions, PodBehavior {
 
     public static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("coordinator-test");
     @Rule
@@ -77,13 +81,20 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                         .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
     }
 
-    @BeforeEach
-    public void prepareCoordinator() {
-        this.coordinator = new EntandoControllerCoordinator(getClient());
-        coordinator.onStartup(new StartupEvent());
+    @AfterEach
+    void clearProperties() {
+        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty());
+
     }
 
-    protected KubernetesClient getClient() {
+    @BeforeEach
+    public void prepareCoordinator() {
+        this.coordinator = new EntandoControllerCoordinator(getFabric8Client());
+        coordinator.onStartup(new StartupEvent());
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty(), "true");
+    }
+
+    public KubernetesClient getFabric8Client() {
         return server.getClient().inNamespace(NAMESPACE);
     }
 
@@ -98,10 +109,19 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         coordinator.getObserver((Class<R>) resource.getClass()).get(0).eventReceived(Action.ADDED, resource);
     }
 
+    @SuppressWarnings("unchecked")
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterSuccess(R resource, Pod pod) {
+        getFabric8Client().pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName())
+                .patch(podWithSucceededStatus(pod));
+        resource.getMetadata().setGeneration(1L);
+        resource.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, resource.getMetadata().getGeneration());
+        coordinator.getObserver((Class<R>) resource.getClass()).get(0).eventReceived(Action.ADDED, resource);
+    }
+
     @Test
     void testExecuteKeycloakControllerPod() {
         //Given I have a clean namespace
-        KubernetesClient client = getClient();
+        KubernetesClient client = getFabric8Client();
         clearNamespace(client);
         //and the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
@@ -134,9 +154,47 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
 
     }
 
+    @Test
+    void testExecuteKeycloakControllerRemoval() {
+        //Given I have a clean namespace
+        KubernetesClient client = getFabric8Client();
+        clearNamespace(client);
+        //and the Coordinator observes this namespace
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
+                client.getNamespace());
+        //And I have a config map with the Entando KeycloakController's image information
+        final String versionToExpect = ensureKeycloakControllerVersion();
+        //And I have created a new EntandoKeycloakServer resource
+        EntandoKeycloakServer keycloakServer = new EntandoKeycloakServerBuilder()
+                .withNewMetadata().withName("test-keycloak").withNamespace(client.getNamespace()).endMetadata()
+                .withNewSpec()
+                .withDbms(DbmsVendor.NONE)
+                .endSpec()
+                .build();
+        EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(client)
+                .inNamespace(client.getNamespace()).create(keycloakServer);
+        afterCreate(keycloakServer);
+        //And I the controller pod is created.
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+                .inNamespace(client.getNamespace())
+                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
+        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
+        //When I complete the Keycloak installation successfully
+        afterSuccess(keycloakServer, listable.list().getItems().get(0));
+        //THen the previously created controller pod will be removed
+        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().isEmpty());
+
+    }
+
     protected String ensureKeycloakControllerVersion() {
         return EntandoOperatorConfigBase.lookupProperty("RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER")
                 .map(s -> s.substring(s.indexOf("@")))
-                .orElseGet(() -> new ImageVersionPreparation(getClient()).ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1"));
+                .orElseGet(() -> new ImageVersionPreparation(getFabric8Client())
+                        .ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1"));
+    }
+
+    @Override
+    public SimpleK8SClient<?> getClient() {
+        throw new IllegalStateException("Not supported");
     }
 }
