@@ -63,7 +63,7 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando-k8s-operator-common.version>6.3.3</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>6.3.4</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>in-process</preDeploymentTestGroups>
         <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
     </properties>
