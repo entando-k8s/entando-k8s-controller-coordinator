@@ -45,6 +45,7 @@ import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigPro
 import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoCustomResourceStatus;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
@@ -99,7 +100,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     }
 
     @SuppressWarnings("unchecked")
-    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterCreate(R resource) {
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S, EntandoCustomResourceStatus>> void afterCreate(R resource) {
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
         }
@@ -110,7 +111,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     }
 
     @SuppressWarnings("unchecked")
-    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterSuccess(R resource, Pod pod) {
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S, EntandoCustomResourceStatus>> void afterSuccess(R resource, Pod pod) {
         getFabric8Client().pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName())
                 .patch(podWithSucceededStatus(pod));
         resource.getMetadata().setGeneration(1L);
@@ -139,7 +140,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .inNamespace(client.getNamespace()).create(keycloakServer);
         afterCreate(keycloakServer);
         //Then I expect to see at least one controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+        FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
@@ -175,7 +176,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .inNamespace(client.getNamespace()).create(keycloakServer);
         afterCreate(keycloakServer);
         //And I the controller pod is created.
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+        FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);

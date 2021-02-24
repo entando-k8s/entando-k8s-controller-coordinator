@@ -16,42 +16,44 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import java.util.HashMap;
 import java.util.List;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
+import java.util.function.UnaryOperator;
 import org.entando.kubernetes.model.EntandoCustomResource;
 
-public interface SimpleEntandoOperations<
-        R extends EntandoCustomResource,
-        D extends DoneableEntandoCustomResource<R, D>> {
+public interface SimpleEntandoOperations<R extends EntandoCustomResource> {
 
-    SimpleEntandoOperations<R, D> inNamespace(String namespace);
+    SimpleEntandoOperations<R> inNamespace(String namespace);
 
-    SimpleEntandoOperations<R, D> inAnyNamespace();
+    SimpleEntandoOperations<R> inAnyNamespace();
 
-    void watch(EntandoResourceObserver<R, D> rldEntandoResourceObserver);
+    void watch(EntandoResourceObserver<R> rldEntandoResourceObserver);
 
     List<R> list();
 
     default R removeAnnotation(R r, String name) {
-        return edit(r)
-                .editMetadata()
-                .removeFromAnnotations(name)
-                .endMetadata()
-                .done();
-
+        return patch(r, toPatch -> {
+            if (toPatch.getMetadata().getAnnotations() != null) {
+                toPatch.getMetadata().getAnnotations().remove(name);
+            }
+            return toPatch;
+        });
     }
 
-    D edit(R r);
+    R patch(R r, UnaryOperator<R> builder);
 
     default R putAnnotation(R r, String name, String value) {
-        return edit(r)
-                .editMetadata()
-                .removeFromAnnotations(name)
-                .addToAnnotations(name, value)
-                .endMetadata()
-                .done();
+        return patch(r, toPatch -> {
+            if (toPatch.getMetadata().getAnnotations() == null) {
+                toPatch.getMetadata().setAnnotations(new HashMap<>());
+            }
+            toPatch.getMetadata().getAnnotations().remove(name);
+            toPatch.getMetadata().getAnnotations().put(name, value);
+            return toPatch;
+        });
 
     }
 
     void removeSuccessfullyCompletedPods(R resource);
+
 }

@@ -19,10 +19,13 @@ package org.entando.kubernetes.controller.coordinator.inprocesstests;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import java.util.Collections;
 import java.util.HashMap;
 import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
+import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.EntandoCustomResourceStatus;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,9 +86,9 @@ class EntandoOperatorMatcherTest {
     @Test
     void testVersionRangeActive() {
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE.getJvmSystemProperty(), "1-2");
-        EntandoApp entandoApp = new EntandoApp();
+        EntandoCustomResource entandoApp = new DummyCustomResource();
         entandoApp.getMetadata().setAnnotations(new HashMap<>());
-        entandoApp.setApiVersion("entando.org/v1.0");
+        entandoApp.setApiVersion("entando.org/v1.0.0");
         assertTrue(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
         entandoApp.setApiVersion("entando.org/v2.0.0");
         assertTrue(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
@@ -99,5 +102,47 @@ class EntandoOperatorMatcherTest {
         EntandoApp entandoApp = new EntandoApp();
         entandoApp.setApiVersion(null);
         assertTrue(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
+    }
+
+    private static class DummyCustomResource implements EntandoCustomResource {
+
+        private ObjectMeta metadata=new ObjectMeta();
+
+        @Override
+        public EntandoCustomResourceStatus getStatus() {
+            return null;
+        }
+
+        @Override
+        public void setStatus(EntandoCustomResourceStatus entandoCustomResourceStatus) {
+
+        }
+
+        @Override
+        public String getDefinitionName() {
+            return null;
+        }
+
+        private String apiVersion;
+
+        @Override
+        public ObjectMeta getMetadata() {
+            return this.metadata;
+        }
+
+        @Override
+        public void setMetadata(ObjectMeta metadata) {
+            this.metadata=metadata;
+        }
+
+        @Override
+        public String getApiVersion() {
+            return apiVersion;
+        }
+
+        @Override
+        public void setApiVersion(String version) {
+            this.apiVersion=version;
+        }
     }
 }

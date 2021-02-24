@@ -64,17 +64,14 @@ import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.creators.IngressCreator;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
-import org.entando.kubernetes.model.compositeapp.DoneableEntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppBuilder;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
-import org.entando.kubernetes.model.keycloakserver.DoneableEntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
 import org.entando.kubernetes.model.keycloakserver.StandardKeycloakImage;
-import org.entando.kubernetes.model.plugin.DoneableEntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
@@ -151,7 +148,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 .inNamespace(client.getNamespace()).create(keycloakServer);
 
         //Then I expect to see at least one controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+        FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
@@ -263,14 +260,14 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 .inNamespace(NAMESPACE)
                 .create(appToCreate);
         //Then I expect to see the keycloak controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> keycloakControllerList = client.pods()
+        FilterWatchListDeletable<Pod, PodList> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() > 0);
         Pod theKeycloakControllerPod = keycloakControllerList.list().getItems().get(0);
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
-        Resource<EntandoKeycloakServer, DoneableEntandoKeycloakServer> keycloakGettable = EntandoKeycloakServerOperationFactory
+        Resource<EntandoKeycloakServer> keycloakGettable = EntandoKeycloakServerOperationFactory
                 .produceAllEntandoKeycloakServers(getClient()).inNamespace(NAMESPACE).withName(KEYCLOAK_NAME);
         await().ignoreExceptions().atMost(15, TimeUnit.SECONDS).until(
                 () -> keycloakGettable.get().getMetadata().getOwnerReferences().get(0).getUid().equals(app.getMetadata().getUid())
@@ -289,7 +286,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
             assertTrue(thePrimaryContainerOn(theKeycloakControllerPod).getImage().endsWith(keycloakControllerVersionToExpect));
         }
         //And its status reflecting on the EntandoCompositeApp
-        Resource<EntandoCompositeApp, DoneableEntandoCompositeApp> appGettable =
+        Resource<EntandoCompositeApp> appGettable =
                 EntandoCompositeAppOperationFactory
                         .produceAllEntandoCompositeApps(client)
                         .inNamespace(client.getNamespace()).withName(MY_APP);
@@ -297,14 +294,14 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(KEYCLOAK_NAME).get().getPodStatus() != null
         );
         //And the plugin controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> pluginControllerList = client.pods()
+        FilterWatchListDeletable<Pod, PodList> pluginControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoPlugin")
                 .withLabel("EntandoPlugin", app.getSpec().getComponents().get(1).getMetadata().getName());
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> pluginControllerList.list().getItems().size() > 0);
         Pod thePluginControllerPod = pluginControllerList.list().getItems().get(0);
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
-        Resource<EntandoPlugin, DoneableEntandoPlugin> pluginGettable = EntandoPluginOperationFactory
+        Resource<EntandoPlugin> pluginGettable = EntandoPluginOperationFactory
                 .produceAllEntandoPlugins(getClient()).inNamespace(NAMESPACE).withName(PLUGIN_NAME);
         await().ignoreExceptions().atMost(15, TimeUnit.SECONDS).until(
                 () -> pluginGettable.get().getMetadata().getOwnerReferences().get(0).getUid(), is(app.getMetadata().getUid())
@@ -390,7 +387,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         return imageVersionPreparation.ensureImageVersion("entando-k8s-plugin-controller", "6.0.2");
     }
 
-    private boolean hasFinished(Resource<EntandoCompositeApp, DoneableEntandoCompositeApp> appGettable) {
+    private boolean hasFinished(Resource<EntandoCompositeApp> appGettable) {
         EntandoDeploymentPhase phase = appGettable.fromServer().get().getStatus().getEntandoDeploymentPhase();
         return phase == EntandoDeploymentPhase.SUCCESSFUL || phase == EntandoDeploymentPhase.FAILED;
     }

@@ -31,9 +31,9 @@ import org.entando.kubernetes.client.DefaultSimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.EntandoCustomResourceStatus;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
@@ -79,17 +79,15 @@ public class EntandoControllerCoordinator {
     }
 
     @SuppressWarnings("unchecked")
-    public <R extends EntandoCustomResource,
-            D extends DoneableEntandoCustomResource<R, D>> List<EntandoResourceObserver<R, D>> getObserver(Class<R> clss) {
-        return (List<EntandoResourceObserver<R, D>>) observers.get(clss);
+    public <R extends EntandoCustomResource> List<EntandoResourceObserver<R>> getObserver(Class<R> clss) {
+        return (List<EntandoResourceObserver<R>>) observers.get(clss);
     }
 
     @SuppressWarnings("unchecked")
-    private <R extends EntandoCustomResource,
-            D extends DoneableEntandoCustomResource<R, D>> void addObservers(Class<R> type, BiConsumer<Action, R> consumer) {
-        final SimpleEntandoOperations<R, D> operations = this.entandoResourceOperationsRegistry
+    private <R extends EntandoCustomResource> void addObservers(Class<R> type, BiConsumer<Action, R> consumer) {
+        final SimpleEntandoOperations<R> operations = this.entandoResourceOperationsRegistry
                 .getOperations(type);
-        List<EntandoResourceObserver<R, D>> observersForType = new ArrayList<>();
+        List<EntandoResourceObserver<R>> observersForType = new ArrayList<>();
         if (EntandoOperatorConfig.isClusterScopedDeployment()) {
             //This code is essentially impossible to test in a shared cluster
             observersForType.add(new EntandoResourceObserver<>(operations.inAnyNamespace(), consumer));
@@ -105,7 +103,8 @@ public class EntandoControllerCoordinator {
         observers.put(type, observersForType);
     }
 
-    private <S extends Serializable, T extends EntandoBaseCustomResource<S>> void startImage(Action action, T resource) {
+    private <S extends Serializable, T extends EntandoBaseCustomResource<S, EntandoCustomResourceStatus>> void startImage(Action action,
+            T resource) {
         ControllerExecutor executor = new ControllerExecutor(client.entandoResources().getNamespace(), client);
         executor.startControllerFor(action, resource, null);
     }
