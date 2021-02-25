@@ -38,6 +38,7 @@ import org.entando.kubernetes.client.integrationtesthelpers.FluentIntegrationTes
 import org.entando.kubernetes.client.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.client.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
+import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
@@ -84,7 +85,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     @AfterEach
     void clearProperties() {
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty());
-
+        System.clearProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty());
     }
 
     @BeforeEach
@@ -156,6 +157,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
 
     @Test
     void testExecuteKeycloakControllerRemoval() {
+        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
         //Given I have a clean namespace
         KubernetesClient client = getFabric8Client();
         clearNamespace(client);

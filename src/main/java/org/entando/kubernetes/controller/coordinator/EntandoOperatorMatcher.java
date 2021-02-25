@@ -31,22 +31,6 @@ public class EntandoOperatorMatcher {
     public static final String ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION = "entando.org/processed-by-version";
     private static final Logger LOGGER = Logger.getLogger(EntandoOperatorMatcher.class.getName());
 
-    public enum EntandoOperatorMatcherProperty implements ConfigProperty {
-        ENTANDO_K8S_OPERATOR_VERSION("entando.k8s.operator.version"),
-        ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE("entando.k8s.operator.version.to.replace");
-
-        private final String jvmSystemProperty;
-
-        EntandoOperatorMatcherProperty(String s) {
-            this.jvmSystemProperty = s;
-        }
-
-        @Override
-        public String getJvmSystemProperty() {
-            return jvmSystemProperty;
-        }
-    }
-
     private EntandoOperatorMatcher() {
 
     }

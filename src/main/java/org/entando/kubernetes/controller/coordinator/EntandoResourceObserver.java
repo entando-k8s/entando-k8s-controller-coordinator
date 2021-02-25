@@ -24,13 +24,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher.EntandoOperatorMatcherProperty;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
@@ -43,10 +42,11 @@ import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 public class EntandoResourceObserver<R extends EntandoCustomResource, D extends DoneableEntandoCustomResource<R, D>> implements Watcher<R> {
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
+
     private final Map<String, R> cache = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
     private final SimpleEntandoOperations<R, D> operations;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
 
     public EntandoResourceObserver(SimpleEntandoOperations<R, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
@@ -55,16 +55,22 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         this.operations.watch(this);
     }
 
+    private static Integer getRemovalDelay() {
+        return EntandoOperatorConfigBase.lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY)
+                .map(Integer::parseInt)
+                .orElse(30);
+    }
+
     private boolean requiresUpgrade(R resource) {
         final boolean requiresUpgrade = EntandoOperatorConfigBase
-                .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
+                .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
                 .flatMap(versionToReplace ->
                         KubeUtils.resolveAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION)
                                 .map(versionToReplace::equals))
                 .orElse(false);
         if (requiresUpgrade) {
             logResource(Level.WARNING, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
-                    .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION).orElse("latest"), resource);
+                    .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION).orElse("latest"), resource);
         }
         return requiresUpgrade;
     }
@@ -91,7 +97,8 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
     }
 
     private void removeSuccessfullyCompletedPods(R resource) {
-        operations.removeSuccessfullyCompletedPods(resource);
+        executor.schedule(() -> operations.removeSuccessfullyCompletedPods(resource), (long) getRemovalDelay(),
+                TimeUnit.SECONDS);
     }
 
     private boolean needsToRemoveSuccessfullyCompletedPods(R resource) {
@@ -142,7 +149,7 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         if (action == Action.ADDED || action == Action.MODIFIED) {
             cache.put(resource.getMetadata().getUid(), resource);
             EntandoOperatorConfigBase
-                    .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION)
+                    .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION)
                     .ifPresent(
                             s -> operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s)
                     );

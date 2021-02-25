@@ -33,8 +33,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.client.integrationtesthelpers.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
+import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher;
-import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher.EntandoOperatorMatcherProperty;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.client.doubles.EntandoResourceClientDouble;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
@@ -70,8 +70,8 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
     void shutdownSchedulers() {
         scheduler.shutdownNow();
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
-        System.clearProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
-        System.clearProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
+        System.clearProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
+        System.clearProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
     }
 
     @Test
@@ -230,7 +230,7 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //Given the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
         //And the current version of the operator is 6,3,1
-        System.setProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
+        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
         //And I have created an EntandoKeycloakServer resource
         final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
         clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
@@ -255,9 +255,9 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //Given the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
         //And the current version of the operator is 6,3,1
-        System.setProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
+        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
         //And the version of the operator to replace 6,3,1
-        System.setProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty(), "6.3.0");
+        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty(), "6.3.0");
         //And I have created an EntandoKeycloakServer resource
         final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
         entandoKeycloakServer.getMetadata().setAnnotations(new HashMap<>());
