@@ -18,6 +18,8 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import java.util.List;
@@ -203,6 +205,14 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
                     || newResource.getStatus().getObservedGeneration() < newResource.getMetadata().getGeneration();
             if (needsObservation) {
                 logResource(Level.WARNING, "%s %s/%s is processed after a metadata.generation increment.", newResource);
+                LOGGER.log(Level.WARNING,
+                        () -> {
+                            try {
+                                return new ObjectMapper().writeValueAsString(newResource);
+                            } catch (JsonProcessingException e) {
+                                return e.toString();
+                            }
+                        });
             }
             return needsObservation;
         }
