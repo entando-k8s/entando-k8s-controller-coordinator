@@ -44,6 +44,7 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
 
     private final Map<String, R> cache = new ConcurrentHashMap<>();
+    private final Map<String, R> resourcesBeingUpgraded = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
     private final SimpleEntandoOperations<R, D> operations;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
@@ -62,17 +63,26 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
     }
 
     private boolean requiresUpgrade(R resource) {
-        final boolean requiresUpgrade = EntandoOperatorConfigBase
+        if (!isBeingUpgraded(resource) && wasProcessedByVersionBeingReplaced(resource)) {
+            resourcesBeingUpgraded.put(resource.getMetadata().getUid(), resource);
+            logResource(Level.WARNING, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
+                    .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION).orElse("latest"), resource);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean wasProcessedByVersionBeingReplaced(R resource) {
+        return EntandoOperatorConfigBase
                 .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
                 .flatMap(versionToReplace ->
                         KubeUtils.resolveAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION)
                                 .map(versionToReplace::equals))
                 .orElse(false);
-        if (requiresUpgrade) {
-            logResource(Level.WARNING, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
-                    .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION).orElse("latest"), resource);
-        }
-        return requiresUpgrade;
+    }
+
+    private boolean isBeingUpgraded(R resource) {
+        return resourcesBeingUpgraded.containsKey(resource.getMetadata().getUid());
     }
 
     private void processExistingRequestedEntandoResources() {
@@ -88,12 +98,24 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         try {
             if (performCriteriaProcessing(resource)) {
                 performCallback(action, resource);
-            } else if (needsToRemoveSuccessfullyCompletedPods(resource)) {
-                removeSuccessfullyCompletedPods(resource);
+            } else if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL) {
+                markAsUpgraded(resource);
+                if (needsToRemoveSuccessfullyCompletedPods(resource)) {
+                    removeSuccessfullyCompletedPods(resource);
+                }
             }
         } catch (Exception e) {
             logFailure(resource, e);
         }
+    }
+
+    private void markAsUpgraded(R resource) {
+        resourcesBeingUpgraded.remove(resource.getMetadata().getUid());
+        EntandoOperatorConfigBase
+                .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION)
+                .ifPresent(
+                        s -> operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s)
+                );
     }
 
     private void removeSuccessfullyCompletedPods(R resource) {
@@ -148,11 +170,6 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         logResource(Level.INFO, "Received " + action.name() + " for the %s %s/%s", resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
             cache.put(resource.getMetadata().getUid(), resource);
-            EntandoOperatorConfigBase
-                    .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION)
-                    .ifPresent(
-                            s -> operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s)
-                    );
             executor.execute(() -> callback.accept(action, resource));
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());

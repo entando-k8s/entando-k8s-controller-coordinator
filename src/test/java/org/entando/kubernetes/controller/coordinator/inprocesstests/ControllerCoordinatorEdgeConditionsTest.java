@@ -226,7 +226,7 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
     }
 
     @Test
-    void testProcessedByVersion() throws InterruptedException {
+    void testProcessedByVersion() {
         //Given the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
         //And the current version of the operator is 6,3,1
@@ -234,13 +234,15 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //And I have created an EntandoKeycloakServer resource
         final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
         clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
-        //when I start the Coordinator Controller
+        //and the Controller Coordinator has started
         coordinator.onStartup(new StartupEvent());
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
-        //then a new controller pod gets created
+        //When the EtandoKeycloakServer is processed successfullly
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
                 clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
-        //And the EntandoKeycloakServer has been annotated with the version 6.3.1
+        entandoKeycloakServer.getMetadata().setResourceVersion("5");
+        entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 10L);
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).eventReceived(Action.MODIFIED, entandoKeycloakServer);
+        // Then  the EntandoKeycloakServer has been annotated with the version 6.3.1
         EntandoKeycloakServer latestKeycloakServer = clientDouble.entandoResources()
                 .load(EntandoKeycloakServer.class,
                         entandoKeycloakServer.getMetadata().getNamespace(),
@@ -251,7 +253,7 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
     }
 
     @Test
-    void testUpgrade() throws InterruptedException {
+    void testUpgrade() {
         //Given the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
         //And the current version of the operator is 6,3,1
@@ -266,13 +268,14 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //And it has been successfully synced previously
         entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 10L);
         clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
-        //when I start the Coordinator Controller
+        //And I have started the Coordinator Controller
         coordinator.onStartup(new StartupEvent());
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
-        //then a new controller pod gets created
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
                 clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
-        //And the EntandoKeycloakServer has been annotated with the version 6.3.1
+        entandoKeycloakServer.getMetadata().setResourceVersion("5");
+        entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 10L);
+        coordinator.getObserver(EntandoKeycloakServer.class).get(0).eventReceived(Action.MODIFIED, entandoKeycloakServer);
+        //Then the EntandoKeycloakServer has been annotated with the version 6.3.1
         EntandoKeycloakServer latestKeycloakServer = clientDouble.entandoResources()
                 .load(EntandoKeycloakServer.class,
                         entandoKeycloakServer.getMetadata().getNamespace(),
