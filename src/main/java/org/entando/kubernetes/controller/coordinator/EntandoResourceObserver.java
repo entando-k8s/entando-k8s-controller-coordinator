@@ -18,19 +18,20 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher.EntandoOperatorMatcherProperty;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
@@ -43,10 +44,12 @@ import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 public class EntandoResourceObserver<R extends EntandoCustomResource, D extends DoneableEntandoCustomResource<R, D>> implements Watcher<R> {
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
+
     private final Map<String, R> cache = new ConcurrentHashMap<>();
+    private final Map<String, R> resourcesBeingUpgraded = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
     private final SimpleEntandoOperations<R, D> operations;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
 
     public EntandoResourceObserver(SimpleEntandoOperations<R, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
@@ -55,18 +58,33 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         this.operations.watch(this);
     }
 
+    private static Integer getRemovalDelay() {
+        return EntandoOperatorConfigBase.lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY)
+                .map(Integer::parseInt)
+                .orElse(30);
+    }
+
     private boolean requiresUpgrade(R resource) {
-        final boolean requiresUpgrade = EntandoOperatorConfigBase
-                .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
+        if (!isBeingUpgraded(resource) && wasProcessedByVersionBeingReplaced(resource)) {
+            resourcesBeingUpgraded.put(resource.getMetadata().getUid(), resource);
+            logResource(Level.WARNING, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
+                    .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION).orElse("latest"), resource);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean wasProcessedByVersionBeingReplaced(R resource) {
+        return EntandoOperatorConfigBase
+                .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
                 .flatMap(versionToReplace ->
                         KubeUtils.resolveAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION)
                                 .map(versionToReplace::equals))
                 .orElse(false);
-        if (requiresUpgrade) {
-            logResource(Level.WARNING, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
-                    .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION).orElse("latest"), resource);
-        }
-        return requiresUpgrade;
+    }
+
+    private boolean isBeingUpgraded(R resource) {
+        return resourcesBeingUpgraded.containsKey(resource.getMetadata().getUid());
     }
 
     private void processExistingRequestedEntandoResources() {
@@ -82,16 +100,29 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         try {
             if (performCriteriaProcessing(resource)) {
                 performCallback(action, resource);
-            } else if (needsToRemoveSuccessfullyCompletedPods(resource)) {
-                removeSuccessfullyCompletedPods(resource);
+            } else if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL) {
+                markAsUpgraded(resource);
+                if (needsToRemoveSuccessfullyCompletedPods(resource)) {
+                    removeSuccessfullyCompletedPods(resource);
+                }
             }
         } catch (Exception e) {
             logFailure(resource, e);
         }
     }
 
+    private void markAsUpgraded(R resource) {
+        resourcesBeingUpgraded.remove(resource.getMetadata().getUid());
+        EntandoOperatorConfigBase
+                .lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION)
+                .ifPresent(
+                        s -> operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s)
+                );
+    }
+
     private void removeSuccessfullyCompletedPods(R resource) {
-        operations.removeSuccessfullyCompletedPods(resource);
+        executor.schedule(() -> operations.removeSuccessfullyCompletedPods(resource), (long) getRemovalDelay(),
+                TimeUnit.SECONDS);
     }
 
     private boolean needsToRemoveSuccessfullyCompletedPods(R resource) {
@@ -141,11 +172,6 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         logResource(Level.INFO, "Received " + action.name() + " for the %s %s/%s", resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
             cache.put(resource.getMetadata().getUid(), resource);
-            EntandoOperatorConfigBase
-                    .lookupProperty(EntandoOperatorMatcherProperty.ENTANDO_K8S_OPERATOR_VERSION)
-                    .ifPresent(
-                            s -> operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s)
-                    );
             executor.execute(() -> callback.accept(action, resource));
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
@@ -179,6 +205,14 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
                     || newResource.getStatus().getObservedGeneration() < newResource.getMetadata().getGeneration();
             if (needsObservation) {
                 logResource(Level.WARNING, "%s %s/%s is processed after a metadata.generation increment.", newResource);
+                LOGGER.log(Level.WARNING,
+                        () -> {
+                            try {
+                                return new ObjectMapper().writeValueAsString(newResource);
+                            } catch (JsonProcessingException e) {
+                                return e.toString();
+                            }
+                        });
             }
             return needsObservation;
         }

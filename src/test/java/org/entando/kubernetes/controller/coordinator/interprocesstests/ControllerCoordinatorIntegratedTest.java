@@ -86,6 +86,7 @@ import org.entando.kubernetes.test.e2etest.podwaiters.ServicePodWaiter;
 import org.hamcrest.core.Is;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -130,6 +131,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     }
 
     @Test
+    @Disabled
     void testExecuteKeycloakControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
@@ -293,7 +295,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 EntandoCompositeAppOperationFactory
                         .produceAllEntandoCompositeApps(client)
                         .inNamespace(client.getNamespace()).withName(MY_APP);
-        await().ignoreExceptions().atMost(180, TimeUnit.SECONDS).until(
+        await().ignoreExceptions().atMost(240, TimeUnit.SECONDS).until(
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(KEYCLOAK_NAME).get().getPodStatus() != null
         );
         //And the plugin controller pod
