@@ -24,7 +24,7 @@
         <version>6.3.13</version>
         <relativePath/>
     </parent>
-    <version>6.3.0-SNAPSHOT</version>
+    <version>6.3.3</version>
     <artifactId>entando-k8s-controller-coordinator</artifactId>
     <name>Entando K8S Controller Coordinator</name>
     <description>Entando's K8S Controller Coordinator</description>
