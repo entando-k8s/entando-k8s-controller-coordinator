@@ -1,5 +1,3 @@
-{{- if .Values.knativeDeploy }}
-{{- else }}
 apiVersion: "{{- if .Values.supportOpenshift }}extensions/v1beta1{{- else }}apps/v1{{- end }}"
 kind: Deployment
 metadata:
@@ -19,45 +17,15 @@ spec:
       labels:
         draft: {{ default "draft-app" .Values.draft }}
         app: {{ template "fullname" . }}
-  {{- if .Values.podAnnotations }}
-      annotations:
-  {{ toYaml .Values.podAnnotations | indent 8 }}
-  {{- end }}
     spec:
       serviceAccountName: entando-operator
       volumes:
-  {{- if .Values.tls.tlsSecretName }}
-        - name: "{{ .Values.tls.tlsSecretName }}-volume"
-          secret:
-            secretName: "{{ .Values.tls.tlsSecretName }}"
-  {{- end }}
-  {{- if .Values.tls.caCertSecretName }}
-        - name: "{{ .Values.tls.caCertSecretName }}-volume"
-          secret:
-            secretName: "{{ .Values.tls.caCertSecretName }}"
-  {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
-  {{- if .Values.tls.tlsSecretName }}
-            - name: "{{ .Values.tls.tlsSecretName }}-volume"
-              mountPath: "/etc/entando/tls"
-  {{- end }}
-  {{- if .Values.tls.caCertSecretName }}
-            - name: "{{ .Values.tls.caCertSecretName }}-volume"
-              mountPath: "/etc/entando/ca"
-  {{- end}}
           env:
-  {{- if .Values.tls.tlsSecretName }}
-            - name: ENTANDO_PATH_TO_TLS_KEYPAIR
-              value: "/etc/entando/tls"
-  {{- end}}
-  {{- if .Values.tls.caCertSecretName }}
-            - name: ENTANDO_CA_CERT_ROOT_FOLDER
-              value: "/etc/entando/ca"
-  {{- end}}
             - name: ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS
               value: "{{- range $index, $name := .Values.imagePullSecrets }}{{- if $index }},{{- end }}{{ $name }}{{- end }}"
             - name: ENTANDO_K8S_OPERATOR_SERVICEACCOUNT
@@ -88,4 +56,3 @@ spec:
           resources:
 {{  .Values.resources | toYaml | trim | indent 12 }}
           terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
-{{- end }}

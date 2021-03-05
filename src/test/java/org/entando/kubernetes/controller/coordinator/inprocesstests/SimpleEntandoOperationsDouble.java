@@ -20,7 +20,7 @@ import io.fabric8.kubernetes.api.builder.Function;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.entando.kubernetes.controller.coordinator.EntandoResourceObserver;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
 import org.entando.kubernetes.controller.support.client.doubles.AbstractK8SClientDouble;
@@ -37,7 +37,8 @@ public class SimpleEntandoOperationsDouble<R extends EntandoCustomResource, D ex
     String namespace;
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public SimpleEntandoOperationsDouble(Map<String, NamespaceDouble> namespaces, Class<R> resourceClass, Class doneableClass) {
+    public SimpleEntandoOperationsDouble(ConcurrentHashMap<String, NamespaceDouble> namespaces, Class<R> resourceClass,
+            Class doneableClass) {
         super(namespaces);
         this.resourceClass = resourceClass;
         this.doneableClass = doneableClass;
@@ -61,11 +62,8 @@ public class SimpleEntandoOperationsDouble<R extends EntandoCustomResource, D ex
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<R> list() {
-        return new ArrayList<>(
-                CoordinatorK8SClientDouble.addMissingCustomResourceMaps(getNamespace(namespace)).getCustomResources(resourceClass)
-                        .values());
+        return new ArrayList<>(getNamespace(namespace).getCustomResources(resourceClass).values());
     }
 
     @Override

@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperationsRegistry;
+import org.entando.kubernetes.controller.support.client.doubles.SimpleK8SClientDouble;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoCustomResource;
 import org.entando.kubernetes.model.keycloakserver.DoneableEntandoKeycloakServer;
@@ -27,14 +28,14 @@ import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 
 public class SimpleEntandoOperationsRegistryDouble implements SimpleEntandoOperationsRegistry {
 
-    private final CoordinatorK8SClientDouble coordinatorK8SClientDouble;
+    private final SimpleK8SClientDouble coordinatorK8SClientDouble;
     private Map<Class<? extends EntandoCustomResource>, Class<? extends DoneableEntandoCustomResource<?, ?>>> doneableMap = new HashMap<>();
 
     {
         doneableMap.put(EntandoKeycloakServer.class, DoneableEntandoKeycloakServer.class);
     }
 
-    public SimpleEntandoOperationsRegistryDouble(CoordinatorK8SClientDouble coordinatorK8SClientDouble) {
+    public SimpleEntandoOperationsRegistryDouble(SimpleK8SClientDouble coordinatorK8SClientDouble) {
         this.coordinatorK8SClientDouble = coordinatorK8SClientDouble;
     }
 
