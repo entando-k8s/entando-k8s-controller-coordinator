@@ -18,14 +18,14 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -45,11 +45,11 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
 
-    private final Map<String, R> cache = new ConcurrentHashMap<>();
+    private final Map<String, Deque<String>> cache = new ConcurrentHashMap<>();
     private final Map<String, R> resourcesBeingUpgraded = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
     private final SimpleEntandoOperations<R, D> operations;
-    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
     public EntandoResourceObserver(SimpleEntandoOperations<R, D> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
@@ -91,7 +91,6 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         List<R> items = this.operations.list();
         for (R resource : items) {
             eventReceived(Action.MODIFIED, resource);
-            cache.put(resource.getMetadata().getUid(), resource);
         }
     }
 
@@ -121,8 +120,7 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
     }
 
     private void removeSuccessfullyCompletedPods(R resource) {
-        executor.schedule(() -> operations.removeSuccessfullyCompletedPods(resource), (long) getRemovalDelay(),
-                TimeUnit.SECONDS);
+        executor.schedule(() -> operations.removeSuccessfullyCompletedPods(resource), (long) getRemovalDelay(), TimeUnit.SECONDS);
     }
 
     private boolean needsToRemoveSuccessfullyCompletedPods(R resource) {
@@ -171,7 +169,6 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
     protected void performCallback(Action action, R resource) {
         logResource(Level.INFO, "Received " + action.name() + " for the %s %s/%s", resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
-            cache.put(resource.getMetadata().getUid(), resource);
             executor.execute(() -> callback.accept(action, resource));
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
@@ -192,8 +189,8 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         if (instruction == OperatorProcessingInstruction.FORCE) {
             //Remove to avoid recursive updates
             final R latestResource = operations.removeAnnotation(newResource, KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME);
-            cache.put(latestResource.getMetadata().getUid(), latestResource);
-            logResource(Level.WARNING, "Processing of %s %s/%s has been forced using entando.org/processing-instruction.", newResource);
+            markResourceVersionProcessed(latestResource);
+            logResource(Level.WARNING, "Processing of %s %s/%s has been forced using entando.org/processing-instruction.", latestResource);
             return true;
         } else if (instruction == OperatorProcessingInstruction.DEFER || instruction == OperatorProcessingInstruction.IGNORE) {
             logResource(Level.WARNING, "Processing of %s %s/%s has been deferred or ignored using entando.org/processing-instruction.",
@@ -205,37 +202,44 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
                     || newResource.getStatus().getObservedGeneration() < newResource.getMetadata().getGeneration();
             if (needsObservation) {
                 logResource(Level.WARNING, "%s %s/%s is processed after a metadata.generation increment.", newResource);
-                LOGGER.log(Level.WARNING,
-                        () -> {
-                            try {
-                                return new ObjectMapper().writeValueAsString(newResource);
-                            } catch (JsonProcessingException e) {
-                                return e.toString();
-                            }
-                        });
+                //                LOGGER.log(Level.WARNING,
+                //                        () -> {
+                //                            try {
+                //                                return new ObjectMapper().writeValueAsString(newResource);
+                //                            } catch (JsonProcessingException e) {
+                //                                return e.toString();
+                //                            }
+                //                        });
             }
             return needsObservation;
         }
     }
 
     private boolean hasNewResourceVersion(R newResource) {
-        if (cache.containsKey(newResource.getMetadata().getUid())) {
-            R oldResource = cache.get(newResource.getMetadata().getUid());
-            int knownResourceVersion = Integer.parseInt(oldResource.getMetadata().getResourceVersion());
-            int receivedVersion = Integer.parseInt(newResource.getMetadata().getResourceVersion());
-            if (knownResourceVersion >= receivedVersion) {
-                logResource(Level.WARNING, "Duplicate event for %s %s/%s. ResourceVersion=" + receivedVersion, newResource);
-                return false;
-            }
+        Deque<String> queue = cache.computeIfAbsent(newResource.getMetadata().getUid(), key -> new ConcurrentLinkedDeque<>());
+        if (queue.contains(newResource.getMetadata().getResourceVersion())) {
+            //TODO observe logs to see if this actually still happens
+            logResource(Level.WARNING, "Duplicate event for %s %s/%s. ResourceVersion=" + newResource.getMetadata().getResourceVersion(),
+                    newResource);
+            return false;
         }
+        markResourceVersionProcessed(newResource);
         logResource(Level.WARNING, "%s %s/%s has a new resource version: " + newResource.getMetadata().getResourceVersion(), newResource);
         return true;
     }
 
-    public void shutDownAndWait(long i, TimeUnit timeUnit) throws InterruptedException {
+    private void markResourceVersionProcessed(R newResource) {
+        Deque<String> queue = cache.computeIfAbsent(newResource.getMetadata().getUid(), key -> new ConcurrentLinkedDeque<>());
+        queue.offer(newResource.getMetadata().getResourceVersion());
+        while (queue.size() > 10) {
+            queue.poll();
+        }
+    }
+
+    public void shutDownAndWait(int i, TimeUnit timeUnit) throws InterruptedException {
         executor.shutdown();
         if (!executor.awaitTermination(i, timeUnit)) {
-            LOGGER.log(Level.WARNING, "Could not sure EntandoResourceObserver down.");
+            LOGGER.log(Level.WARNING, "Could not shut EntandoResourceObserver down.");
         }
     }
 }

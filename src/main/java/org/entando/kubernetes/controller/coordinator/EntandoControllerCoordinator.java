@@ -21,16 +21,20 @@ import io.fabric8.kubernetes.client.Watcher.Action;
 import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import org.entando.kubernetes.client.DefaultSimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
+import org.entando.kubernetes.controller.support.controller.DefaultControllerImageResolver;
 import org.entando.kubernetes.model.DoneableEntandoCustomResource;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoCustomResource;
@@ -61,8 +65,6 @@ public class EntandoControllerCoordinator {
     }
 
     public void onStartup(@Observes StartupEvent event) {
-        //TODO extract TLS and CA certs and write them to the standard secret names
-
         addObservers(EntandoKeycloakServer.class, this::startImage);
         addObservers(EntandoClusterInfrastructure.class, this::startImage);
         addObservers(EntandoPlugin.class, this::startImage);
@@ -84,7 +86,6 @@ public class EntandoControllerCoordinator {
         return (List<EntandoResourceObserver<R, D>>) observers.get(clss);
     }
 
-    @SuppressWarnings("unchecked")
     private <R extends EntandoCustomResource,
             D extends DoneableEntandoCustomResource<R, D>> void addObservers(Class<R> type, BiConsumer<Action, R> consumer) {
         final SimpleEntandoOperations<R, D> operations = this.entandoResourceOperationsRegistry
@@ -105,8 +106,19 @@ public class EntandoControllerCoordinator {
         observers.put(type, observersForType);
     }
 
+    public void shutdownObservers(int wait, TimeUnit timeUnit) throws InterruptedException {
+        final List<? extends EntandoResourceObserver<? extends EntandoCustomResource, ?>> observers = this.observers.keySet().stream()
+                .map(this::getObserver)
+                .flatMap(Collection::stream).collect(Collectors.toList());
+        for (EntandoResourceObserver<? extends EntandoCustomResource, ?> observer : observers) {
+            observer.shutDownAndWait(wait, timeUnit);
+        }
+    }
+
     private <S extends Serializable, T extends EntandoBaseCustomResource<S>> void startImage(Action action, T resource) {
-        ControllerExecutor executor = new ControllerExecutor(client.entandoResources().getNamespace(), client);
+        TrustStoreSecretRegenerator.regenerateIfNecessary(client);
+        ControllerExecutor executor = new ControllerExecutor(client.entandoResources().getNamespace(), client,
+                new DefaultControllerImageResolver());
         executor.startControllerFor(action, resource, null);
     }
 }
