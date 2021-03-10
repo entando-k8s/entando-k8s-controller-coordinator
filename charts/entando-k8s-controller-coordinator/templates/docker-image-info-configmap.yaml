@@ -24,8 +24,6 @@ data:
     {"version":"6.3.2","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-composite-app-controller: >-
     {"version":"6.3.3","executable-type":"jvm","registry":"docker.io","organization":"entando"}
-  entando-k8s-controller-coordinator: >-
-    {"version":"6.3.4","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-database-service-controller: >-
     {"version":"6.3.7","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-dbjob: >-
