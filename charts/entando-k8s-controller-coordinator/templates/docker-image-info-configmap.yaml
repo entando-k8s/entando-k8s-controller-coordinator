@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: entando-docker-image-info
-  namespace: { { .Release.Namespace } }
+  namespace: "{{ .Release.Namespace }}"
 data:
   app-builder: >-
     {"version":"6.3.44","executable-type":"n/a","registry":"docker.io","organization":"entando"}
