@@ -57,6 +57,7 @@ public class EntandoControllerCoordinator {
     @Inject
     public EntandoControllerCoordinator(KubernetesClient client) {
         this(new DefaultSimpleK8SClient(client), new DefaultSimpleEntandoOperationsRegistry(client));
+        client.configMaps().inNamespace(client.getNamespace()).withName("entando-operator-config").watch(new ConfigListener());
     }
 
     public EntandoControllerCoordinator(SimpleK8SClient<?> client, SimpleEntandoOperationsRegistry registry) {

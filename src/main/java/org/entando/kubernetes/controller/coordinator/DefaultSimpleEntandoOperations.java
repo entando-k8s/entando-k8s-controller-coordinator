@@ -67,7 +67,7 @@ public class DefaultSimpleEntandoOperations<
 
     @Override
     public void removeSuccessfullyCompletedPods(R resource) {
-        this.client.pods().removeSuccessfullyCompletedPods(operations.getNamespace(), Map.of(
+        this.client.pods().removeSuccessfullyCompletedPods(client.entandoResources().getNamespace(), Map.of(
                 KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
                 KubeUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
                 resource.getKind(), resource.getMetadata().getName()));
