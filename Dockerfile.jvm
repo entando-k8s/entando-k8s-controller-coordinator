@@ -1,5 +1,16 @@
-FROM entando/entando-k8s-operator-common:6.3.12
+FROM entando/entando-k8s-operator-common:6.3.13
 ARG VERSION
+
+
+USER root
+
+RUN microdnf install yum 
+RUN yum -y update --security
+RUN microdnf remove yum && microdnf clean all
+
+USER default
+
+
 LABEL name="Entando K8S Controller Coordinator" \
       vendor="Entando" \
       version="v${VERSION}" \
