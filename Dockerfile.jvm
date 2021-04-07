@@ -1,5 +1,6 @@
-FROM entando/entando-k8s-operator-common:6.3.12
+FROM entando/entando-k8s-operator-common:6.3.19
 ARG VERSION
+
 LABEL name="Entando K8S Controller Coordinator" \
       vendor="Entando" \
       version="v${VERSION}" \
