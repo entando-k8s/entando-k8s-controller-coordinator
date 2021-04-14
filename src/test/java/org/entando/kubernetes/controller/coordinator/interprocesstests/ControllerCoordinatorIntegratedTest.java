@@ -169,10 +169,10 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
             assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
         }
         //and the database containers have been created
-        helper.keycloak().waitForServicePod(new ServicePodWaiter().limitReadinessTo(Duration.ofSeconds(150)), keycloakServer
+        helper.keycloak().waitForServicePod(new ServicePodWaiter().limitReadinessTo(Duration.ofSeconds(180)), keycloakServer
                 .getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-db");
         //and the database preparation has completed
-        helper.keycloak().waitForDbJobPod(new JobPodWaiter().limitCompletionTo(Duration.ofSeconds(60)), keycloakServer, "server");
+        helper.keycloak().waitForDbJobPod(new JobPodWaiter().limitCompletionTo(Duration.ofSeconds(90)), keycloakServer, "server");
         //and the Keycloak server container has been deployed
         helper.keycloak().waitForServicePod((new ServicePodWaiter()).limitReadinessTo(Duration.ofSeconds(300)),
                 keycloakServer.getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-server");
