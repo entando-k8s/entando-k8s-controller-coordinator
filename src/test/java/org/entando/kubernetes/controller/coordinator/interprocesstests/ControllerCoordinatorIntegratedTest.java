@@ -330,12 +330,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     }
 
     protected void verifyKeycloakDeployment(EntandoKeycloakServer entandoKeycloakServer, StandardKeycloakImage standardKeycloakImage) {
-        String http = HttpTestHelper.getDefaultProtocol();
-        await().atMost(15, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).ignoreExceptions().until(() -> HttpTestHelper
-                .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "-" + entandoKeycloakServer.getMetadata()
-                        .getNamespace() + "." + helper.getDomainSuffix()
-                        + "/auth"));
-        await().atMost(30, SECONDS).ignoreExceptions().until(() -> helper.keycloak().getOperations()
+        await().atMost(60, SECONDS).ignoreExceptions().until(() -> helper.keycloak().getOperations()
                 .inNamespace(entandoKeycloakServer.getMetadata().getNamespace())
                 .withName(entandoKeycloakServer.getMetadata().getName())
                 .fromServer()
@@ -357,6 +352,11 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         assertTrue(helper.keycloak().getOperations()
                 .inNamespace(entandoKeycloakServer.getMetadata().getNamespace()).withName(entandoKeycloakServer.getMetadata().getName())
                 .fromServer().get().getStatus().forServerQualifiedBy("server").isPresent());
+        String http = HttpTestHelper.getDefaultProtocol();
+        await().atMost(30, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).ignoreExceptions().until(() -> HttpTestHelper
+                .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "-" + entandoKeycloakServer.getMetadata()
+                        .getNamespace() + "." + helper.getDomainSuffix()
+                        + "/auth"));
 
         Secret adminSecret = client.secrets()
                 .inNamespace(client.getNamespace())
