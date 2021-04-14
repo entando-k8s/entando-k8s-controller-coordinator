@@ -251,7 +251,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     /**
      * Adding this test as a kind of e2e test to ensure state gets propagate correctly all the way through th container hierarchy.
      */
-    //    @Test
+    @Test
     void testExecuteCompositeAppControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
@@ -382,24 +382,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         assertTrue(helper.keycloak().getOperations()
                 .inNamespace(entandoKeycloakServer.getMetadata().getNamespace()).withName(entandoKeycloakServer.getMetadata().getName())
                 .fromServer().get().getStatus().forServerQualifiedBy("server").isPresent());
-        System.out.println("#####Printing TLS properties");
-        System.out.println(System.getProperty(EntandoOperatorConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty()));
-        System.out.println(System.getProperty(EntandoOperatorConfigProperty.ENTANDO_TLS_SECRET_NAME.getJvmSystemProperty()));
-        System.out.println(System.getProperty(EntandoOperatorConfigProperty.ENTANDO_USE_AUTO_CERT_GENERATION.getJvmSystemProperty()));
-        System.out.println("#####Printing TLS env vars");
-        System.out.println(System.getenv(EntandoOperatorConfigProperty.ENTANDO_CA_SECRET_NAME.name()));
-        System.out.println(System.getenv(EntandoOperatorConfigProperty.ENTANDO_TLS_SECRET_NAME.name()));
-        System.out.println(System.getenv(EntandoOperatorConfigProperty.ENTANDO_USE_AUTO_CERT_GENERATION.name()));
-        System.out.println("#####Printing resolved TLS props");
-        System.out.println(EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_CA_SECRET_NAME));
-        System.out.println(EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_TLS_SECRET_NAME));
-        System.out.println(EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_USE_AUTO_CERT_GENERATION));
-        System.out.println("#####Printing default protocol");
-        System.out.println(HttpTestHelper.getDefaultProtocol());
-
         String http = HttpTestHelper.getDefaultProtocol();
-        System.out.println("#####Printing KC url");
-        System.out.println(http + "://" + entandoKeycloakServer.getMetadata().getName() + "." + helper.getDomainSuffix() + "/auth");
         await().atMost(30, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).ignoreExceptions().until(() -> HttpTestHelper
                 .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "." + helper.getDomainSuffix() + "/auth"));
 
