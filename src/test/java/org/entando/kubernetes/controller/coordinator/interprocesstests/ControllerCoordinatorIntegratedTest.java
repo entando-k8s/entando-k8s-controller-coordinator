@@ -142,9 +142,10 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         final String versionToExpect = ensureKeycloakControllerVersion();
         //When I create a new EntandoKeycloakServer resource
         EntandoKeycloakServer keycloakServer = new EntandoKeycloakServerBuilder()
-                .withNewMetadata().withName("test-keycloak").withNamespace(client.getNamespace()).endMetadata()
+                .withNewMetadata().withName(KEYCLOAK_NAME).withNamespace(client.getNamespace()).endMetadata()
                 .withNewSpec()
                 .withDbms(DbmsVendor.POSTGRESQL)
+                .withIngressHostName(KEYCLOAK_NAME + "." + getDomainSuffix())
                 .endSpec()
                 .build();
         EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(client)
@@ -354,9 +355,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 .fromServer().get().getStatus().forServerQualifiedBy("server").isPresent());
         String http = HttpTestHelper.getDefaultProtocol();
         await().atMost(30, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).ignoreExceptions().until(() -> HttpTestHelper
-                .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "-" + entandoKeycloakServer.getMetadata()
-                        .getNamespace() + "." + helper.getDomainSuffix()
-                        + "/auth"));
+                .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "." + helper.getDomainSuffix() + "/auth"));
 
         Secret adminSecret = client.secrets()
                 .inNamespace(client.getNamespace())
