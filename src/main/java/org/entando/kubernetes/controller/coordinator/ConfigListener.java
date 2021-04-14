@@ -30,6 +30,6 @@ public class ConfigListener implements Watcher<ConfigMap> {
 
     @Override
     public void onClose(KubernetesClientException cause) {
-
+        //No recovery from this situation
     }
 }

@@ -1,8 +1,7 @@
-apiVersion: "{{- if .Values.supportOpenshift }}extensions/v1beta1{{- else }}apps/v1{{- end }}"
+apiVersion: "{{- if .Values.supportOpenshift311 }}extensions/v1beta1{{- else }}apps/v1{{- end }}"
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}
-  namespace: {{ .Release.Namespace }}
   labels:
     draft: {{ default "draft-app" .Values.draft }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
@@ -36,23 +35,52 @@ spec:
             - name: {{ $pkey }}
               value: {{ quote $pval }}
   {{- end }}
+  {{- if .Values.supportOpenshift311 }}
           livenessProbe:
             exec:
               command:
                 - cat
                 - /tmp/EntandoControllerCoordinator.ready
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
-            successThreshold: {{ .Values.livenessProbe.successThreshold }}
-            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
           readinessProbe:
             exec:
               command:
                 - cat
                 - /tmp/EntandoControllerCoordinator.ready
-            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-            successThreshold: {{ .Values.readinessProbe.successThreshold }}
-            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+  {{- else }}
+          startupProbe:
+            exec:
+              command:
+                - cat
+                - /tmp/EntandoControllerCoordinator.ready
+            periodSeconds: 3
+            failureThreshold: {{ div .Values.livenessProbe.initialDelaySeconds 3 }}
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            exec:
+              command:
+                - cat
+                - /tmp/EntandoControllerCoordinator.ready
+            periodSeconds: 5
+            failureThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            exec:
+              command:
+                - cat
+                - /tmp/EntandoControllerCoordinator.ready
+            periodSeconds: 5
+            failureThreshold: 1
+            timeoutSeconds: 1
+  {{- end}}
           resources:
 {{  .Values.resources | toYaml | trim | indent 12 }}
           terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}

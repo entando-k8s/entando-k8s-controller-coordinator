@@ -86,7 +86,6 @@ import org.entando.kubernetes.test.e2etest.podwaiters.ServicePodWaiter;
 import org.hamcrest.core.Is;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -131,7 +130,6 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     }
 
     @Test
-    @Disabled
     void testExecuteKeycloakControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();

@@ -24,7 +24,7 @@ import org.entando.kubernetes.controller.support.common.TlsHelper;
 
 public class TrustStoreSecretRegenerator {
 
-    private static AtomicReference<String> lastCaSecretResourceVersion = new AtomicReference("");
+    private static AtomicReference<String> lastCaSecretResourceVersion = new AtomicReference<>("");
 
     private TrustStoreSecretRegenerator() {
 

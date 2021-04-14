@@ -10,5 +10,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: entando-operator
-    namespace: {{ .Release.Namespace }}
 {{- end }}

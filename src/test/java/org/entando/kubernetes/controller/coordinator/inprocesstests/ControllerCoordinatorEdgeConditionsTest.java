@@ -56,7 +56,6 @@ import org.junit.jupiter.api.Test;
 
 @Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
 //because Awaitility knows which invocation throws the exception
-@SuppressWarnings("java:S5778")
 class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting, CommonLabels {
 
     public static final String CONTROLLER_NAMESPACE = EntandoResourceClientDouble.CONTROLLER_NAMESPACE;
