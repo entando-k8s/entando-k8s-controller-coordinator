@@ -61,6 +61,7 @@ import org.entando.kubernetes.controller.spi.common.SecretUtils;
 import org.entando.kubernetes.controller.spi.container.KeycloakName;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.controller.support.common.TlsHelper;
 import org.entando.kubernetes.controller.support.creators.IngressCreator;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
@@ -89,6 +90,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
+import org.junit.platform.commons.util.StringUtils;
 
 @Tags({@Tag("end-to-end"), @Tag("inter-process"), @Tag("smoke-test"), @Tag("post-deployment")})
 class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, FluentTraversals,
@@ -100,6 +102,33 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     public static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
     private static NamespacedKubernetesClient client;
     private static K8SIntegrationTestHelper helper = new K8SIntegrationTestHelper();
+
+    static {
+        /* 
+         NB!!! this part is a bit convoluted. The ENTANDO_CA_SECRET_NAME JVM property could potentially be set in the
+         constructor K8SIntegrationTestHelper. The init statement TestFixturePreparation.newClient() actually indirectly
+         calls CertificateSecretHelper.buildCertificateSecretsFromDirectory() but only if certs could be picked up
+         in the source folder src/test/resources/${domain}/, and then it sets the The ENTANDO_CA_SECRET_NAME JVM
+         property.
+
+         If it is set, the secret will be created in the TestFixturePreparation#ENTANDO_CONTROLLERS_NAMESPACE.
+         Just to make sure, the preview Helm template of this project also declares the relevant secrets:
+         test-ca-secret: charts/preview/templates/ca-secret.yaml
+         test-tls-secret: charts/preview/templates/tls-secret.yaml
+
+         So if all the planets are aligned and the secret has been created, the following code attempts to initialize the
+         current JVM's trust store, but it is essential that it is called before any HTTPS calls are made
+         or the new trust store could  initialized without this CA cert.
+         */
+        if (StringUtils.isNotBlank(System.getProperty(EntandoOperatorConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty()))) {
+            final Secret secret = getClient().secrets()
+                    .withName(System.getProperty(EntandoOperatorConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty())).get();
+            if (secret != null) {
+                TlsHelper.trustCertificateAuthoritiesIn(secret);
+            }
+        }
+    }
+
     private String domainSuffix;
 
     private static NamespacedKubernetesClient getClient() {
