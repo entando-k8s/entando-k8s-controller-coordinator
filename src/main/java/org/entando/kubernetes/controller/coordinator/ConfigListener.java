@@ -19,9 +19,13 @@ package org.entando.kubernetes.controller.coordinator;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 
 public class ConfigListener implements Watcher<ConfigMap> {
+
+    private static final Logger LOGGER = Logger.getLogger(ConfigListener.class.getName());
 
     @Override
     public void eventReceived(Action action, ConfigMap resource) {
@@ -30,6 +34,7 @@ public class ConfigListener implements Watcher<ConfigMap> {
 
     @Override
     public void onClose(KubernetesClientException cause) {
-        //No recovery from this situation
+        LOGGER.log(Level.SEVERE, cause, () -> "ConfigListener closed. The container should restart now.");
+        Liveness.dead();
     }
 }
