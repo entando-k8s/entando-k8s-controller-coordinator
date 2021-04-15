@@ -158,6 +158,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     @Test
     void testExecuteKeycloakControllerRemoval() {
         System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty(), "true");
         //Given I have a clean namespace
         KubernetesClient client = getFabric8Client();
         clearNamespace(client);
@@ -182,6 +183,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
         //When I complete the Keycloak installation successfully
+        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
         afterSuccess(keycloakServer, listable.list().getItems().get(0));
         //THen the previously created controller pod will be removed
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().isEmpty());
