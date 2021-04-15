@@ -80,6 +80,9 @@ public class EntandoOperatorMatcher {
                 .map(crdVersion::satisfies).orElse(true);
     }
 
+    public static void main(String[] args) {
+        System.out.println( Version.valueOf("6.3.1").greaterThan(Version.valueOf("6.3.1-beta")));
+    }
     private static String fillSemVer(EntandoCustomResource r) {
         String version = r.getApiVersion().substring("entando.org/v".length());
         long count = version.chars().filter(i -> i == '.').count();
