@@ -157,8 +157,6 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
 
     @Test
     void testExecuteKeycloakControllerRemoval() {
-        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty(), "true");
         //Given I have a clean namespace
         KubernetesClient client = getFabric8Client();
         clearNamespace(client);
@@ -182,8 +180,22 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
-        //When I complete the Keycloak installation successfully
+        //And I have activated Pod GC with a removal delay of 1 second
         System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty(), "true");
+        System.out.println("#####Printing system properties");
+        System.out.println(
+                System.getProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty()));
+        System.out
+                .println(System.getProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty()));
+        System.out.println("#####Printing env vars");
+        System.out.println(System.getenv(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.name()));
+        System.out.println(System.getenv(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.name()));
+        System.out.println("#####Printing resolved config properties");
+        System.out.println(
+                EntandoOperatorConfigBase.lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY));
+        System.out.println(EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS));
+        //When I complete the Keycloak installation successfully
         afterSuccess(keycloakServer, listable.list().getItems().get(0));
         //THen the previously created controller pod will be removed
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().isEmpty());
