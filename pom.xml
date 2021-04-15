@@ -64,7 +64,7 @@
     <properties>
         <github.organization>entando-k8s</github.organization>
         <entando-k8s-operator-common.version>6.3.19</entando-k8s-operator-common.version>
-        <preDeploymentTestGroups>in-process</preDeploymentTestGroups>
+        <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
     </properties>
     <issueManagement>
