@@ -30,12 +30,18 @@ import org.entando.kubernetes.controller.coordinator.ConfigListener;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.Liveness;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
 @Tags({@Tag("unit"), @Tag("pre-deployment")})
 class ConfigListenerTest {
+
+    @AfterEach
+    void resetConfigMap() {
+        EntandoOperatorConfigBase.setConfigMap(null);
+    }
 
     @Test
     void shoulReflectLatestConfig() {
