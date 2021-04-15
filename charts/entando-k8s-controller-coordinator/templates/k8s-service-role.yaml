@@ -3,7 +3,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: entando-k8s-service
-  namespace: {{ .Release.Namespace }}
 rules:
   - apiGroups:
       - entando.org
@@ -32,7 +31,6 @@ rules:
       - ingresses
     verbs:
       - "*"
-{{- if .Values.supportOpenshift }}
   - apiGroups:
       - route.openshift.io
     resources:
@@ -40,7 +38,6 @@ rules:
       - "routes/custom-host"
     verbs:
       - "*"
-{{- end }}
   - apiGroups:
       - ""
     resources:

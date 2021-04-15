@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 
 public class Liveness {
 
@@ -43,7 +44,9 @@ public class Liveness {
     }
 
     private static Path aliveFile() {
-        return Paths.get("/tmp", EntandoControllerCoordinator.class.getSimpleName() + ".ready");
+        return Paths
+                .get(EntandoOperatorConfigBase.lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_PROBE_FOLDER).orElse("/tmp"),
+                        EntandoControllerCoordinator.class.getSimpleName() + ".ready");
     }
 
     private interface FileOperation {

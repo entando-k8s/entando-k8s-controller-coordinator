@@ -157,10 +157,12 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
 
     @Test
     void testExecuteKeycloakControllerRemoval() {
-        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
         //Given I have a clean namespace
         KubernetesClient client = getFabric8Client();
         clearNamespace(client);
+        //And I have activated Pod GC with a removal delay of 1 second
+        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty(), "true");
         //and the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
                 client.getNamespace());

@@ -67,7 +67,6 @@ rules:
     verbs:
       - get
       - create
-{{- if .Values.supportOpenshift }}
   - apiGroups:
       - route.openshift.io
     resources:
@@ -75,5 +74,4 @@ rules:
       - "routes/custom-host"
     verbs:
       - "*"
-{{- end }}
 {{- end }}

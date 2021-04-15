@@ -61,6 +61,7 @@ import org.entando.kubernetes.controller.spi.common.SecretUtils;
 import org.entando.kubernetes.controller.spi.container.KeycloakName;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.controller.support.common.TlsHelper;
 import org.entando.kubernetes.controller.support.creators.IngressCreator;
 import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
@@ -86,10 +87,10 @@ import org.entando.kubernetes.test.e2etest.podwaiters.ServicePodWaiter;
 import org.hamcrest.core.Is;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
+import org.junit.platform.commons.util.StringUtils;
 
 @Tags({@Tag("end-to-end"), @Tag("inter-process"), @Tag("smoke-test"), @Tag("post-deployment")})
 class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, FluentTraversals,
@@ -101,6 +102,33 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     public static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
     private static NamespacedKubernetesClient client;
     private static K8SIntegrationTestHelper helper = new K8SIntegrationTestHelper();
+
+    static {
+        /* 
+         NB!!! this part is a bit convoluted. The ENTANDO_CA_SECRET_NAME JVM property could potentially be set in the
+         constructor K8SIntegrationTestHelper. The init statement TestFixturePreparation.newClient() actually indirectly
+         calls CertificateSecretHelper.buildCertificateSecretsFromDirectory() but only if certs could be picked up
+         in the source folder src/test/resources/${domain}/, and then it sets the The ENTANDO_CA_SECRET_NAME JVM
+         property.
+
+         If it is set, the secret will be created in the TestFixturePreparation#ENTANDO_CONTROLLERS_NAMESPACE.
+         Just to make sure, the preview Helm template of this project also declares the relevant secrets:
+         test-ca-secret: charts/preview/templates/ca-secret.yaml
+         test-tls-secret: charts/preview/templates/tls-secret.yaml
+
+         So if all the planets are aligned and the secret has been created, the following code attempts to initialize the
+         current JVM's trust store, but it is essential that it is called before any HTTPS calls are made
+         or the new trust store could  initialized without this CA cert.
+         */
+        if (StringUtils.isNotBlank(System.getProperty(EntandoOperatorConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty()))) {
+            final Secret secret = getClient().secrets()
+                    .withName(System.getProperty(EntandoOperatorConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty())).get();
+            if (secret != null) {
+                TlsHelper.trustCertificateAuthoritiesIn(secret);
+            }
+        }
+    }
+
     private String domainSuffix;
 
     private static NamespacedKubernetesClient getClient() {
@@ -131,7 +159,6 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     }
 
     @Test
-    @Disabled
     void testExecuteKeycloakControllerPod() {
         //Given I have a clean namespace
         KubernetesClient client = getClient();
@@ -144,9 +171,10 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         final String versionToExpect = ensureKeycloakControllerVersion();
         //When I create a new EntandoKeycloakServer resource
         EntandoKeycloakServer keycloakServer = new EntandoKeycloakServerBuilder()
-                .withNewMetadata().withName("test-keycloak").withNamespace(client.getNamespace()).endMetadata()
+                .withNewMetadata().withName(KEYCLOAK_NAME).withNamespace(client.getNamespace()).endMetadata()
                 .withNewSpec()
                 .withDbms(DbmsVendor.POSTGRESQL)
+                .withIngressHostName(KEYCLOAK_NAME + "." + getDomainSuffix())
                 .endSpec()
                 .build();
         EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(client)
@@ -170,10 +198,10 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
             assertTrue(thePrimaryContainerOn(theControllerPod).getImage().endsWith(versionToExpect));
         }
         //and the database containers have been created
-        helper.keycloak().waitForServicePod(new ServicePodWaiter().limitReadinessTo(Duration.ofSeconds(150)), keycloakServer
+        helper.keycloak().waitForServicePod(new ServicePodWaiter().limitReadinessTo(Duration.ofSeconds(180)), keycloakServer
                 .getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-db");
         //and the database preparation has completed
-        helper.keycloak().waitForDbJobPod(new JobPodWaiter().limitCompletionTo(Duration.ofSeconds(60)), keycloakServer, "server");
+        helper.keycloak().waitForDbJobPod(new JobPodWaiter().limitCompletionTo(Duration.ofSeconds(90)), keycloakServer, "server");
         //and the Keycloak server container has been deployed
         helper.keycloak().waitForServicePod((new ServicePodWaiter()).limitReadinessTo(Duration.ofSeconds(300)),
                 keycloakServer.getMetadata().getNamespace(), keycloakServer.getMetadata().getName() + "-server");
@@ -332,12 +360,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     }
 
     protected void verifyKeycloakDeployment(EntandoKeycloakServer entandoKeycloakServer, StandardKeycloakImage standardKeycloakImage) {
-        String http = HttpTestHelper.getDefaultProtocol();
-        await().atMost(15, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).ignoreExceptions().until(() -> HttpTestHelper
-                .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "-" + entandoKeycloakServer.getMetadata()
-                        .getNamespace() + "." + helper.getDomainSuffix()
-                        + "/auth"));
-        await().atMost(30, SECONDS).ignoreExceptions().until(() -> helper.keycloak().getOperations()
+        await().atMost(60, SECONDS).ignoreExceptions().until(() -> helper.keycloak().getOperations()
                 .inNamespace(entandoKeycloakServer.getMetadata().getNamespace())
                 .withName(entandoKeycloakServer.getMetadata().getName())
                 .fromServer()
@@ -359,6 +382,9 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         assertTrue(helper.keycloak().getOperations()
                 .inNamespace(entandoKeycloakServer.getMetadata().getNamespace()).withName(entandoKeycloakServer.getMetadata().getName())
                 .fromServer().get().getStatus().forServerQualifiedBy("server").isPresent());
+        String http = HttpTestHelper.getDefaultProtocol();
+        await().atMost(30, TimeUnit.SECONDS).pollInterval(1, TimeUnit.SECONDS).ignoreExceptions().until(() -> HttpTestHelper
+                .statusOk(http + "://" + entandoKeycloakServer.getMetadata().getName() + "." + helper.getDomainSuffix() + "/auth"));
 
         Secret adminSecret = client.secrets()
                 .inNamespace(client.getNamespace())

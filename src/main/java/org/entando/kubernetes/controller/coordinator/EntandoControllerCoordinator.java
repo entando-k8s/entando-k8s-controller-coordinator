@@ -108,10 +108,10 @@ public class EntandoControllerCoordinator {
     }
 
     public void shutdownObservers(int wait, TimeUnit timeUnit) throws InterruptedException {
-        final List<? extends EntandoResourceObserver<? extends EntandoCustomResource, ?>> observers = this.observers.keySet().stream()
+        final List<? extends EntandoResourceObserver<? extends EntandoCustomResource, ?>> allObservers = this.observers.keySet().stream()
                 .map(this::getObserver)
                 .flatMap(Collection::stream).collect(Collectors.toList());
-        for (EntandoResourceObserver<? extends EntandoCustomResource, ?> observer : observers) {
+        for (EntandoResourceObserver<? extends EntandoCustomResource, ?> observer : allObservers) {
             observer.shutDownAndWait(wait, timeUnit);
         }
     }
