@@ -1,0 +1,86 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: entando-k8s-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      deployment: entando-k8s-service
+  template:
+    metadata:
+      name: entando-k8s-service-pod
+      labels:
+        deployment: entando-k8s-service
+    spec:
+      restartPolicy: Always
+      serviceAccountName: entando-k8s-service
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      securityContext: {}
+      containers:
+        - resources:
+            limits:
+              cpu: '1'
+              memory: 768Mi
+            requests:
+              cpu: 250m
+              memory: 192Mi
+          name: k8s-svc-container
+          env:
+            - name: SERVER_SERVLET_CONTEXT_PATH
+              value: /k8s
+          ports:
+            - name: k8s-svc-port
+              containerPort: 8084
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+  {{- if .Values.supportOpenshift311 }}
+          livenessProbe:
+            httpGet:
+              path: /k8s/actuator/health
+              port: 8084
+              scheme: HTTP
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            httpGet:
+              path: /k8s/actuator/health
+              port: 8084
+              scheme: HTTP
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+  {{- else }}
+          startupProbe:
+            httpGet:
+              path: /k8s/actuator/health
+              port: 8084
+              scheme: HTTP
+            periodSeconds: 3
+            failureThreshold: {{ div .Values.livenessProbe.initialDelaySeconds 3 }}
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              path: /k8s/actuator/health
+              port: 8084
+              scheme: HTTP
+            periodSeconds: 5
+            failureThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            httpGet:
+              path: /k8s/actuator/health
+              port: 8084
+              scheme: HTTP
+            periodSeconds: 5
+            failureThreshold: 1
+            timeoutSeconds: 1
+  {{- end}}
+          image: >-
+            docker.io/entando/entando-k8s-service:{{ .Values.relatedImages.entando_k8s_service.version }}
+      serviceAccount: entando-operator
