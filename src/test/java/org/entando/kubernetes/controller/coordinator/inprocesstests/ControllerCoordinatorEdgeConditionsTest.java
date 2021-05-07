@@ -30,18 +30,18 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.entando.kubernetes.client.integrationtesthelpers.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.client.doubles.EntandoResourceClientDouble;
 import org.entando.kubernetes.controller.support.client.doubles.SimpleK8SClientDouble;
+import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
-import org.entando.kubernetes.model.DbmsVendor;
-import org.entando.kubernetes.model.EntandoDeploymentPhase;
+import org.entando.kubernetes.model.common.DbmsVendor;
+import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppBuilder;
 import org.entando.kubernetes.model.debundle.EntandoDeBundle;
@@ -55,7 +55,7 @@ import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
 @Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
-//because Awaitility knows which invocation throws the exception
+        //because Awaitility knows which invocation throws the exception
 class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTesting, CommonLabels {
 
     public static final String CONTROLLER_NAMESPACE = EntandoResourceClientDouble.CONTROLLER_NAMESPACE;
@@ -308,7 +308,7 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //THe status is updated
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
                 clientDouble.entandoResources().load(EntandoDeBundle.class, OBSERVED_NAMESPACE, "my-de-bundle").getStatus()
-                        .getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL);
+                        .getPhase() == EntandoDeploymentPhase.SUCCESSFUL);
     }
 
     protected EntandoKeycloakServer createEntandoKeycloakServer(String resourceVersion, Long generation) {

@@ -24,8 +24,6 @@ import com.google.common.base.Strings;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.Watch;
-import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
@@ -33,25 +31,25 @@ import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.entando.kubernetes.client.EntandoOperatorTestConfig;
-import org.entando.kubernetes.client.integrationtesthelpers.FluentIntegrationTesting;
-import org.entando.kubernetes.client.integrationtesthelpers.TestFixturePreparation;
-import org.entando.kubernetes.client.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
+import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
+import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.FluentIntegrationTesting;
+import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
+import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
-import org.entando.kubernetes.model.DbmsVendor;
-import org.entando.kubernetes.model.EntandoBaseCustomResource;
-import org.entando.kubernetes.model.EntandoDeploymentPhase;
+import org.entando.kubernetes.model.common.DbmsVendor;
+import org.entando.kubernetes.model.common.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.common.EntandoCustomResourceStatus;
+import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerBuilder;
-import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.test.common.FluentTraversals;
 import org.entando.kubernetes.test.common.PodBehavior;
@@ -100,7 +98,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     }
 
     @SuppressWarnings("unchecked")
-    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterCreate(R resource) {
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S, EntandoCustomResourceStatus>> void afterCreate(R resource) {
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
         }
@@ -111,7 +109,8 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     }
 
     @SuppressWarnings("unchecked")
-    protected <S extends Serializable, R extends EntandoBaseCustomResource<S>> void afterSuccess(R resource, Pod pod) {
+    protected <S extends Serializable, R extends EntandoBaseCustomResource<S, EntandoCustomResourceStatus>> void afterSuccess(R resource,
+            Pod pod) {
         getFabric8Client().pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName())
                 .patch(podWithSucceededStatus(pod));
         resource.getMetadata().setGeneration(1L);
@@ -136,11 +135,10 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .withDbms(DbmsVendor.NONE)
                 .endSpec()
                 .build();
-        EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(client)
-                .inNamespace(client.getNamespace()).create(keycloakServer);
+        client.customResources(EntandoKeycloakServer.class).inNamespace(client.getNamespace()).create(keycloakServer);
         afterCreate(keycloakServer);
         //Then I expect to see at least one controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+        FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
@@ -175,11 +173,10 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .withDbms(DbmsVendor.NONE)
                 .endSpec()
                 .build();
-        EntandoKeycloakServerOperationFactory.produceAllEntandoKeycloakServers(client)
-                .inNamespace(client.getNamespace()).create(keycloakServer);
+        client.customResources(EntandoKeycloakServer.class).inNamespace(client.getNamespace()).create(keycloakServer);
         afterCreate(keycloakServer);
         //And I the controller pod is created.
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+        FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);

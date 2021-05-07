@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher.Action;
+import io.fabric8.kubernetes.client.WatcherException;
 import java.io.File;
 import java.nio.file.Paths;
 import org.entando.kubernetes.controller.coordinator.ConfigListener;
@@ -65,7 +66,7 @@ class ConfigListenerTest {
         assertTrue(file.exists());
         final ConfigListener configListener = new ConfigListener();
         //When the Operator loses the connection to the ConfigMap listener
-        configListener.onClose(new KubernetesClientException("Something went wrong"));
+        configListener.onClose(new WatcherException("Something went wrong"));
         //Then the operator has been killed
         assertFalse(file.exists());
     }

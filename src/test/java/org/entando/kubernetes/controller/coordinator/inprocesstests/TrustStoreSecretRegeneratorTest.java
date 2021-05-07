@@ -21,7 +21,8 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import java.nio.file.Paths;
 import org.entando.kubernetes.controller.coordinator.TrustStoreSecretRegenerator;
-import org.entando.kubernetes.controller.spi.container.TrustStoreAware;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
+import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.support.client.doubles.SimpleK8SClientDouble;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.test.common.CertificateSecretHelper;
@@ -41,12 +42,12 @@ class TrustStoreSecretRegeneratorTest {
                 Paths.get("src", "test", "resources", "tls", "ampie.dynu.net")
         ).stream().peek(s -> s.getMetadata().setResourceVersion("1")).forEach(client.secrets()::overwriteControllerSecret);
         TrustStoreSecretRegenerator.regenerateIfNecessary(client);
-        assertThat(client.secrets().loadControllerSecret(TrustStoreAware.DEFAULT_TRUSTSTORE_SECRET), notNullValue());
+        assertThat(client.secrets().loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET), notNullValue());
     }
 
     @AfterEach
     void resetSystemProperties() {
-        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty());
+        System.clearProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty());
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_TLS_SECRET_NAME.getJvmSystemProperty());
     }
 }

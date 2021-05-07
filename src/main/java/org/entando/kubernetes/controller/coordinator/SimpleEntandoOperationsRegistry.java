@@ -16,12 +16,9 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public interface SimpleEntandoOperationsRegistry {
 
-    <R extends EntandoCustomResource,
-            D extends DoneableEntandoCustomResource<R, D>
-            > SimpleEntandoOperations<R, D> getOperations(Class<R> clzz);
+    <R extends EntandoCustomResource> SimpleEntandoOperations<R> getOperations(Class<R> clzz);
 }

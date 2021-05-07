@@ -17,25 +17,23 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.entando.kubernetes.client.DefaultSimpleK8SClient;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
-import org.entando.kubernetes.model.EntandoResourceOperationsRegistry;
+import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
+import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SClient;
+import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public class DefaultSimpleEntandoOperationsRegistry implements SimpleEntandoOperationsRegistry {
 
-    private final EntandoResourceOperationsRegistry registry;
     private final DefaultSimpleK8SClient client;
+    private final KubernetesClient kubernetesClient;
 
     public DefaultSimpleEntandoOperationsRegistry(KubernetesClient client) {
-        this.registry = new EntandoResourceOperationsRegistry(client);
         this.client = new DefaultSimpleK8SClient(client);
+        this.kubernetesClient = client;
     }
 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public <R extends EntandoCustomResource, D extends DoneableEntandoCustomResource<R, D>> SimpleEntandoOperations<R, D> getOperations(
-            Class<R> clzz) {
-        return new DefaultSimpleEntandoOperations(client, registry.getOperations(clzz));
+    public <R extends EntandoCustomResource> SimpleEntandoOperations<R> getOperations(Class<R> clzz) {
+        return new DefaultSimpleEntandoOperations(client, (CustomResourceOperationsImpl) kubernetesClient.customResources((Class)clzz));
     }
 }

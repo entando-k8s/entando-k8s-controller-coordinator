@@ -18,8 +18,8 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -36,22 +36,21 @@ import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
-import org.entando.kubernetes.model.EntandoDeploymentPhase;
+import org.entando.kubernetes.model.common.EntandoCustomResource;
+import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 
-public class EntandoResourceObserver<R extends EntandoCustomResource, D extends DoneableEntandoCustomResource<R, D>> implements Watcher<R> {
+public class EntandoResourceObserver<R extends EntandoCustomResource> implements Watcher<R> {
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
 
     private final Map<String, Deque<String>> cache = new ConcurrentHashMap<>();
     private final Map<String, R> resourcesBeingUpgraded = new ConcurrentHashMap<>();
     private final BiConsumer<Action, R> callback;
-    private final SimpleEntandoOperations<R, D> operations;
+    private final SimpleEntandoOperations<R> operations;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
-    public EntandoResourceObserver(SimpleEntandoOperations<R, D> operations, BiConsumer<Action, R> callback) {
+    public EntandoResourceObserver(SimpleEntandoOperations<R> operations, BiConsumer<Action, R> callback) {
         this.callback = callback;
         this.operations = operations;
         processExistingRequestedEntandoResources();
@@ -99,7 +98,7 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
         try {
             if (performCriteriaProcessing(resource)) {
                 performCallback(action, resource);
-            } else if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL) {
+            } else if (resource.getStatus().getPhase() == EntandoDeploymentPhase.SUCCESSFUL) {
                 markAsUpgraded(resource);
                 if (needsToRemoveSuccessfullyCompletedPods(resource)) {
                     removeSuccessfullyCompletedPods(resource);
@@ -128,7 +127,7 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
                 && Optional.ofNullable(resource.getMetadata().getGeneration())
                 .map(aLong -> aLong.equals(resource.getMetadata().getGeneration()))
                 .orElse(false)
-                && resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.SUCCESSFUL;
+                && resource.getStatus().getPhase() == EntandoDeploymentPhase.SUCCESSFUL;
     }
 
     private void logFailure(R resource, Exception e) {
@@ -156,7 +155,7 @@ public class EntandoResourceObserver<R extends EntandoCustomResource, D extends 
     }
 
     @Override
-    public void onClose(KubernetesClientException cause) {
+    public void onClose(WatcherException cause) {
         if (cause.getMessage().contains("resourceVersion") && cause.getMessage().contains("too old")) {
             LOGGER.log(Level.WARNING, () -> "EntandoResourceObserver closed due to out of date resourceVersion. Reconnecting ... ");
             operations.watch(this);

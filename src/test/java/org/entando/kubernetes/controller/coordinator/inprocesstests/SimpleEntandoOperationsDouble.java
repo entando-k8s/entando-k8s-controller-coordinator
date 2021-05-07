@@ -16,8 +16,6 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
-import io.fabric8.kubernetes.api.builder.Function;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,39 +23,34 @@ import org.entando.kubernetes.controller.coordinator.EntandoResourceObserver;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
 import org.entando.kubernetes.controller.support.client.doubles.AbstractK8SClientDouble;
 import org.entando.kubernetes.controller.support.client.doubles.NamespaceDouble;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.common.EntandoCustomResource;
 
-public class SimpleEntandoOperationsDouble<R extends EntandoCustomResource, D extends DoneableEntandoCustomResource<R, D>>
-        extends AbstractK8SClientDouble
-        implements SimpleEntandoOperations<R, D> {
+public class SimpleEntandoOperationsDouble<R extends EntandoCustomResource> extends AbstractK8SClientDouble implements
+        SimpleEntandoOperations<R> {
 
     final Class<R> resourceClass;
-    final Class<D> doneableClass;
     String namespace;
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public SimpleEntandoOperationsDouble(ConcurrentHashMap<String, NamespaceDouble> namespaces, Class<R> resourceClass,
-            Class doneableClass) {
+    public SimpleEntandoOperationsDouble(ConcurrentHashMap<String, NamespaceDouble> namespaces, Class<R> resourceClass) {
         super(namespaces);
         this.resourceClass = resourceClass;
-        this.doneableClass = doneableClass;
     }
 
     @Override
-    public SimpleEntandoOperations<R, D> inNamespace(String namespace) {
+    public SimpleEntandoOperations<R> inNamespace(String namespace) {
         this.namespace = namespace;
         return this;
     }
 
     @Override
-    public SimpleEntandoOperations<R, D> inAnyNamespace() {
+    public SimpleEntandoOperations<R> inAnyNamespace() {
         this.namespace = null;
         return this;
     }
 
     @Override
-    public void watch(EntandoResourceObserver<R, D> rldEntandoResourceObserver) {
+    public void watch(EntandoResourceObserver<R> rldEntandoResourceObserver) {
 
     }
 
@@ -67,14 +60,15 @@ public class SimpleEntandoOperationsDouble<R extends EntandoCustomResource, D ex
     }
 
     @Override
-    public D edit(R r) {
-        Function<R, R> function = updated -> getNamespace(r).getCustomResources(resourceClass)
-                .put(updated.getMetadata().getName(), updated);
-        try {
-            return doneableClass.getConstructor(resourceClass, Function.class).newInstance(r, function);
-        } catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException(e);
-        }
+    public R removeAnnotation(R r, String name) {
+        r.getMetadata().getAnnotations().remove(name);
+        return r;
+    }
+
+    @Override
+    public R putAnnotation(R r, String name, String value) {
+        r.getMetadata().getAnnotations().put(name, value);
+        return r;
     }
 
     @Override

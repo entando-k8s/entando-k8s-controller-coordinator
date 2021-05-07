@@ -22,36 +22,32 @@ import java.util.List;
 import java.util.Map;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.common.EntandoCustomResource;
 
-public class DefaultSimpleEntandoOperations<
-        R extends EntandoCustomResource,
-        D extends DoneableEntandoCustomResource<R, D>
-        > implements SimpleEntandoOperations<R, D> {
+public class DefaultSimpleEntandoOperations<R extends EntandoCustomResource> implements SimpleEntandoOperations<R> {
 
     private final SimpleK8SClient<?> client;
-    CustomResourceOperationsImpl<R, CustomResourceList<R>, D> operations;
+    CustomResourceOperationsImpl<R, CustomResourceList<R>> operations;
 
-    public DefaultSimpleEntandoOperations(SimpleK8SClient<?> client, CustomResourceOperationsImpl<R, CustomResourceList<R>, D> operations) {
+    public DefaultSimpleEntandoOperations(SimpleK8SClient<?> client, CustomResourceOperationsImpl<R, CustomResourceList<R>> operations) {
         this.client = client;
         this.operations = operations;
     }
 
     @Override
-    public SimpleEntandoOperations<R, D> inNamespace(String namespace) {
+    public SimpleEntandoOperations<R> inNamespace(String namespace) {
         return new DefaultSimpleEntandoOperations<>(client,
-                (CustomResourceOperationsImpl<R, CustomResourceList<R>, D>) operations.inNamespace(namespace));
+                (CustomResourceOperationsImpl<R, CustomResourceList<R>>) operations.inNamespace(namespace));
     }
 
     @Override
-    public SimpleEntandoOperations<R, D> inAnyNamespace() {
+    public SimpleEntandoOperations<R> inAnyNamespace() {
         return new DefaultSimpleEntandoOperations<>(client,
-                (CustomResourceOperationsImpl<R, CustomResourceList<R>, D>) operations.inAnyNamespace());
+                (CustomResourceOperationsImpl<R, CustomResourceList<R>>) operations.inAnyNamespace());
     }
 
     @Override
-    public void watch(EntandoResourceObserver<R, D> rldEntandoResourceObserver) {
+    public void watch(EntandoResourceObserver<R> rldEntandoResourceObserver) {
         operations.watch(rldEntandoResourceObserver);
     }
 
@@ -61,8 +57,19 @@ public class DefaultSimpleEntandoOperations<
     }
 
     @Override
-    public D edit(R r) {
-        return operations.inNamespace(r.getMetadata().getNamespace()).withName(r.getMetadata().getName()).edit();
+    public R removeAnnotation(R r, String name) {
+        return operations.inNamespace(r.getMetadata().getNamespace()).withName(r.getMetadata().getName()).edit(r1 -> {
+            r1.getMetadata().getAnnotations().remove(name);
+            return r1;
+        });
+    }
+
+    @Override
+    public R putAnnotation(R r, String name, String value) {
+        return operations.inNamespace(r.getMetadata().getNamespace()).withName(r.getMetadata().getName()).edit(r1 -> {
+            r1.getMetadata().getAnnotations().put(name, value);
+            return r1;
+        });
     }
 
     @Override

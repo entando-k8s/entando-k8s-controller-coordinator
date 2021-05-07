@@ -17,41 +17,21 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import java.util.List;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.common.EntandoCustomResource;
 
-public interface SimpleEntandoOperations<
-        R extends EntandoCustomResource,
-        D extends DoneableEntandoCustomResource<R, D>> {
+public interface SimpleEntandoOperations<R extends EntandoCustomResource> {
 
-    SimpleEntandoOperations<R, D> inNamespace(String namespace);
+    SimpleEntandoOperations<R> inNamespace(String namespace);
 
-    SimpleEntandoOperations<R, D> inAnyNamespace();
+    SimpleEntandoOperations<R> inAnyNamespace();
 
-    void watch(EntandoResourceObserver<R, D> rldEntandoResourceObserver);
+    void watch(EntandoResourceObserver<R> rldEntandoResourceObserver);
 
     List<R> list();
 
-    default R removeAnnotation(R r, String name) {
-        return edit(r)
-                .editMetadata()
-                .removeFromAnnotations(name)
-                .endMetadata()
-                .done();
+    R removeAnnotation(R r, String name);
 
-    }
-
-    D edit(R r);
-
-    default R putAnnotation(R r, String name, String value) {
-        return edit(r)
-                .editMetadata()
-                .removeFromAnnotations(name)
-                .addToAnnotations(name, value)
-                .endMetadata()
-                .done();
-
-    }
+    R putAnnotation(R r, String name, String value);
 
     void removeSuccessfullyCompletedPods(R resource);
 }

@@ -18,9 +18,9 @@ package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.Secret;
 import java.util.concurrent.atomic.AtomicReference;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
+import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
-import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.support.common.TlsHelper;
 
 public class TrustStoreSecretRegenerator {
 
@@ -31,14 +31,14 @@ public class TrustStoreSecretRegenerator {
     }
 
     public static void regenerateIfNecessary(SimpleK8SClient<?> client) {
-        EntandoOperatorConfig.getCertificateAuthoritySecretName()
+        EntandoOperatorSpiConfig.getCertificateAuthoritySecretName()
                 .map(client.secrets()::loadControllerSecret)
                 .filter(TrustStoreSecretRegenerator::hasNewResourceVersion)
                 .ifPresent(secret -> overwriteTrustStoreSecret(client, secret));
     }
 
     private static void overwriteTrustStoreSecret(SimpleK8SClient<?> client, Secret secret) {
-        client.secrets().overwriteControllerSecret(TlsHelper.newTrustStoreSecret(secret));
+        client.secrets().overwriteControllerSecret(TrustStoreHelper.newTrustStoreSecret(secret));
         lastCaSecretResourceVersion.set(secret.getMetadata().getResourceVersion());
     }
 
