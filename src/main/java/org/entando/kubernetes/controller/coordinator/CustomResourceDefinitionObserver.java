@@ -88,6 +88,8 @@ public class CustomResourceDefinitionObserver implements ControllerImageResolver
     }
 
     private void processCustomResourceDefinition(CustomResourceDefinition r, ConfigMap latestCrdNameMap) {
+        //TODO if there are existing observers, close then. then create  new observers
+
         latestCrdNameMap.getData().put(r.getSpec().getNames().getKind() + "." + r.getSpec().getGroup(), r.getMetadata().getName());
         derivedControllerImageMap
                 .put(r.getMetadata().getName(), r.getMetadata().getAnnotations().get(CONTROLLER_IMAGE_ANNOTATION_NAME));
