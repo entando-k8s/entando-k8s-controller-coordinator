@@ -16,24 +16,21 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import java.util.List;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
+import java.util.Locale;
 
-public interface SimpleEntandoOperations {
+public enum OperatorDeploymentType {
+    OLM,
+    HELM;
 
-    SimpleEntandoOperations inNamespace(String namespace);
+    public static OperatorDeploymentType resolve(String s) {
+        try {
+            return valueOf(s.toUpperCase(Locale.ROOT).replace("-", "_"));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
 
-    SimpleEntandoOperations inAnyNamespace();
-
-    void watch(EntandoResourceObserver rldEntandoResourceObserver);
-
-    List<EntandoCustomResource> list();
-
-    EntandoCustomResource removeAnnotation(EntandoCustomResource r, String name);
-
-    EntandoCustomResource putAnnotation(EntandoCustomResource r, String name, String value);
-
-    void removeSuccessfullyCompletedPods(EntandoCustomResource resource);
-
-    String getControllerNamespace();
+    public String getName() {
+        return name().toLowerCase(Locale.ROOT);
+    }
 }

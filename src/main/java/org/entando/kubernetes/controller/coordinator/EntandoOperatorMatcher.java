@@ -20,8 +20,6 @@ import com.github.zafarkhaja.semver.Version;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
-import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public class EntandoOperatorMatcher {
@@ -52,22 +50,22 @@ public class EntandoOperatorMatcher {
 
     private static boolean shouldEnforceOperatorId(EntandoCustomResource r) {
         //Enforce operatorId checking if either the resource has the annotation or this operator has been configured with an operatorId
-        return isPropertyActive(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID)
-                || KubeUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION).isPresent();
+        return isPropertyActive(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_ID)
+                || CoordinatorUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION).isPresent();
     }
 
-    private static boolean isPropertyActive(EntandoOperatorConfigProperty property) {
+    private static boolean isPropertyActive(ControllerCoordinatorProperty property) {
         return EntandoOperatorConfigBase.lookupProperty(property).orElse("").trim().length() > 0;
     }
 
     private static boolean isVersionCheckingActive() {
-        return isPropertyActive(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE);
+        return isPropertyActive(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE);
     }
 
     private static boolean hasMyAnnotation(EntandoCustomResource r) {
-        return KubeUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION)
+        return CoordinatorUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION)
                 .map(s ->
-                        EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_ID)
+                        EntandoOperatorConfigBase.lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_ID)
                                 .map(s::equals)
                                 .orElse(false))
                 .orElse(false);
@@ -76,7 +74,7 @@ public class EntandoOperatorMatcher {
     private static boolean isInMyVersionRange(EntandoCustomResource r) {
         Version crdVersion = Version.valueOf(
                 Optional.ofNullable(r.getApiVersion()).map(s -> fillSemVer(r)).orElse("1.0.0"));
-        return EntandoOperatorConfigBase.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE)
+        return EntandoOperatorConfigBase.lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE)
                 .map(crdVersion::satisfies).orElse(true);
     }
 

@@ -16,12 +16,21 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Paths;
+import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorConfig;
+import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.Liveness;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMode;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
+import org.entando.kubernetes.controller.support.common.OperatorDeploymentType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -39,4 +48,26 @@ class LivenessTest {
         Liveness.dead();
         assertFalse(file.exists());
     }
+
+    @Test
+    void testDeploymentType() {
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty());
+        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType(), is(OperatorDeploymentType.HELM));
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(),
+                OperatorDeploymentType.OLM.getName());
+        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType(), is(OperatorDeploymentType.OLM));
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(),
+                OperatorDeploymentType.HELM.getName());
+        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType(), is(OperatorDeploymentType.HELM));
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(), "invalid");
+        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType(), is(OperatorDeploymentType.HELM));
+    }
+
+    @AfterEach
+    void resetPropertiesTested() {
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty());
+        System.clearProperty(EntandoOperatorSpiConfigProperty.ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE.getJvmSystemProperty());
+    }
+
+
 }

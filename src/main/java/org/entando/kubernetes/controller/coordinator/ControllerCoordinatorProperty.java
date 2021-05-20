@@ -16,9 +16,17 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import org.entando.kubernetes.model.common.EntandoCustomResource;
+import org.entando.kubernetes.controller.spi.common.ConfigProperty;
 
-public interface SimpleEntandoOperationsRegistry {
+public enum ControllerCoordinatorProperty implements ConfigProperty {
+    ENTANDO_K8S_OPERATOR_API_VERSION_RANGE,
+    ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE,
+    ENTANDO_NAMESPACES_TO_OBSERVE,
+    ENTANDO_K8S_OPERATOR_ID,
+    ENTANDO_K8S_PROBE_FOLDER,
+    ENTANDO_K8S_OPERATOR_VERSION,
+    ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE,
+    ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY,
+    ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS, ENTANDO_K8S_OPERATOR_SERVICEACCOUNT
 
-    <R extends EntandoCustomResource> SimpleEntandoOperations<R> getOperations(Class<R> clzz);
 }

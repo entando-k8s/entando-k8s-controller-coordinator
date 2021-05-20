@@ -17,7 +17,6 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import java.util.logging.Level;

@@ -16,63 +16,77 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
+import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.entando.kubernetes.controller.coordinator.EntandoResourceObserver;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
 import org.entando.kubernetes.controller.support.client.doubles.AbstractK8SClientDouble;
 import org.entando.kubernetes.controller.support.client.doubles.NamespaceDouble;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 
-public class SimpleEntandoOperationsDouble<R extends EntandoCustomResource> extends AbstractK8SClientDouble implements
-        SimpleEntandoOperations<R> {
+public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble implements SimpleEntandoOperations {
 
-    final Class<R> resourceClass;
+    private final CustomResourceDefinitionContext definitionContext;
     String namespace;
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    public SimpleEntandoOperationsDouble(ConcurrentHashMap<String, NamespaceDouble> namespaces, Class<R> resourceClass) {
+    public SimpleEntandoOperationsDouble(ConcurrentHashMap<String, NamespaceDouble> namespaces,
+            CustomResourceDefinitionContext definitionContext) {
         super(namespaces);
-        this.resourceClass = resourceClass;
+        this.definitionContext = definitionContext;
+
     }
 
     @Override
-    public SimpleEntandoOperations<R> inNamespace(String namespace) {
+    public SimpleEntandoOperations inNamespace(String namespace) {
         this.namespace = namespace;
         return this;
     }
 
     @Override
-    public SimpleEntandoOperations<R> inAnyNamespace() {
+    public SimpleEntandoOperations inAnyNamespace() {
         this.namespace = null;
         return this;
     }
 
     @Override
-    public void watch(EntandoResourceObserver<R> rldEntandoResourceObserver) {
+    public void watch(EntandoResourceObserver rldEntandoResourceObserver) {
 
     }
 
     @Override
-    public List<R> list() {
-        return new ArrayList<>(getNamespace(namespace).getCustomResources(resourceClass).values());
+    public List<EntandoCustomResource> list() {
+        if (namespace == null) {
+            return getNamespaces().values().stream()
+                    .flatMap(namespaceDouble -> namespaceDouble.getCustomResources(definitionContext.getKind()).values().stream()).collect(
+                            Collectors.toList());
+        } else {
+            return new ArrayList<>(getNamespace(namespace).getCustomResources(definitionContext.getKind()).values());
+        }
     }
 
     @Override
-    public R removeAnnotation(R r, String name) {
+    public EntandoCustomResource removeAnnotation(EntandoCustomResource r, String name) {
         r.getMetadata().getAnnotations().remove(name);
+
         return r;
     }
 
     @Override
-    public R putAnnotation(R r, String name, String value) {
+    public EntandoCustomResource putAnnotation(EntandoCustomResource r, String name, String value) {
         r.getMetadata().getAnnotations().put(name, value);
         return r;
     }
 
     @Override
-    public void removeSuccessfullyCompletedPods(R resource) {
+    public void removeSuccessfullyCompletedPods(EntandoCustomResource resource) {
 
+    }
+
+    @Override
+    public String getControllerNamespace() {
+        return namespace;
     }
 }

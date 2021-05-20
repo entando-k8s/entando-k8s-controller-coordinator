@@ -30,12 +30,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
-import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.EntandoOperatorMatcher;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.client.doubles.EntandoResourceClientDouble;
-import org.entando.kubernetes.controller.support.client.doubles.SimpleK8SClientDouble;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
@@ -60,15 +59,14 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
 
     public static final String CONTROLLER_NAMESPACE = EntandoResourceClientDouble.CONTROLLER_NAMESPACE;
     public static final String OBSERVED_NAMESPACE = "observed-namespace";
-    private final SimpleK8SClientDouble clientDouble = new SimpleK8SClientDouble();
-    private final EntandoControllerCoordinator coordinator = new EntandoControllerCoordinator(clientDouble,
-            new SimpleEntandoOperationsRegistryDouble(clientDouble));
+    private final SimpleKubernetesClientDouble clientDouble = new SimpleKubernetesClientDouble();
+    private final EntandoControllerCoordinator coordinator = new EntandoControllerCoordinator(clientDouble);
 
     @AfterEach
     void shutdownSchedulers() {
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
-        System.clearProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
-        System.clearProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
     }
 
     @Test
@@ -84,7 +82,7 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
 
         //A controller pod gets created for the existing resource
         await().atMost(3, TimeUnit.SECONDS)
-                .until(() -> clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+                .until(() -> clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
     }
 
     @Test
@@ -94,22 +92,22 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         coordinator.onStartup(new StartupEvent());
         //And I have created an EntandoKeycloakServer resource
         EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("X", 1L);
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).eventReceived(Action.ADDED, entandoKeycloakServer);
+        coordinator.getObserver(EntandoKeycloakServer.class).eventReceived(Action.ADDED, entandoKeycloakServer);
 
         //And its controller pod has been created
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS)
-                .until(() -> clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
-        Pod oldPod = clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer));
+                .until(() -> clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+        Pod oldPod = clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer));
         //when I submit a duplicate event
         EntandoKeycloakServer oldVersionOfKeycloakServer = new EntandoKeycloakServerBuilder(entandoKeycloakServer)
                 .editMetadata()
                 .withResourceVersion("X")
                 .endMetadata()
                 .build();
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).eventReceived(Action.ADDED, oldVersionOfKeycloakServer);
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        coordinator.getObserver(EntandoKeycloakServer.class).eventReceived(Action.ADDED, oldVersionOfKeycloakServer);
+        coordinator.getObserver(EntandoKeycloakServer.class).shutDownAndWait(1, SECONDS);
         //no new pod gets created
-        assertThat(clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(sameInstance(oldPod)));
+        assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(sameInstance(oldPod)));
     }
 
     @Test
@@ -125,8 +123,8 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //when I start the Coordinator Controller
         coordinator.onStartup(new StartupEvent());
         //no new pod gets created
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
-        assertThat(clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
+        coordinator.getObserver(EntandoKeycloakServer.class).shutDownAndWait(1, SECONDS);
+        assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
 
     }
 
@@ -150,17 +148,17 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
                 .addToEntandoKeycloakServers(entandoKeycloakServer)
                 .endSpec()
                 .build();
-        clientDouble.entandoResources().createOrPatchEntandoResource(compositeApp);
-        clientDouble.entandoResources().createOrPatchEntandoResource(new EntandoKeycloakServerBuilder(entandoKeycloakServer)
+        clientDouble.createOrPatchEntandoResource(compositeApp);
+        clientDouble.createOrPatchEntandoResource(new EntandoKeycloakServerBuilder(entandoKeycloakServer)
                 .editMetadata()
                 .addToOwnerReferences(ResourceUtils.buildOwnerReference(compositeApp))
                 .endMetadata()
                 .build());
         //when I start the Coordinator Controller
         coordinator.onStartup(new StartupEvent());
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        coordinator.getObserver(EntandoKeycloakServer.class).shutDownAndWait(1, SECONDS);
         //no new pod gets created
-        assertThat(clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
+        assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
     }
 
     @Test
@@ -173,9 +171,9 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.STARTED, 10L);
         //when I start the Coordinator Controller
         coordinator.onStartup(new StartupEvent());
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        coordinator.getObserver(EntandoKeycloakServer.class).shutDownAndWait(1, SECONDS);
         //no new pod gets created
-        assertThat(clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
+        assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)), is(nullValue()));
     }
 
     @Test
@@ -191,19 +189,19 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         entandoKeycloakServer.getMetadata().setAnnotations(new HashMap<>());
         entandoKeycloakServer.getMetadata().getAnnotations().put(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME,
                 OperatorProcessingInstruction.FORCE.name().toLowerCase(Locale.ROOT));
-        clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
+        clientDouble.createOrPatchEntandoResource(entandoKeycloakServer);
         //when I start the Coordinator Controller
         coordinator.onStartup(new StartupEvent());
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        coordinator.getObserver(EntandoKeycloakServer.class).shutDownAndWait(1, SECONDS);
 
         //a new pod gets created
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS)
                 .until(() -> {
                     final Map<String, String> labels = labelsFromResource(entandoKeycloakServer);
-                    return clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labels) != null;
+                    return clientDouble.loadPod(CONTROLLER_NAMESPACE, labels) != null;
                 });
         //and the FORCED instruction has been removed
-        final EntandoKeycloakServer latestKeycloakServer = clientDouble.entandoResources()
+        final EntandoKeycloakServer latestKeycloakServer = clientDouble
                 .load(EntandoKeycloakServer.class, entandoKeycloakServer.getMetadata().getNamespace(),
                         entandoKeycloakServer.getMetadata().getName());
         assertThat(KubeUtils.resolveProcessingInstruction(latestKeycloakServer), is(OperatorProcessingInstruction.NONE));
@@ -217,13 +215,13 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
         //But the  observedGeneration in the status is behind generation in the metadata
         entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 9L);
-        clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
+        clientDouble.createOrPatchEntandoResource(entandoKeycloakServer);
         //when I start the Coordinator Controller
         coordinator.onStartup(new StartupEvent());
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        coordinator.getObserver(EntandoKeycloakServer.class).shutDownAndWait(1, SECONDS);
         //then a new controller pod gets created
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
-                clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+                clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
     }
 
     @Test
@@ -231,24 +229,23 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //Given the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
         //And the current version of the operator is 6,3,1
-        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
         //And I have created an EntandoKeycloakServer resource
         final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
-        clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
+        clientDouble.createOrPatchEntandoResource(entandoKeycloakServer);
         //and the Controller Coordinator has started
         coordinator.onStartup(new StartupEvent());
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        coordinator.getObserver(EntandoKeycloakServer.class).shutDownAndWait(1, SECONDS);
         //then a new controller pod gets created
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
-                clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+                clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
         entandoKeycloakServer.getMetadata().setResourceVersion("5");
         entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 10L);
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).eventReceived(Action.MODIFIED, entandoKeycloakServer);
+        coordinator.getObserver(EntandoKeycloakServer.class).eventReceived(Action.MODIFIED, entandoKeycloakServer);
         // Then  the EntandoKeycloakServer has been annotated with the version 6.3.1
-        EntandoKeycloakServer latestKeycloakServer = clientDouble.entandoResources()
-                .load(EntandoKeycloakServer.class,
-                        entandoKeycloakServer.getMetadata().getNamespace(),
-                        entandoKeycloakServer.getMetadata().getName());
+        EntandoKeycloakServer latestKeycloakServer = clientDouble.load(EntandoKeycloakServer.class,
+                entandoKeycloakServer.getMetadata().getNamespace(),
+                entandoKeycloakServer.getMetadata().getName());
         assertThat(
                 KubeUtils.resolveAnnotation(latestKeycloakServer, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION).get(),
                 is("6.3.1"));
@@ -259,9 +256,9 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //Given the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
         //And the current version of the operator is 6,3,1
-        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1");
         //And the version of the operator to replace 6,3,1
-        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty(), "6.3.0");
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty(), "6.3.0");
         //And I have created an EntandoKeycloakServer resource
         final EntandoKeycloakServer entandoKeycloakServer = createEntandoKeycloakServer("1", 10L);
         entandoKeycloakServer.getMetadata().setAnnotations(new HashMap<>());
@@ -269,21 +266,20 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         entandoKeycloakServer.getMetadata().getAnnotations().put(EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, "6.3.0");
         //And it has been successfully synced previously
         entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 10L);
-        clientDouble.entandoResources().createOrPatchEntandoResource(entandoKeycloakServer);
+        clientDouble.createOrPatchEntandoResource(entandoKeycloakServer);
         //And I have started the Coordinator Controller
         coordinator.onStartup(new StartupEvent());
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).shutDownAndWait(1, SECONDS);
+        coordinator.getObserver(EntandoKeycloakServer.class).shutDownAndWait(1, SECONDS);
         //then a new controller pod gets created
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
-                clientDouble.pods().loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
+                clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(entandoKeycloakServer)) != null);
         entandoKeycloakServer.getMetadata().setResourceVersion("5");
         entandoKeycloakServer.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, 10L);
-        coordinator.getObserver(EntandoKeycloakServer.class).get(0).eventReceived(Action.MODIFIED, entandoKeycloakServer);
+        coordinator.getObserver(EntandoKeycloakServer.class).eventReceived(Action.MODIFIED, entandoKeycloakServer);
         //Then the EntandoKeycloakServer has been annotated with the version 6.3.1
-        EntandoKeycloakServer latestKeycloakServer = clientDouble.entandoResources()
-                .load(EntandoKeycloakServer.class,
-                        entandoKeycloakServer.getMetadata().getNamespace(),
-                        entandoKeycloakServer.getMetadata().getName());
+        EntandoKeycloakServer latestKeycloakServer = clientDouble.load(EntandoKeycloakServer.class,
+                entandoKeycloakServer.getMetadata().getNamespace(),
+                entandoKeycloakServer.getMetadata().getName());
         assertThat(
                 KubeUtils.resolveAnnotation(latestKeycloakServer, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION).get(),
                 is("6.3.1"));
@@ -294,7 +290,7 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         //Given the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
         //And I have created an EntandoDeBundle resource
-        clientDouble.entandoResources().createOrPatchEntandoResource(new EntandoDeBundleBuilder().withNewMetadata()
+        clientDouble.createOrPatchEntandoResource(new EntandoDeBundleBuilder().withNewMetadata()
                 .withNamespace(OBSERVED_NAMESPACE)
                 .withResourceVersion("123")
                 .withGeneration(1L)
@@ -307,7 +303,7 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
         coordinator.onStartup(new StartupEvent());
         //THe status is updated
         await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
-                clientDouble.entandoResources().load(EntandoDeBundle.class, OBSERVED_NAMESPACE, "my-de-bundle").getStatus()
+                clientDouble.load(EntandoDeBundle.class, OBSERVED_NAMESPACE, "my-de-bundle").getStatus()
                         .getPhase() == EntandoDeploymentPhase.SUCCESSFUL);
     }
 
@@ -324,11 +320,8 @@ class ControllerCoordinatorEdgeConditionsTest implements FluentIntegrationTestin
                 .withDbms(DbmsVendor.NONE)
                 .endSpec()
                 .build();
-        getClient().entandoResources().createOrPatchEntandoResource(keycloakServer);
+        clientDouble.createOrPatchEntandoResource(keycloakServer);
         return keycloakServer;
     }
 
-    public SimpleK8SClientDouble getClient() {
-        return clientDouble;
-    }
 }

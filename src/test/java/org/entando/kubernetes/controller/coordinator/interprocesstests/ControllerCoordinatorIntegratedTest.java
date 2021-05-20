@@ -314,7 +314,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         Resource<EntandoCompositeApp> appGettable = client.customResources(EntandoCompositeApp.class).inNamespace(client.getNamespace())
                 .withName(MY_APP);
         await().ignoreExceptions().atMost(240, TimeUnit.SECONDS).until(
-                () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(KEYCLOAK_NAME).get().getPodStatus() != null
+                () -> !appGettable.fromServer().get().getStatus().forServerQualifiedBy(KEYCLOAK_NAME).get().getPodPhases().isEmpty()
         );
         //And the plugin controller pod
         FilterWatchListDeletable<Pod, PodList> pluginControllerList = client.pods()
@@ -343,7 +343,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         }
         //And its status reflecting on the EntandoCompositeApp
         await().ignoreExceptions().atMost(240, TimeUnit.SECONDS).until(
-                () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(PLUGIN_NAME).get().getPodStatus() != null
+                () -> !appGettable.fromServer().get().getStatus().forServerQualifiedBy(PLUGIN_NAME).get().getPodPhases().isEmpty()
         );
         //And the EntandoCompositeApp is in a finished state
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> hasFinished(appGettable));

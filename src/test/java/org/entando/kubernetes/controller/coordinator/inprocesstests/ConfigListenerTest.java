@@ -22,13 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.WatcherException;
 import java.io.File;
 import java.nio.file.Paths;
 import org.entando.kubernetes.controller.coordinator.ConfigListener;
-import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
+import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.Liveness;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.junit.jupiter.api.AfterEach;
@@ -50,11 +49,11 @@ class ConfigListenerTest {
         final ConfigListener configListener = new ConfigListener();
         //When the entando-operator-config configmap is updated
         configListener.eventReceived(Action.MODIFIED, new ConfigMapBuilder()
-                .addToData(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "400")
+                .addToData(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "400")
                 .build());
         //Then the latest property value reflects
         assertThat(
-                EntandoOperatorConfigBase.lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY).get(),
+                EntandoOperatorConfigBase.lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY).get(),
                 is("400"));
     }
 

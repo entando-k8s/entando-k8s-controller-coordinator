@@ -32,10 +32,9 @@ import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
-import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
+import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorProperty;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
-import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
@@ -83,7 +82,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     @AfterEach
     void clearProperties() {
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty());
-        System.clearProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty());
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty());
     }
 
     @BeforeEach
@@ -105,7 +104,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         if (Strings.isNullOrEmpty(resource.getMetadata().getResourceVersion())) {
             resource.getMetadata().setResourceVersion(Integer.toString(1));
         }
-        coordinator.getObserver((Class<R>) resource.getClass()).get(0).eventReceived(Action.ADDED, resource);
+        coordinator.getObserver((Class<R>) resource.getClass()).eventReceived(Action.ADDED, resource);
     }
 
     @SuppressWarnings("unchecked")
@@ -115,7 +114,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .patch(podWithSucceededStatus(pod));
         resource.getMetadata().setGeneration(1L);
         resource.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, resource.getMetadata().getGeneration());
-        coordinator.getObserver((Class<R>) resource.getClass()).get(0).eventReceived(Action.ADDED, resource);
+        coordinator.getObserver((Class<R>) resource.getClass()).eventReceived(Action.ADDED, resource);
     }
 
     @Test
@@ -159,7 +158,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         KubernetesClient client = getFabric8Client();
         clearNamespace(client);
         //And I have activated Pod GC with a removal delay of 1 second
-        System.setProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "1");
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty(), "true");
         //and the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
@@ -194,8 +193,4 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                         .ensureImageVersion("entando-k8s-keycloak-controller", "6.0.1"));
     }
 
-    @Override
-    public SimpleK8SClient<?> getClient() {
-        throw new IllegalStateException("Not supported");
-    }
 }

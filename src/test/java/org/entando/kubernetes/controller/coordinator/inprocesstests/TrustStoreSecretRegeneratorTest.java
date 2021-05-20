@@ -23,9 +23,8 @@ import java.nio.file.Paths;
 import org.entando.kubernetes.controller.coordinator.TrustStoreSecretRegenerator;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
-import org.entando.kubernetes.controller.support.client.doubles.SimpleK8SClientDouble;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.test.common.CertificateSecretHelper;
+import org.entando.kubernetes.test.legacy.CertificateSecretHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
@@ -36,13 +35,13 @@ class TrustStoreSecretRegeneratorTest {
 
     @Test
     void testRegenerate() {
-        final SimpleK8SClientDouble client = new SimpleK8SClientDouble();
+        final SimpleKubernetesClientDouble client = new SimpleKubernetesClientDouble();
         CertificateSecretHelper.buildCertificateSecretsFromDirectory(
-                client.entandoResources().getNamespace(),
+                client.getControllerNamespace(),
                 Paths.get("src", "test", "resources", "tls", "ampie.dynu.net")
-        ).stream().peek(s -> s.getMetadata().setResourceVersion("1")).forEach(client.secrets()::overwriteControllerSecret);
+        ).stream().peek(s -> s.getMetadata().setResourceVersion("1")).forEach(client::overwriteControllerSecret);
         TrustStoreSecretRegenerator.regenerateIfNecessary(client);
-        assertThat(client.secrets().loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET), notNullValue());
+        assertThat(client.loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET), notNullValue());
     }
 
     @AfterEach

@@ -16,22 +16,10 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import org.entando.kubernetes.controller.spi.common.ConfigProperty;
+public enum OperatorProcessingInstruction {
+    NONE,
+    IGNORE,
+    FORCE,
+    DEFER;
 
-public enum EntandoControllerCoordinatorProperty implements ConfigProperty {
-    ENTANDO_K8S_PROBE_FOLDER("entando.k8s.probe.folder"),
-    ENTANDO_K8S_OPERATOR_VERSION("entando.k8s.operator.version"),
-    ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE("entando.k8s.operator.version.to.replace"),
-    ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY("entando.k8s.controller.removal.delay");
-
-    private final String jvmSystemProperty;
-
-    EntandoControllerCoordinatorProperty(String s) {
-        this.jvmSystemProperty = s;
-    }
-
-    @Override
-    public String getJvmSystemProperty() {
-        return jvmSystemProperty;
-    }
 }
