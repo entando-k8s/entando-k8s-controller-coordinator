@@ -26,13 +26,13 @@ import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
-import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorProperty;
+import org.entando.kubernetes.controller.coordinator.CoordinatorUtils;
+import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
@@ -53,7 +53,6 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.test.common.FluentTraversals;
 import org.entando.kubernetes.test.common.PodBehavior;
 import org.entando.kubernetes.test.common.VariableReferenceAssertions;
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -67,8 +66,6 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         VariableReferenceAssertions, PodBehavior {
 
     public static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("coordinator-test");
-    @Rule
-    public KubernetesServer server = new KubernetesServer(false, true);
     private EntandoControllerCoordinator coordinator;
 
     protected static void clearNamespace(KubernetesClient client) {
@@ -93,7 +90,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
     }
 
     public KubernetesClient getFabric8Client() {
-        return server.getClient().inNamespace(NAMESPACE);
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -104,7 +101,8 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         if (Strings.isNullOrEmpty(resource.getMetadata().getResourceVersion())) {
             resource.getMetadata().setResourceVersion(Integer.toString(1));
         }
-        coordinator.getObserver((Class<R>) resource.getClass()).eventReceived(Action.ADDED, resource);
+        coordinator.getObserver((Class<R>) resource.getClass())
+                .eventReceived(Action.ADDED, CoordinatorUtils.toSerializedResource(resource));
     }
 
     @SuppressWarnings("unchecked")
@@ -114,7 +112,8 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .patch(podWithSucceededStatus(pod));
         resource.getMetadata().setGeneration(1L);
         resource.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, resource.getMetadata().getGeneration());
-        coordinator.getObserver((Class<R>) resource.getClass()).eventReceived(Action.ADDED, resource);
+        coordinator.getObserver((Class<R>) resource.getClass())
+                .eventReceived(Action.ADDED, CoordinatorUtils.toSerializedResource(resource));
     }
 
     @Test

@@ -24,12 +24,14 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.Collection;
 import java.util.Map;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
+import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public interface SimpleKubernetesClient {
 
-    void updatePhase(EntandoCustomResource resource, EntandoDeploymentPhase phase);
+    String CRD_OF_INTEREST_LABEL_NAME = "entando.org/crd-of-interest";
+
+    SerializedEntandoResource updatePhase(SerializedEntandoResource resource, EntandoDeploymentPhase phase);
 
     String getControllerNamespace();
 
@@ -53,5 +55,5 @@ public interface SimpleKubernetesClient {
 
     Collection<CustomResourceDefinition> loadCustomResourceDefinitionsOfInterest();
 
-    <T extends EntandoCustomResource> SimpleEntandoOperations getOperations(CustomResourceDefinitionContext context);
+    SimpleEntandoOperations getOperations(CustomResourceDefinitionContext context);
 }

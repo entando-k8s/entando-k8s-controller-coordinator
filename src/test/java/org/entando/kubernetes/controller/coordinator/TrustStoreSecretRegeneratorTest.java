@@ -14,17 +14,17 @@
  *
  */
 
-package org.entando.kubernetes.controller.coordinator.inprocesstests;
+package org.entando.kubernetes.controller.coordinator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.nio.file.Paths;
-import org.entando.kubernetes.controller.coordinator.TrustStoreSecretRegenerator;
+import org.entando.kubernetes.controller.coordinator.inprocesstests.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.test.legacy.CertificateSecretHelper;
+import org.entando.kubernetes.test.e2etest.CertificateSecretHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;

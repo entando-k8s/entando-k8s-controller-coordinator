@@ -133,7 +133,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
 
     @AfterEach
     void clearSystemProperty() {
-        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE.getJvmSystemProperty());
+        System.clearProperty(EntandoOperatorSpiConfigProperty.ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE.getJvmSystemProperty());
     }
 
     @BeforeAll

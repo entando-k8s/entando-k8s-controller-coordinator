@@ -33,18 +33,18 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
-public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
+public class EntandoResourceObserver implements Watcher<SerializedEntandoResource> {
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
 
     private final Map<String, Deque<String>> cache = new ConcurrentHashMap<>();
-    private final Map<String, EntandoCustomResource> resourcesBeingUpgraded = new ConcurrentHashMap<>();
-    private final BiConsumer<Action, EntandoCustomResource> callback;
+    private final Map<String, SerializedEntandoResource> resourcesBeingUpgraded = new ConcurrentHashMap<>();
+    private final BiConsumer<Action, SerializedEntandoResource> callback;
     private final SimpleEntandoOperations operations;
     //TODO make the poolsize configurable
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
@@ -52,7 +52,7 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
     private final Long generation;
 
     public EntandoResourceObserver(SimpleEntandoOperations operations,
-            BiConsumer<Action, EntandoCustomResource> callback,
+            BiConsumer<Action, SerializedEntandoResource> callback,
             CrdNameMapSync crdNameMapSync,
             Long generation) {
         this.callback = callback;
@@ -78,7 +78,7 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
         }
     }
 
-    private boolean requiresUpgrade(EntandoCustomResource resource) {
+    private boolean requiresUpgrade(SerializedEntandoResource resource) {
         if (!isBeingUpgraded(resource) && wasProcessedByVersionBeingReplaced(resource)) {
             resourcesBeingUpgraded.put(resource.getMetadata().getUid(), resource);
             logResource(Level.WARNING, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
@@ -88,7 +88,7 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
         return false;
     }
 
-    private boolean wasProcessedByVersionBeingReplaced(EntandoCustomResource resource) {
+    private boolean wasProcessedByVersionBeingReplaced(SerializedEntandoResource resource) {
         return EntandoOperatorConfigBase
                 .lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
                 .flatMap(versionToReplace ->
@@ -97,12 +97,12 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
                 .orElse(false);
     }
 
-    private boolean isBeingUpgraded(EntandoCustomResource resource) {
+    private boolean isBeingUpgraded(SerializedEntandoResource resource) {
         return resourcesBeingUpgraded.containsKey(resource.getMetadata().getUid());
     }
 
     @Override
-    public void eventReceived(Action action, EntandoCustomResource resource) {
+    public void eventReceived(Action action, SerializedEntandoResource resource) {
         try {
             if (performCriteriaProcessing(resource)) {
                 performCallback(action, resource);
@@ -117,7 +117,7 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
         }
     }
 
-    private void markAsUpgraded(EntandoCustomResource resource) {
+    private void markAsUpgraded(SerializedEntandoResource resource) {
         resourcesBeingUpgraded.remove(resource.getMetadata().getUid());
         EntandoOperatorConfigBase
                 .lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION)
@@ -126,12 +126,12 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
                 );
     }
 
-    private void removeSuccessfullyCompletedPods(EntandoCustomResource resource) {
+    private void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
         executor.schedule(() -> operations.removeSuccessfullyCompletedPods(resource), (long) ControllerCoordinatorConfig.getRemovalDelay(),
                 TimeUnit.SECONDS);
     }
 
-    private boolean needsToRemoveSuccessfullyCompletedPods(EntandoCustomResource resource) {
+    private boolean needsToRemoveSuccessfullyCompletedPods(SerializedEntandoResource resource) {
         return ControllerCoordinatorConfig.garbageCollectSuccessfullyCompletedPods()
                 && Optional.ofNullable(resource.getMetadata().getGeneration())
                 .map(aLong -> aLong.equals(resource.getMetadata().getGeneration()))
@@ -139,12 +139,12 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
                 && resource.getStatus().getPhase() == EntandoDeploymentPhase.SUCCESSFUL;
     }
 
-    private void logFailure(EntandoCustomResource resource, Exception e) {
+    private void logFailure(SerializedEntandoResource resource, Exception e) {
         LOGGER.log(Level.SEVERE, e, () -> format("Could not process the %s %s/%s", resource.getKind(),
                 resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
     }
 
-    private boolean performCriteriaProcessing(EntandoCustomResource resource) {
+    private boolean performCriteriaProcessing(SerializedEntandoResource resource) {
         return requiresUpgrade(resource)
                 || (hasNewResourceVersion(resource)
                 && isNotOwnedByResourceOfInterest(resource)
@@ -152,7 +152,7 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
                 && processGenerationIncrement(resource));
     }
 
-    private boolean isNotOwnedByResourceOfInterest(EntandoCustomResource resource) {
+    private boolean isNotOwnedByResourceOfInterest(SerializedEntandoResource resource) {
         final boolean topLevel = resource.getMetadata().getOwnerReferences().stream()
                 .noneMatch(ownerReference -> ownerReference.getKind().equals(
                         ProvidedCapability.class.getSimpleName()) || crdNameMapSync.isOfInterest(ownerReference));
@@ -173,7 +173,7 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
         }
     }
 
-    protected void performCallback(Action action, EntandoCustomResource resource) {
+    protected void performCallback(Action action, SerializedEntandoResource resource) {
         logResource(Level.INFO, "Received " + action.name() + " for the %s %s/%s", resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
             executor.execute(() -> callback.accept(action, resource));
@@ -185,17 +185,17 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
         }
     }
 
-    private void logResource(Level info, String format, EntandoCustomResource resource) {
+    private void logResource(Level info, String format, SerializedEntandoResource resource) {
         LOGGER.log(info,
                 () -> format(format, resource.getKind(), resource.getMetadata().getNamespace(),
                         resource.getMetadata().getName()));
     }
 
-    private boolean processGenerationIncrement(EntandoCustomResource newResource) {
+    private boolean processGenerationIncrement(SerializedEntandoResource newResource) {
         OperatorProcessingInstruction instruction = CoordinatorUtils.resolveProcessingInstruction(newResource);
         if (instruction == OperatorProcessingInstruction.FORCE) {
             //Remove to avoid recursive updates
-            final EntandoCustomResource latestResource = operations
+            final SerializedEntandoResource latestResource = operations
                     .removeAnnotation(newResource, CoordinatorUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME);
             markResourceVersionProcessed(latestResource);
             logResource(Level.WARNING, "Processing of %s %s/%s has been forced using entando.org/processing-instruction.", latestResource);
@@ -215,7 +215,7 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
         }
     }
 
-    private boolean hasNewResourceVersion(EntandoCustomResource newResource) {
+    private boolean hasNewResourceVersion(SerializedEntandoResource newResource) {
         Deque<String> queue = cache.computeIfAbsent(newResource.getMetadata().getUid(), key -> new ConcurrentLinkedDeque<>());
         if (queue.contains(newResource.getMetadata().getResourceVersion())) {
             //TODO observe logs to see if this actually still happens
@@ -228,7 +228,7 @@ public class EntandoResourceObserver implements Watcher<EntandoCustomResource> {
         return true;
     }
 
-    private void markResourceVersionProcessed(EntandoCustomResource newResource) {
+    private void markResourceVersionProcessed(SerializedEntandoResource newResource) {
         Deque<String> queue = cache.computeIfAbsent(newResource.getMetadata().getUid(), key -> new ConcurrentLinkedDeque<>());
         queue.offer(newResource.getMetadata().getResourceVersion());
         while (queue.size() > 10) {

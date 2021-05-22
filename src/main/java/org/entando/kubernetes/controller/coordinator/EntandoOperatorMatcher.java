@@ -16,8 +16,6 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import com.github.zafarkhaja.semver.Version;
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
@@ -39,12 +37,6 @@ public class EntandoOperatorMatcher {
                             r.getMetadata().getName()));
             return false;
         }
-        if (isVersionCheckingActive() && !isInMyVersionRange(r)) {
-            LOGGER.warning(() -> String
-                    .format("Operator version mismatch. Ignoring resource %s:%s/%s", r.getKind(), r.getMetadata().getNamespace(),
-                            r.getMetadata().getName()));
-            return false;
-        }
         return true;
     }
 
@@ -58,10 +50,6 @@ public class EntandoOperatorMatcher {
         return EntandoOperatorConfigBase.lookupProperty(property).orElse("").trim().length() > 0;
     }
 
-    private static boolean isVersionCheckingActive() {
-        return isPropertyActive(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE);
-    }
-
     private static boolean hasMyAnnotation(EntandoCustomResource r) {
         return CoordinatorUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION)
                 .map(s ->
@@ -69,24 +57,6 @@ public class EntandoOperatorMatcher {
                                 .map(s::equals)
                                 .orElse(false))
                 .orElse(false);
-    }
-
-    private static boolean isInMyVersionRange(EntandoCustomResource r) {
-        Version crdVersion = Version.valueOf(
-                Optional.ofNullable(r.getApiVersion()).map(s -> fillSemVer(r)).orElse("1.0.0"));
-        return EntandoOperatorConfigBase.lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_API_VERSION_RANGE)
-                .map(crdVersion::satisfies).orElse(true);
-    }
-
-    private static String fillSemVer(EntandoCustomResource r) {
-        String version = r.getApiVersion().substring("entando.org/v".length());
-        long count = version.chars().filter(i -> i == '.').count();
-        if (count == 0) {
-            version = version + ".0.0";
-        } else if (count == 1) {
-            version = version + ".0";
-        }
-        return version;
     }
 
 }

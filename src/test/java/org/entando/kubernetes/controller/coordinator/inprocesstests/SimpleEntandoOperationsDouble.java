@@ -16,16 +16,16 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
+import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import org.entando.kubernetes.controller.coordinator.EntandoResourceObserver;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
+import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.support.client.doubles.AbstractK8SClientDouble;
+import org.entando.kubernetes.controller.support.client.doubles.ClusterDouble;
 import org.entando.kubernetes.controller.support.client.doubles.NamespaceDouble;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble implements SimpleEntandoOperations {
 
@@ -33,8 +33,8 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
     String namespace;
 
     public SimpleEntandoOperationsDouble(ConcurrentHashMap<String, NamespaceDouble> namespaces,
-            CustomResourceDefinitionContext definitionContext) {
-        super(namespaces);
+            CustomResourceDefinitionContext definitionContext, ClusterDouble cluster) {
+        super(namespaces, cluster);
         this.definitionContext = definitionContext;
 
     }
@@ -52,36 +52,39 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
     }
 
     @Override
-    public void watch(EntandoResourceObserver rldEntandoResourceObserver) {
+    public void watch(Watcher<SerializedEntandoResource> rldEntandoResourceObserver) {
 
     }
 
     @Override
-    public List<EntandoCustomResource> list() {
+    public List<SerializedEntandoResource> list() {
         if (namespace == null) {
             return getNamespaces().values().stream()
-                    .flatMap(namespaceDouble -> namespaceDouble.getCustomResources(definitionContext.getKind()).values().stream()).collect(
-                            Collectors.toList());
+                    .flatMap(namespaceDouble -> namespaceDouble.getCustomResources(definitionContext.getKind()).values().stream())
+                    .map(SerializedEntandoResource.class::cast)
+                    .collect(Collectors.toList());
         } else {
-            return new ArrayList<>(getNamespace(namespace).getCustomResources(definitionContext.getKind()).values());
+            return getNamespace(namespace).getCustomResources(definitionContext.getKind()).values().stream()
+                    .map(SerializedEntandoResource.class::cast)
+                    .collect(Collectors.toList());
         }
     }
 
     @Override
-    public EntandoCustomResource removeAnnotation(EntandoCustomResource r, String name) {
+    public SerializedEntandoResource removeAnnotation(SerializedEntandoResource r, String name) {
         r.getMetadata().getAnnotations().remove(name);
 
         return r;
     }
 
     @Override
-    public EntandoCustomResource putAnnotation(EntandoCustomResource r, String name, String value) {
+    public SerializedEntandoResource putAnnotation(SerializedEntandoResource r, String name, String value) {
         r.getMetadata().getAnnotations().put(name, value);
         return r;
     }
 
     @Override
-    public void removeSuccessfullyCompletedPods(EntandoCustomResource resource) {
+    public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
 
     }
 

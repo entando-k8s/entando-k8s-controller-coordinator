@@ -16,6 +16,7 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
@@ -31,22 +32,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
+import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public class EntandoControllerCoordinator implements Watcher<CustomResourceDefinition> {
 
-    public static final String NO_IMAGE = "none";
-    public static final String ENTANDO_OPERATOR_CONFIG = "entando-operator-config";
-    public static final String CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP = "entando-controller-image-overrides";
-    public static final String SUPPORTED_CAPABILITIES_ANNOTATION = "entando.org/supported-capabilities";
     private final SimpleKubernetesClient client;
     private static final Logger LOGGER = Logger.getLogger(EntandoControllerCoordinator.class.getName());
     private final Map<String, String> derivedControllerImageMap = new ConcurrentHashMap<>();
@@ -65,9 +64,9 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
 
     @Startup
     public void onStartup(StartupEvent e) {
-        client.watchControllerConfigMap(ENTANDO_OPERATOR_CONFIG, new ConfigListener());
-        this.controllerImageOverrides = client.findOrCreateControllerConfigMap(CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP);
-        client.watchControllerConfigMap(CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP, new ControllerImageOverridesWatcher());
+        client.watchControllerConfigMap(CoordinatorUtils.ENTANDO_OPERATOR_CONFIG, new ConfigListener());
+        this.controllerImageOverrides = client.findOrCreateControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP);
+        client.watchControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP, new ControllerImageOverridesWatcher());
         final List<CustomResourceDefinition> customResourceDefinitions = client.loadCustomResourceDefinitionsOfInterest().stream()
                 .filter(CoordinatorUtils::isOfInterest)
                 .collect(Collectors.toList());
@@ -94,10 +93,21 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
             existingObserver.shutDownAndWait(10, TimeUnit.SECONDS);
             observers.remove(key);
         }
-        final String controllerImage = CoordinatorUtils.resolveControllerImageAnnotation(r);
-        derivedControllerImageMap.put(r.getMetadata().getName(), controllerImage);
-        CoordinatorUtils.resolveAnnotation(r, SUPPORTED_CAPABILITIES_ANNOTATION).ifPresent(capabilities ->
-                Arrays.stream(capabilities.split(","))
+        final Optional<String> controllerImageAnnotation = CoordinatorUtils
+                .resolveAnnotation(r, CoordinatorUtils.CONTROLLER_IMAGE_ANNOTATION_NAME);
+        controllerImageAnnotation.ifPresent(controllerImage -> derivedControllerImageMap.put(r.getMetadata().getName(), controllerImage));
+        String controllerImage = controllerImageAnnotation
+                .orElseGet(
+                        () -> CoordinatorUtils.resolveValue(this.controllerImageOverrides, CoordinatorUtils.keyOf(r)).orElseThrow(() ->
+                                new IllegalStateException(
+                                        format("CRD %s has neither the %s annotation, nor is there and entry in the configmap %s for %s",
+                                                r.getMetadata().getName(),
+                                                CoordinatorUtils.CONTROLLER_IMAGE_ANNOTATION_NAME,
+                                                CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP,
+                                                CoordinatorUtils.keyOf(r)))));
+
+        CoordinatorUtils.resolveAnnotation(r, CoordinatorUtils.SUPPORTED_CAPABILITIES_ANNOTATION)
+                .ifPresent(capabilities -> Arrays.stream(capabilities.split(","))
                         .forEach(s -> derivedControllerImageMap.put(s + ".capability.org", controllerImage)));
 
         observers.computeIfAbsent(key,
@@ -112,32 +122,32 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
         return key.toLowerCase(Locale.ROOT);//.replace("_", "").replace("-", "").replace(".", "");
     }
 
-    private String getControllerImageFor(EntandoCustomResource resource) {
-        if (resource instanceof ProvidedCapability) {
-            ProvidedCapability pc = (ProvidedCapability) resource;
-            return ofNullable(resolveCapabilityFromMap(pc, this.controllerImageOverrides.getData()))
-                    .orElse(resolveCapabilityFromMap(pc, this.derivedControllerImageMap));
+    public String getControllerImageFor(SerializedEntandoResource resource) {
+        if (resource.getKind().equals(ProvidedCapability.class.getSimpleName())) {
+            return ofNullable(resolveCapabilityFromMap(resource, this.controllerImageOverrides.getData()))
+                    .orElse(resolveCapabilityFromMap(resource, this.derivedControllerImageMap));
         } else {
             return ofNullable(resolveCustomControllerFromMap(resource, this.controllerImageOverrides.getData()))
                     .orElse(resolveCustomControllerFromMap(resource, this.derivedControllerImageMap));
         }
     }
 
-    private String resolveCapabilityFromMap(ProvidedCapability pc, Map<String, String> controllerImageMap) {
-        return pc.getSpec().getImplementation()
-                .flatMap(impl -> ofNullable(
-                        controllerImageMap.get(sanitize(impl.name() + "." + impl.getCapability().name() + ".capability.org"))))
-                .orElse(controllerImageMap.get(sanitize(pc.getSpec().getCapability().name() + ".capability.org")));
+    private String resolveCapabilityFromMap(SerializedEntandoResource pc, Map<String, String> controllerImageMap) {
+        Optional<String> implementation = Optional.ofNullable((String) pc.getSpec().get("implementation"));
+        String capability = (String) pc.getSpec().get("capability");
+        return implementation
+                .flatMap(impl -> ofNullable(controllerImageMap.get(sanitize(impl + "." + capability + ".capability.org"))))
+                .orElse(controllerImageMap.get(sanitize(capability + ".capability.org")));
     }
 
-    private String resolveCustomControllerFromMap(EntandoCustomResource r, Map<String, String> controllerImageMap) {
+    private String resolveCustomControllerFromMap(SerializedEntandoResource r, Map<String, String> controllerImageMap) {
         final String crdName = this.crdNameMapSync.getCrdName(r);
-        return controllerImageMap.get(crdName);
+        return ofNullable(controllerImageMap).map(map -> map.get(crdName)).orElse(null);
     }
 
-    private <S extends Serializable, T extends EntandoCustomResource> void startImage(Action action, T resource) {
+    private <S extends Serializable, T extends SerializedEntandoResource> void startImage(Action action, T resource) {
         final String controllerImage = getControllerImageFor(resource);
-        if (NO_IMAGE.equals(controllerImage)) {
+        if (CoordinatorUtils.NO_IMAGE.equals(controllerImage)) {
             //A CRD with now Kubernetes semantics
             client.updatePhase(resource, EntandoDeploymentPhase.SUCCESSFUL);
         } else {

@@ -25,11 +25,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.common.EntandoImageResolver;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public class ControllerExecutor {
 
@@ -45,20 +45,20 @@ public class ControllerExecutor {
         this.imageName = imageName;
     }
 
-    public Pod startControllerFor(Action action, EntandoCustomResource resource) {
+    public Pod startControllerFor(Action action, SerializedEntandoResource resource) {
         removeObsoleteControllerPods(resource);
         Pod pod = buildControllerPod(action, resource);
         return client.startPod(pod);
     }
 
-    private void removeObsoleteControllerPods(EntandoCustomResource resource) {
+    private void removeObsoleteControllerPods(SerializedEntandoResource resource) {
         this.client.removePodsAndWait(controllerNamespace, Map.of(
                 CoordinatorUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
                 CoordinatorUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
                 resource.getKind(), resource.getMetadata().getName()));
     }
 
-    private Pod buildControllerPod(Action action, EntandoCustomResource resource) {
+    private Pod buildControllerPod(Action action, SerializedEntandoResource resource) {
         return new PodBuilder().withNewMetadata()
                 .withName(resource.getMetadata().getName() + "-deployer-" + NameUtils.randomNumeric(4).toLowerCase())
                 .withNamespace(this.controllerNamespace)
@@ -88,7 +88,7 @@ public class ControllerExecutor {
         result.put(envVar.getName(), envVar);
     }
 
-    private List<EnvVar> buildEnvVars(Action action, EntandoCustomResource resource) {
+    private List<EnvVar> buildEnvVars(Action action, SerializedEntandoResource resource) {
         Map<String, EnvVar> result = new HashMap<>();
         System.getProperties().entrySet().stream()
                 .filter(this::matchesKnownSystemProperty).forEach(objectObjectEntry -> addTo(result,

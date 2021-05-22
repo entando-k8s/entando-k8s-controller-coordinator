@@ -16,8 +16,9 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import io.fabric8.kubernetes.client.Watcher;
 import java.util.List;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
+import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 
 public interface SimpleEntandoOperations {
 
@@ -25,15 +26,15 @@ public interface SimpleEntandoOperations {
 
     SimpleEntandoOperations inAnyNamespace();
 
-    void watch(EntandoResourceObserver rldEntandoResourceObserver);
+    void watch(Watcher<SerializedEntandoResource> rldEntandoResourceObserver);
 
-    List<EntandoCustomResource> list();
+    List<SerializedEntandoResource> list();
 
-    EntandoCustomResource removeAnnotation(EntandoCustomResource r, String name);
+    SerializedEntandoResource removeAnnotation(SerializedEntandoResource r, String name);
 
-    EntandoCustomResource putAnnotation(EntandoCustomResource r, String name, String value);
+    SerializedEntandoResource putAnnotation(SerializedEntandoResource r, String name, String value);
 
-    void removeSuccessfullyCompletedPods(EntandoCustomResource resource);
+    void removeSuccessfullyCompletedPods(SerializedEntandoResource resource);
 
     String getControllerNamespace();
 }

@@ -14,7 +14,7 @@
  *
  */
 
-package org.entando.kubernetes.controller.coordinator.inprocesstests;
+package org.entando.kubernetes.controller.coordinator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -23,19 +23,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Paths;
-import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorConfig;
-import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorProperty;
-import org.entando.kubernetes.controller.coordinator.Liveness;
-import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMode;
-import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
-import org.entando.kubernetes.controller.support.common.OperatorDeploymentType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tags({@Tag("unit"), @Tag("pre-deployment")})
+@Tags({@Tag("in-process"), @Tag("unit"), @Tag("pre-deployment")})
 class LivenessTest {
 
     @Test
@@ -68,6 +62,5 @@ class LivenessTest {
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty());
         System.clearProperty(EntandoOperatorSpiConfigProperty.ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE.getJvmSystemProperty());
     }
-
 
 }

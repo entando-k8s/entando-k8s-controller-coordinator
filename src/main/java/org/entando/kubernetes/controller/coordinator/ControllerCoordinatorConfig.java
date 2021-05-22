@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 
 public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
 
@@ -43,6 +44,9 @@ public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
             return getNamespacesToObserve().stream().anyMatch("*"::equals);
         }
     }
+    public static long getPodShutdownTimeoutSeconds() {
+        return lookupProperty(EntandoOperatorConfigProperty.ENTANDO_POD_SHUTDOWN_TIMEOUT_SECONDS).map(Long::valueOf).orElse(120L);
+    }
 
     public static OperatorDeploymentType getOperatorDeploymentType() {
         return lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE)
@@ -60,5 +64,8 @@ public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
         return lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY)
                 .map(Integer::parseInt)
                 .orElse(30);
+    }
+    public static String getEntandoDockerImageInfoConfigMap() {
+        return lookupProperty(ControllerCoordinatorProperty.ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP).orElse("entando-docker-image-info");
     }
 }

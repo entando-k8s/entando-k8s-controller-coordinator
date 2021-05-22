@@ -14,7 +14,7 @@
  *
  */
 
-package org.entando.kubernetes.controller.coordinator.inprocesstests;
+package org.entando.kubernetes.controller.coordinator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -26,16 +26,13 @@ import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.WatcherException;
 import java.io.File;
 import java.nio.file.Paths;
-import org.entando.kubernetes.controller.coordinator.ConfigListener;
-import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorProperty;
-import org.entando.kubernetes.controller.coordinator.Liveness;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tags({@Tag("unit"), @Tag("pre-deployment")})
+@Tags({@Tag("in-process"), @Tag("unit"), @Tag("pre-deployment")})
 class ConfigListenerTest {
 
     @AfterEach

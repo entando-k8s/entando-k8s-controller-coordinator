@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
 
@@ -57,7 +56,7 @@ public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
     }
 
     @Override
-    public void watch(EntandoResourceObserver observer) {
+    public void watch(Watcher<SerializedEntandoResource> observer) {
         try {
             operations.watch(new Watcher<>() {
                 @Override
@@ -92,18 +91,18 @@ public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<EntandoCustomResource> list() {
+    public List<SerializedEntandoResource> list() {
         final List<Map<String, Object>> items = (List<Map<String, Object>>) operations.list().get("items");
         return items.stream().map(this::toResource).collect(Collectors.toList());
     }
 
     @Override
-    public EntandoCustomResource removeAnnotation(EntandoCustomResource r, String name) {
+    public SerializedEntandoResource removeAnnotation(SerializedEntandoResource r, String name) {
         return editAnnotations(r, a -> a.remove(name));
     }
 
     @SuppressWarnings("unchecked")
-    private EntandoCustomResource editAnnotations(EntandoCustomResource r, Consumer<Map<String, Object>> editAction) {
+    private SerializedEntandoResource editAnnotations(SerializedEntandoResource r, Consumer<Map<String, Object>> editAction) {
         try {
             final Map<String, Object> map = operations.get(r.getMetadata().getNamespace(), r.getMetadata().getName());
             final Map<String, Object> metadata = (Map<String, Object>) map.get("metadata");
@@ -126,12 +125,12 @@ public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
     }
 
     @Override
-    public EntandoCustomResource putAnnotation(EntandoCustomResource r, String name, String value) {
+    public SerializedEntandoResource putAnnotation(SerializedEntandoResource r, String name, String value) {
         return editAnnotations(r, a -> a.put(name, value));
     }
 
     @Override
-    public void removeSuccessfullyCompletedPods(EntandoCustomResource resource) {
+    public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
         this.removeSuccessfullyCompletedPods(client.getNamespace(), Map.of(
                 CoordinatorUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
                 CoordinatorUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
