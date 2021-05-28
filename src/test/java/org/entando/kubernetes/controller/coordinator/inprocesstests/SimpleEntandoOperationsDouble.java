@@ -16,11 +16,17 @@
 
 package org.entando.kubernetes.controller.coordinator.inprocesstests;
 
+import static java.util.Optional.ofNullable;
+
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.entando.kubernetes.controller.coordinator.CoordinatorUtils;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.support.client.doubles.AbstractK8SClientDouble;
@@ -52,8 +58,12 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
     }
 
     @Override
-    public void watch(Watcher<SerializedEntandoResource> rldEntandoResourceObserver) {
-
+    public void watch(Watcher<SerializedEntandoResource> watcher) {
+        if (ofNullable(this.namespace).isPresent()) {
+            getCluster().getResourceProcessor().watch(watcher, definitionContext,  this.namespace);
+        } else {
+            getCluster().getResourceProcessor().watch(watcher, definitionContext);
+        }
     }
 
     @Override
@@ -73,23 +83,33 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
     @Override
     public SerializedEntandoResource removeAnnotation(SerializedEntandoResource r, String name) {
         r.getMetadata().getAnnotations().remove(name);
-
+        getCluster().getResourceProcessor().processResource(getNamespace(r).getCustomResources(r.getKind()), r);
         return r;
     }
 
     @Override
     public SerializedEntandoResource putAnnotation(SerializedEntandoResource r, String name, String value) {
+        if(r.getMetadata().getAnnotations()==null){
+            r.getMetadata().setAnnotations(new HashMap<>());
+        }
         r.getMetadata().getAnnotations().put(name, value);
+        getCluster().getResourceProcessor().processResource(getNamespace(r).getCustomResources(r.getKind()), r);
         return r;
     }
 
     @Override
     public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
+        final Map<String, String> labels = CoordinatorUtils.podLabelsFor(resource);
+        final Map<String, Pod> pods = getNamespace(getControllerNamespace()).getPods();
+        pods.values().stream().filter(pod -> CoordinatorTestUtil.matchesLabels(labels, pod)).forEach(pod -> {
+            getCluster().getResourceProcessor().processResource(pods, pod);
+            pods.remove(pod.getMetadata().getName());
+        });
 
     }
 
     @Override
     public String getControllerNamespace() {
-        return namespace;
+        return CONTROLLER_NAMESPACE;
     }
 }

@@ -20,6 +20,7 @@ import static java.lang.String.format;
 
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -41,13 +42,15 @@ import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 public class EntandoResourceObserver implements Watcher<SerializedEntandoResource> {
 
     private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
+    public static final List<String> LOG_ENTRIES = new ArrayList<>();
 
     private final Map<String, Deque<String>> cache = new ConcurrentHashMap<>();
     private final Map<String, SerializedEntandoResource> resourcesBeingUpgraded = new ConcurrentHashMap<>();
     private final BiConsumer<Action, SerializedEntandoResource> callback;
     private final SimpleEntandoOperations operations;
-    //TODO make the poolsize configurable
-    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
+    //TODO make the pool size configurable. Need to think that through though. We would require different settings for cluster vs
+    // namespace scoped deployments
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
     private final CrdNameMapSync crdNameMapSync;
     private final Long generation;
 
@@ -118,17 +121,23 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
     }
 
     private void markAsUpgraded(SerializedEntandoResource resource) {
-        resourcesBeingUpgraded.remove(resource.getMetadata().getUid());
-        EntandoOperatorConfigBase
-                .lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION)
+        final Optional<String> currentOperatorVersion = EntandoOperatorConfigBase
+                .lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION);
+        currentOperatorVersion
                 .ifPresent(
-                        s -> operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s)
+                        s -> {
+                            final Optional<String> processedByVersion = CoordinatorUtils
+                                    .resolveAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION);
+                            if (!processedByVersion.map(s::equals).orElse(false)) {
+                                operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s);
+                            }
+                        }
                 );
+        resourcesBeingUpgraded.remove(resource.getMetadata().getUid());
     }
 
     private void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
-        executor.schedule(() -> operations.removeSuccessfullyCompletedPods(resource), (long) ControllerCoordinatorConfig.getRemovalDelay(),
-                TimeUnit.SECONDS);
+        scheduler.execute(() -> operations.removeSuccessfullyCompletedPods(resource));
     }
 
     private boolean needsToRemoveSuccessfullyCompletedPods(SerializedEntandoResource resource) {
@@ -154,10 +163,11 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
 
     private boolean isNotOwnedByResourceOfInterest(SerializedEntandoResource resource) {
         final boolean topLevel = resource.getMetadata().getOwnerReferences().stream()
-                .noneMatch(ownerReference -> ownerReference.getKind().equals(
-                        ProvidedCapability.class.getSimpleName()) || crdNameMapSync.isOfInterest(ownerReference));
+                .noneMatch(crdNameMapSync::isOfInterest);
         if (topLevel) {
             logResource(Level.WARNING, "%s %s/%s is a top level resource", resource);
+        }else{
+            logResource(Level.WARNING, "%s %s/%s is ignored because it is not a top level resource", resource);
         }
         return topLevel;
     }
@@ -176,7 +186,7 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
     protected void performCallback(Action action, SerializedEntandoResource resource) {
         logResource(Level.INFO, "Received " + action.name() + " for the %s %s/%s", resource);
         if (action == Action.ADDED || action == Action.MODIFIED) {
-            executor.execute(() -> callback.accept(action, resource));
+            scheduler.execute(() -> callback.accept(action, resource));
         } else if (action == Action.DELETED) {
             cache.remove(resource.getMetadata().getUid());
         } else {
@@ -186,9 +196,11 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
     }
 
     private void logResource(Level info, String format, SerializedEntandoResource resource) {
+        if (ControllerCoordinatorConfig.storeLogEntries()) {
+            LOG_ENTRIES.add(format(format, resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
+        }
         LOGGER.log(info,
-                () -> format(format, resource.getKind(), resource.getMetadata().getNamespace(),
-                        resource.getMetadata().getName()));
+                () -> format(format, resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
     }
 
     private boolean processGenerationIncrement(SerializedEntandoResource newResource) {
@@ -210,6 +222,10 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
                     || newResource.getStatus().getObservedGeneration() < newResource.getMetadata().getGeneration();
             if (needsObservation) {
                 logResource(Level.WARNING, "%s %s/%s is processed after a metadata.generation increment.", newResource);
+            } else {
+                logResource(Level.WARNING,
+                        "%s %s/%s was ignored because its metadata.generation is still the same as the status.observedGeneration.",
+                        newResource);
             }
             return needsObservation;
         }
@@ -238,8 +254,8 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
 
     public void shutDownAndWait(int i, TimeUnit timeUnit) {
         try {
-            executor.shutdown();
-            if (!executor.awaitTermination(i, timeUnit)) {
+            scheduler.shutdown();
+            if (!scheduler.awaitTermination(i, timeUnit)) {
                 LOGGER.log(Level.WARNING, "Could not shut EntandoResourceObserver down.");
             }
         } catch (InterruptedException e) {

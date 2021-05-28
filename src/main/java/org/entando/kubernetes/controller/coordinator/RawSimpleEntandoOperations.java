@@ -19,12 +19,14 @@ package org.entando.kubernetes.controller.coordinator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -84,7 +86,7 @@ public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
             });
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, e,
-                    () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
+                    () -> "EntandoResourceObserver registration failed. Can't recover. The container should restart now.");
             Liveness.dead();
         }
     }
@@ -130,19 +132,27 @@ public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
     }
 
     @Override
-    public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
-        this.removeSuccessfullyCompletedPods(client.getNamespace(), Map.of(
-                CoordinatorUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
-                CoordinatorUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
-                resource.getKind(), resource.getMetadata().getName()));
-    }
-
-    @Override
     public String getControllerNamespace() {
         return client.getNamespace();
     }
 
-    private void removeSuccessfullyCompletedPods(String namespace, Map<String, String> labels) {
+    @Override
+    public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
+        String namespace = client.getNamespace();
+        Map<String, String> labels = CoordinatorUtils.podLabelsFor(resource);
+        try {
+            client.pods().inNamespace(namespace).withLabels(labels)
+                    .waitUntilCondition(
+                            pod -> PodResult.of(pod).getState() == State.COMPLETED,
+                            ControllerCoordinatorConfig.getRemovalDelay(),
+                            TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        } catch (KubernetesClientException e) {
+            LOGGER.log(Level.WARNING, "Some pods remained active after the removal delay period. You can consider increasing the setting "
+                    + ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty());
+        }
         client.pods().inNamespace(namespace).withLabels(labels).list().getItems().stream()
                 .filter(pod -> PodResult.of(pod).getState() == State.COMPLETED && !PodResult.of(pod).hasFailed())
                 .forEach(client.pods().inNamespace(namespace)::delete);

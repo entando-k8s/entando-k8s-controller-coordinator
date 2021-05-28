@@ -1,0 +1,3 @@
+removal of successfully completed pods
+CRD Event restarts observers\
+validation when no image registered, or alternatively just mark it as "SUCCESSFUL"

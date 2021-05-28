@@ -52,7 +52,7 @@ class CrdNameMapSync implements Watcher<CustomResourceDefinition> {
 
     private void syncName(CustomResourceDefinition r) {
         String key = CoordinatorUtils.keyOf(r);
-        crdNameMap=new ConfigMapBuilder(crdNameMap).addToData(key, r.getMetadata().getName()).build();
+        crdNameMap = new ConfigMapBuilder(crdNameMap).addToData(key, r.getMetadata().getName()).build();
     }
 
     @Override

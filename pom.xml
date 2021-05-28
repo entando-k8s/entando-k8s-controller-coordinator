@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>0.0.0-SNAPSHOT-PR-3-3</version>
+        <version>0.0.0-SNAPSHOT-PR-3-8</version>
         <relativePath/>
     </parent>
     <version>6.3.0-SNAPSHOT</version>
@@ -64,8 +64,10 @@
     <properties>
         <github.organization>entando-k8s</github.organization>
         <entando-k8s-operator-common.version>6.3.0-SNAPSHOT</entando-k8s-operator-common.version>
-        <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
+        <preDeploymentTestGroups>allure</preDeploymentTestGroups>
         <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
     </properties>
     <issueManagement>
         <system>Github</system>
@@ -188,20 +190,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
                 <version>2.8.2</version>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M1</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>9</source>
-                    <target>9</target>
-                </configuration>
             </plugin>
         </plugins>
     </build>

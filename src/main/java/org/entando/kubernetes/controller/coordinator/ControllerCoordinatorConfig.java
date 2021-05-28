@@ -44,6 +44,11 @@ public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
             return getNamespacesToObserve().stream().anyMatch("*"::equals);
         }
     }
+
+    public static boolean storeLogEntries() {
+        return lookupProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES).map(s -> s.equals("true")).orElse(false);
+    }
+
     public static long getPodShutdownTimeoutSeconds() {
         return lookupProperty(EntandoOperatorConfigProperty.ENTANDO_POD_SHUTDOWN_TIMEOUT_SECONDS).map(Long::valueOf).orElse(120L);
     }
@@ -65,6 +70,7 @@ public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
                 .map(Integer::parseInt)
                 .orElse(30);
     }
+
     public static String getEntandoDockerImageInfoConfigMap() {
         return lookupProperty(ControllerCoordinatorProperty.ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP).orElse("entando-docker-image-info");
     }

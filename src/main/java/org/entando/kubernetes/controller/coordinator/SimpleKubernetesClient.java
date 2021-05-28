@@ -29,8 +29,6 @@ import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public interface SimpleKubernetesClient {
 
-    String CRD_OF_INTEREST_LABEL_NAME = "entando.org/crd-of-interest";
-
     SerializedEntandoResource updatePhase(SerializedEntandoResource resource, EntandoDeploymentPhase phase);
 
     String getControllerNamespace();

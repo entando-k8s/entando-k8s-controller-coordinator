@@ -24,7 +24,7 @@ import org.entando.kubernetes.controller.coordinator.inprocesstests.SimpleKubern
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.test.e2etest.CertificateSecretHelper;
+import org.entando.kubernetes.test.common.CertificateSecretHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;

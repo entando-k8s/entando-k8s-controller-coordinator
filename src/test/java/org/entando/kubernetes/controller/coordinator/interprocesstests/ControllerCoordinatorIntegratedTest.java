@@ -50,6 +50,7 @@ import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProp
 import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
+import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.spi.common.SecretUtils;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.spi.container.KeycloakName;
@@ -175,7 +176,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //Then I expect to see at least one controller pod
         FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
-                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
+                .withLabel(ResourceUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
         Pod theControllerPod = listable.list().getItems().get(0);
         assertThat(theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(theControllerPod)), is(Action.ADDED.name()));
@@ -287,7 +288,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //Then I expect to see the keycloak controller pod
         FilterWatchListDeletable<Pod, PodList> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
-                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
+                .withLabel(ResourceUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() > 0);
         Pod theKeycloakControllerPod = keycloakControllerList.list().getItems().get(0);
@@ -319,7 +320,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //And the plugin controller pod
         FilterWatchListDeletable<Pod, PodList> pluginControllerList = client.pods()
                 .inNamespace(client.getNamespace())
-                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoPlugin")
+                .withLabel(ResourceUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoPlugin")
                 .withLabel("EntandoPlugin", app.getSpec().getComponents().get(1).getMetadata().getName());
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> pluginControllerList.list().getItems().size() > 0);
         Pod thePluginControllerPod = pluginControllerList.list().getItems().get(0);

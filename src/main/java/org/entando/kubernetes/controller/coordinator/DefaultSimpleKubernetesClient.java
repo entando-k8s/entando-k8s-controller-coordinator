@@ -155,8 +155,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
 
     @Override
     public void removePodsAndWait(String namespace, Map<String, String> labels) {
-        FilterWatchListDeletable<Pod, PodList> podResource = client
-                .pods().inNamespace(namespace).withLabels(labels);
+        FilterWatchListDeletable<Pod, PodList> podResource = client.pods().inNamespace(namespace).withLabels(labels);
         podResource.delete();
         try {
             podResource.waitUntilCondition(pod -> podResource.list().getItems().isEmpty(),
@@ -197,7 +196,8 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
 
     @Override
     public Collection<CustomResourceDefinition> loadCustomResourceDefinitionsOfInterest() {
-        return client.apiextensions().v1beta1().customResourceDefinitions().withLabel(CoordinatorUtils.ENTANDO_CRD_OF_INTEREST_LABEL_NAME).list()
+        return client.apiextensions().v1beta1().customResourceDefinitions().withLabel(CoordinatorUtils.ENTANDO_CRD_OF_INTEREST_LABEL_NAME)
+                .list()
                 .getItems();
     }
 

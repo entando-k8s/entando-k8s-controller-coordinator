@@ -23,9 +23,11 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
+import io.fabric8.kubernetes.client.CustomResource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.io.IOException;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
@@ -46,8 +48,7 @@ public class CoordinatorUtils {
     public static final String ENTANDO_CRD_NAMES_CONFIGMAP_NAME = "entando-crd-names";
     public static final String ENTANDO_CRD_OF_INTEREST_LABEL_NAME = "entando.org/crd-of-interest";
 
-    public static OperatorProcessingInstruction resolveProcessingInstruction(
-            EntandoCustomResource resource) {
+    public static OperatorProcessingInstruction resolveProcessingInstruction(EntandoCustomResource resource) {
         return resolveAnnotation(resource, PROCESSING_INSTRUCTION_ANNOTATION_NAME)
                 .map(value -> OperatorProcessingInstruction
                         .valueOf(value.toUpperCase(Locale.ROOT).replace("-", "_")))
@@ -58,16 +59,16 @@ public class CoordinatorUtils {
         return ofNullable(resource.getMetadata().getAnnotations()).map(map -> map.get(name));
     }
 
+    public static boolean isOfInterest(CustomResourceDefinition r) {
+        return ofNullable(r.getMetadata().getLabels()).map(labels -> labels.containsKey(ENTANDO_CRD_OF_INTEREST_LABEL_NAME)).orElse(false);
+    }
+
     public static String keyOf(CustomResourceDefinitionContext definitionContext) {
         return keyOf(definitionContext.getKind(), definitionContext.getGroup());
     }
 
     private static String keyOf(String kind, String group) {
         return kind + "." + group;
-    }
-
-    public static boolean isOfInterest(CustomResourceDefinition r) {
-        return ofNullable(r.getMetadata().getLabels()).map(labels -> labels.containsKey(ENTANDO_CRD_OF_INTEREST_LABEL_NAME)).orElse(false);
     }
 
     public static String keyOf(CustomResourceDefinition r) {
@@ -86,16 +87,14 @@ public class CoordinatorUtils {
         return apiVersion.substring(0, apiVersion.indexOf("/"));
     }
 
-    public static SerializedEntandoResource toSerializedResource(EntandoCustomResource entandoCustomResource) {
-        try {
-            final ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(objectMapper.writeValueAsString(entandoCustomResource), SerializedEntandoResource.class);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
     public static Optional<String> resolveValue(ConfigMap map, String key) {
         return ofNullable(map.getData()).flatMap(data -> ofNullable(data.get(key)));
+    }
+
+    public static Map<String, String> podLabelsFor(EntandoCustomResource resource) {
+        return Map.of(
+                ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
+                ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
+                resource.getKind(), resource.getMetadata().getName());
     }
 }

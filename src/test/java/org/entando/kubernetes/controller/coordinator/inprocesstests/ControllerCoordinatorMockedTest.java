@@ -26,21 +26,21 @@ import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorProperty;
-import org.entando.kubernetes.controller.coordinator.CoordinatorUtils;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
 import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.model.common.DbmsVendor;
 import org.entando.kubernetes.model.common.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.common.EntandoCustomResourceStatus;
@@ -101,8 +101,8 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         if (Strings.isNullOrEmpty(resource.getMetadata().getResourceVersion())) {
             resource.getMetadata().setResourceVersion(Integer.toString(1));
         }
-        coordinator.getObserver((Class<R>) resource.getClass())
-                .eventReceived(Action.ADDED, CoordinatorUtils.toSerializedResource(resource));
+        coordinator.getObserver(CustomResourceDefinitionContext.fromCustomResourceType((Class<R>) resource.getClass()))
+                .eventReceived(Action.ADDED, CoordinatorTestUtil.toSerializedResource(resource));
     }
 
     @SuppressWarnings("unchecked")
@@ -112,8 +112,8 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .patch(podWithSucceededStatus(pod));
         resource.getMetadata().setGeneration(1L);
         resource.getStatus().updateDeploymentPhase(EntandoDeploymentPhase.SUCCESSFUL, resource.getMetadata().getGeneration());
-        coordinator.getObserver((Class<R>) resource.getClass())
-                .eventReceived(Action.ADDED, CoordinatorUtils.toSerializedResource(resource));
+        coordinator.getObserver(CustomResourceDefinitionContext.fromCustomResourceType((Class<R>) resource.getClass()))
+                .eventReceived(Action.ADDED, CoordinatorTestUtil.toSerializedResource(resource));
     }
 
     @Test
@@ -138,7 +138,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         //Then I expect to see at least one controller pod
         FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
-                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
+                .withLabel(ResourceUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
         Pod theControllerPod = listable.list().getItems().get(0);
         assertThat(theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(theControllerPod)), is(Action.ADDED.name()));
@@ -176,7 +176,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
         //And I the controller pod is created.
         FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
-                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
+                .withLabel(ResourceUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
         //When I complete the Keycloak installation successfully
         afterSuccess(keycloakServer, listable.list().getItems().get(0));

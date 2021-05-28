@@ -52,10 +52,9 @@ public class ControllerExecutor {
     }
 
     private void removeObsoleteControllerPods(SerializedEntandoResource resource) {
-        this.client.removePodsAndWait(controllerNamespace, Map.of(
-                CoordinatorUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
-                CoordinatorUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
-                resource.getKind(), resource.getMetadata().getName()));
+        //We need to make sure they all terminate so that we don't have racing conditions between 2 controllers
+        // processing the same resource
+        this.client.removePodsAndWait(controllerNamespace, CoordinatorUtils.podLabelsFor(resource));
     }
 
     private Pod buildControllerPod(Action action, SerializedEntandoResource resource) {
@@ -63,9 +62,7 @@ public class ControllerExecutor {
                 .withName(resource.getMetadata().getName() + "-deployer-" + NameUtils.randomNumeric(4).toLowerCase())
                 .withNamespace(this.controllerNamespace)
                 .addToOwnerReferences(ResourceUtils.buildOwnerReference(resource))
-                .addToLabels(CoordinatorUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind())
-                .addToLabels(CoordinatorUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace())
-                .addToLabels(resource.getKind(), resource.getMetadata().getName())
+                .addToLabels(CoordinatorUtils.podLabelsFor(resource))
                 .endMetadata()
                 .withNewSpec()
                 .withRestartPolicy("Never")

@@ -25,8 +25,6 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
           env:
-            - name: ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS
-              value: "{{- range $index, $name := .Values.imagePullSecrets }}{{- if $index }},{{- end }}{{ $name }}{{- end }}"
             - name: ENTANDO_K8S_OPERATOR_SERVICEACCOUNT
               valueFrom:
                 fieldRef:

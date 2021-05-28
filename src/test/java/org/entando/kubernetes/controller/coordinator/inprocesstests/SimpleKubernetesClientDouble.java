@@ -79,7 +79,12 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
 
     @Override
     public void removePodsAndWait(String namespace, Map<String, String> labels) {
-
+        final Map<String, Pod> pods = getNamespace(namespace).getPods();
+        pods.values().stream().filter(pod -> CoordinatorTestUtil.matchesLabels(labels, pod))
+                .forEach(pod -> {
+                    getCluster().getResourceProcessor().processResource(pods, pod);
+                    pods.remove(pod.getMetadata().getName());
+                });
     }
 
     @Override
@@ -103,7 +108,8 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
     }
 
     @Override
-    public void watchControllerConfigMap(String s, Watcher<ConfigMap> configMapWatcher) {
+    public void watchControllerConfigMap(String name, Watcher<ConfigMap> configMapWatcher) {
+        getCluster().getResourceProcessor().watch(configMapWatcher, CONTROLLER_NAMESPACE, name);
 
     }
 
@@ -123,17 +129,18 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
         return new SimpleEntandoOperationsDouble(getNamespaces(), context, getCluster());
     }
 
-    public <T extends EntandoCustomResource> void createOrPatchEntandoResource(T resource) {
-        getNamespace(resource).getCustomResources((Class<T>) resource.getClass()).put(resource.getMetadata().getName(), resource);
+    public SerializedEntandoResource createOrPatchEntandoResource(SerializedEntandoResource resource) {
+        return getCluster().getResourceProcessor()
+                .processResource(getNamespace(resource).getCustomResources(resource.getKind()), resource);
     }
 
     public Pod loadPod(String namespace, Map<String, String> labels) {
-        return getNamespace(namespace).getPods().values().stream().filter(p -> labels.entrySet().stream()
-                .allMatch(entry -> entry.getValue().equals(p.getMetadata().getLabels().get(entry.getKey())))).findFirst().orElse(null);
+        final Map<String, Pod> pods = getNamespace(namespace).getPods();
+        return pods.values().stream().filter(p -> CoordinatorTestUtil.matchesLabels(labels, p)).findFirst().orElse(null);
     }
 
-    public <T extends EntandoCustomResource> T load(Class<T> resourceClass, String namespace, String name) {
-        return getNamespace(namespace).getCustomResources(resourceClass).get(name);
+    public SerializedEntandoResource load(Class<?> resourceClass, String namespace, String name) {
+        return (SerializedEntandoResource)getNamespace(namespace).getCustomResources( resourceClass.getSimpleName()).get(name);
     }
 
 }

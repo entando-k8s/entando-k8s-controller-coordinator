@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public class EntandoControllerCoordinator implements Watcher<CustomResourceDefinition> {
@@ -70,16 +69,31 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
         final List<CustomResourceDefinition> customResourceDefinitions = client.loadCustomResourceDefinitionsOfInterest().stream()
                 .filter(CoordinatorUtils::isOfInterest)
                 .collect(Collectors.toList());
-        customResourceDefinitions.forEach(this::processCustomResourceDefinition);
         this.crdNameMapSync = new CrdNameMapSync(client, customResourceDefinitions);
+        customResourceDefinitions.forEach(this::processCustomResourceDefinition);
         client.watchCustomResourceDefinitions(this);
+        customResourceDefinitions.forEach(this::startObservingInstances);
+        observers.computeIfAbsent(CoordinatorUtils.keyOf(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
+                s -> new EntandoResourceObserver(
+                        this.client.getOperations(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
+                        this::startImage,
+                        crdNameMapSync,
+                        1L));
+
         Liveness.alive();
     }
 
-    @SuppressWarnings("unchecked")
-    //for testing purposes only, pseudo-deprecated
-    public <R extends EntandoCustomResource> EntandoResourceObserver getObserver(Class clss) {
-        return observers.get(CoordinatorUtils.keyOf(CustomResourceDefinitionContext.fromCustomResourceType(clss)));
+    private EntandoResourceObserver startObservingInstances(CustomResourceDefinition crd) {
+        return observers.computeIfAbsent(CoordinatorUtils.keyOf(crd),
+                s1 -> new EntandoResourceObserver(
+                        this.client.getOperations(CustomResourceDefinitionContext.fromCrd(crd)),
+                        this::startImage,
+                        crdNameMapSync,
+                        crd.getMetadata().getGeneration()));
+    }
+
+    public EntandoResourceObserver getObserver(CustomResourceDefinitionContext context) {
+        return observers.get(CoordinatorUtils.keyOf(context));
     }
 
     public void shutdownObservers(int wait, TimeUnit timeUnit) {
@@ -98,6 +112,7 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
         controllerImageAnnotation.ifPresent(controllerImage -> derivedControllerImageMap.put(r.getMetadata().getName(), controllerImage));
         String controllerImage = controllerImageAnnotation
                 .orElseGet(
+                        //TODO consider automatically updating these resources to "successful"
                         () -> CoordinatorUtils.resolveValue(this.controllerImageOverrides, CoordinatorUtils.keyOf(r)).orElseThrow(() ->
                                 new IllegalStateException(
                                         format("CRD %s has neither the %s annotation, nor is there and entry in the configmap %s for %s",
@@ -110,12 +125,6 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
                 .ifPresent(capabilities -> Arrays.stream(capabilities.split(","))
                         .forEach(s -> derivedControllerImageMap.put(s + ".capability.org", controllerImage)));
 
-        observers.computeIfAbsent(key,
-                s -> new EntandoResourceObserver(
-                        this.client.getOperations(CustomResourceDefinitionContext.fromCrd(r)),
-                        this::startImage,
-                        crdNameMapSync,
-                        r.getMetadata().getGeneration()));
     }
 
     private String sanitize(String key) {
@@ -124,8 +133,9 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
 
     public String getControllerImageFor(SerializedEntandoResource resource) {
         if (resource.getKind().equals(ProvidedCapability.class.getSimpleName())) {
-            return ofNullable(resolveCapabilityFromMap(resource, this.controllerImageOverrides.getData()))
+            final String s = ofNullable(resolveCapabilityFromMap(resource, this.controllerImageOverrides.getData()))
                     .orElse(resolveCapabilityFromMap(resource, this.derivedControllerImageMap));
+            return s;
         } else {
             return ofNullable(resolveCustomControllerFromMap(resource, this.controllerImageOverrides.getData()))
                     .orElse(resolveCustomControllerFromMap(resource, this.derivedControllerImageMap));
@@ -135,9 +145,11 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     private String resolveCapabilityFromMap(SerializedEntandoResource pc, Map<String, String> controllerImageMap) {
         Optional<String> implementation = Optional.ofNullable((String) pc.getSpec().get("implementation"));
         String capability = (String) pc.getSpec().get("capability");
+        final Optional<Map<String, String>> nullableMap = ofNullable(controllerImageMap);
         return implementation
-                .flatMap(impl -> ofNullable(controllerImageMap.get(sanitize(impl + "." + capability + ".capability.org"))))
-                .orElse(controllerImageMap.get(sanitize(capability + ".capability.org")));
+                .flatMap(impl -> nullableMap
+                        .flatMap(map -> ofNullable(map.get(sanitize(impl + "." + capability + ".capability.org")))))
+                .orElse(nullableMap.map(map -> map.get(sanitize(capability + ".capability.org"))).orElse(null));
     }
 
     private String resolveCustomControllerFromMap(SerializedEntandoResource r, Map<String, String> controllerImageMap) {
@@ -146,14 +158,18 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     }
 
     private <S extends Serializable, T extends SerializedEntandoResource> void startImage(Action action, T resource) {
-        final String controllerImage = getControllerImageFor(resource);
-        if (CoordinatorUtils.NO_IMAGE.equals(controllerImage)) {
-            //A CRD with now Kubernetes semantics
-            client.updatePhase(resource, EntandoDeploymentPhase.SUCCESSFUL);
-        } else {
-            TrustStoreSecretRegenerator.regenerateIfNecessary(client);
-            ControllerExecutor executor = new ControllerExecutor(client.getControllerNamespace(), client, controllerImage);
-            executor.startControllerFor(action, resource);
+        try {
+            final String controllerImage = getControllerImageFor(resource);
+            if (CoordinatorUtils.NO_IMAGE.equals(controllerImage)) {
+                //A CRD with now Kubernetes semantics
+                client.updatePhase(resource, EntandoDeploymentPhase.SUCCESSFUL);
+            } else {
+                TrustStoreSecretRegenerator.regenerateIfNecessary(client);
+                ControllerExecutor executor = new ControllerExecutor(client.getControllerNamespace(), client, controllerImage);
+                executor.startControllerFor(action, resource);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -161,6 +177,7 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     public void eventReceived(Action action, CustomResourceDefinition customResourceDefinition) {
         if (CoordinatorUtils.isOfInterest(customResourceDefinition)) {
             processCustomResourceDefinition(customResourceDefinition);
+            startObservingInstances(customResourceDefinition);
         }
     }
 
