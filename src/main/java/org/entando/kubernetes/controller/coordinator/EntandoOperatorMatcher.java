@@ -22,8 +22,6 @@ import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public class EntandoOperatorMatcher {
 
-    public static final String OPERATOR_ID_ANNOTATION = "entando.org/operator-id";
-    public static final String ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION = "entando.org/processed-by-version";
     private static final Logger LOGGER = Logger.getLogger(EntandoOperatorMatcher.class.getName());
 
     private EntandoOperatorMatcher() {
@@ -43,7 +41,7 @@ public class EntandoOperatorMatcher {
     private static boolean shouldEnforceOperatorId(EntandoCustomResource r) {
         //Enforce operatorId checking if either the resource has the annotation or this operator has been configured with an operatorId
         return isPropertyActive(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_ID)
-                || CoordinatorUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION).isPresent();
+                || CoordinatorUtils.resolveAnnotation(r, AnnotationNames.OPERATOR_ID_ANNOTATION).isPresent();
     }
 
     private static boolean isPropertyActive(ControllerCoordinatorProperty property) {
@@ -51,7 +49,7 @@ public class EntandoOperatorMatcher {
     }
 
     private static boolean hasMyAnnotation(EntandoCustomResource r) {
-        return CoordinatorUtils.resolveAnnotation(r, OPERATOR_ID_ANNOTATION)
+        return CoordinatorUtils.resolveAnnotation(r, AnnotationNames.OPERATOR_ID_ANNOTATION)
                 .map(s ->
                         EntandoOperatorConfigBase.lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_ID)
                                 .map(s::equals)

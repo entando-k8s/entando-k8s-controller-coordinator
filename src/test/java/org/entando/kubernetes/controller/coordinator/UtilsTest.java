@@ -16,8 +16,7 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,7 +29,7 @@ import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
 @Tags({@Tag("in-process"), @Tag("unit"), @Tag("pre-deployment")})
-class LivenessTest {
+class UtilsTest {
 
     @Test
     void shouldDeleteLivenessFileWithoutFailing() {
@@ -46,15 +45,38 @@ class LivenessTest {
     @Test
     void testDeploymentType() {
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty());
-        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType(), is(OperatorDeploymentType.HELM));
+        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType()).isEqualTo(OperatorDeploymentType.HELM);
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(),
                 OperatorDeploymentType.OLM.getName());
-        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType(), is(OperatorDeploymentType.OLM));
+        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType()).isEqualTo(OperatorDeploymentType.OLM);
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(),
                 OperatorDeploymentType.HELM.getName());
-        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType(), is(OperatorDeploymentType.HELM));
+        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType()).isEqualTo(OperatorDeploymentType.HELM);
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(), "invalid");
-        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType(), is(OperatorDeploymentType.HELM));
+        assertThat(ControllerCoordinatorConfig.getOperatorDeploymentType()).isEqualTo(OperatorDeploymentType.HELM);
+    }
+
+    @Test
+    void testIsClusterScope() {
+        //Because it will use the current namespace
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty());
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
+        assertThat(ControllerCoordinatorConfig.isClusterScopedDeployment()).isFalse();
+        //OLM contract
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(),
+                OperatorDeploymentType.OLM.getName());
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
+        assertThat(ControllerCoordinatorConfig.isClusterScopedDeployment()).isTrue();
+        //Using current namespace again
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(),
+                OperatorDeploymentType.HELM.getName());
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
+        assertThat(ControllerCoordinatorConfig.isClusterScopedDeployment()).isFalse();
+        //The Helm deployment expects "*" for cluster scope
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE.getJvmSystemProperty(),
+                OperatorDeploymentType.HELM.getName());
+        System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), "*");
+        assertThat(ControllerCoordinatorConfig.isClusterScopedDeployment()).isTrue();
     }
 
     @AfterEach

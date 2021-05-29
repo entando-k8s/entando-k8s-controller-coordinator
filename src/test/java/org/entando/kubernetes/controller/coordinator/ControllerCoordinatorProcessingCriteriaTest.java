@@ -39,15 +39,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.entando.kubernetes.controller.coordinator.inprocesstests.CoordinatorTestUtil;
-import org.entando.kubernetes.controller.coordinator.inprocesstests.SimpleKubernetesClientDouble;
+import org.entando.kubernetes.controller.coordinator.common.CoordinatorTestUtils;
+import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
+import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.client.doubles.EntandoResourceClientDouble;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.FluentIntegrationTesting;
-import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.support.common.KubeUtils;
-import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.fluentspi.BasicDeploymentSpecBuilder;
 import org.entando.kubernetes.fluentspi.TestResource;
 import org.entando.kubernetes.model.capability.ProvidedCapabilityBuilder;
@@ -65,7 +63,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-@Tags({@Tag("component"), @Tag("in-process"), @Tag("allure"), @Tag("inner-hexagon")})
+@Tags({@Tag("component"), @Tag("in-process"), @Tag("allure"), @Tag("inner-hexagon"), @Tag("pre-deployment")})
 @Feature("As a controller developer, I want my controller to be triggered when my custom resources are encountered but only when the "
         + "underlying conditions require it so that they are not run unnecessarily")
 @Issue("ENG-2284")
@@ -80,8 +78,8 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @AfterEach
     void shutdownSchedulers() {
         coordinator.shutdownObservers(5, TimeUnit.SECONDS);
-        EntandoResourceObserver.LOG_ENTRIES.clear();
-        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
+        LogDelegator.getLogEntries().clear();
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty());
@@ -90,24 +88,24 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @BeforeEach
     void prepareCrds() throws IOException {
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty(), "true");
-        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
+        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
         final CustomResourceDefinition testResourceDefinition = objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("testrources.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         clientDouble.getCluster().putCustomResourceDefinition(new CustomResourceDefinitionBuilder(testResourceDefinition)
-                .editMetadata().addToLabels(CoordinatorUtils.ENTANDO_CRD_OF_INTEREST_LABEL_NAME, "TestResource")
-                .addToAnnotations(CoordinatorUtils.CONTROLLER_IMAGE_ANNOTATION_NAME, "test/my-controller")
-                .addToAnnotations(CoordinatorUtils.SUPPORTED_CAPABILITIES_ANNOTATION, "dbms")
+                .editMetadata().addToLabels(LabelNames.CRD_OF_INTEREST.getName(), "TestResource")
+                .addToAnnotations(AnnotationNames.CONTROLLER_IMAGE.getName(), "test/my-controller")
+                .addToAnnotations(AnnotationNames.SUPPORTED_CAPABILITIES.getName(), "dbms")
                 .endMetadata().build()
         );
         final CustomResourceDefinition value = objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("crd/providedcapabilities.entando.org.crd.yaml"),
                         CustomResourceDefinition.class);
         clientDouble.getCluster().putCustomResourceDefinition(new CustomResourceDefinitionBuilder(value)
-                .editMetadata().addToLabels(CoordinatorUtils.ENTANDO_CRD_OF_INTEREST_LABEL_NAME, "ProvidedCapability")
-                .addToAnnotations(CoordinatorUtils.CONTROLLER_IMAGE_ANNOTATION_NAME, "test/my-capability-controller").endMetadata().build()
+                .editMetadata().addToLabels(LabelNames.CRD_OF_INTEREST.getName(), "ProvidedCapability")
+                .addToAnnotations(AnnotationNames.CONTROLLER_IMAGE.getName(), "test/my-capability-controller").endMetadata().build()
         );
 
     }
@@ -116,7 +114,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @Description("Should run existing resources when starting up the ControllerCoordinator")
     void testExistingResourcesProcessed() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource", () ->
                 testResource.set(createTestResource(1L, Collections.emptyMap())));
@@ -135,7 +133,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @Description("Resource modification events should be ignored when Kubernetes it twice with the same resource version")
     void testDuplicatesIgnored() {
         step("Given the Coordinator observes this namespace", () -> {
-            System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+            System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
             coordinator.onStartup(new StartupEvent());
         });
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
@@ -162,23 +160,23 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))).isSameAs(oldPod.get());
         });
         step("And the duplicate event was logged", () -> {
-            final Optional<String> logEntry = EntandoResourceObserver.LOG_ENTRIES.stream()
+            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
                     .filter(s -> s.startsWith("Duplicate event")).findFirst();
             assertThat(logEntry).isPresent();
         });
     }
 
     @Test
-    @Description("Resource modification events should be ignored when the resource carries the annotation '"
-            + KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME + "=ignore'")
+    @Description("Resource modification events should be ignored when the resource carries the annotation 'entando"
+            + ".org/processing-instruction=ignore'")
     void testIgnoreInstruction() {
         step("Given e Coordinator observes this namespace", () ->
-                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
 
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource with the 'ignore' processing instruction", () -> {
             testResource.set(createTestResource(1L,
-                    Collections.singletonMap(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME, "ignore")));
+                    Collections.singletonMap(AnnotationNames.PROCESSING_INSTRUCTION.getName(), "ignore")));
             attachment("TestResource", objectMapper.writeValueAsString(testResource.get()));
         });
         step("When I start the ControllerCoordinator", () ->
@@ -188,7 +186,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))).isNull();
         });
         step("And the ignored event was logged", () -> {
-            final Optional<String> logEntry = EntandoResourceObserver.LOG_ENTRIES.stream()
+            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
                     .filter(s -> s.contains("has been deferred or ignored ")).findFirst();
             assertThat(logEntry).isPresent();
         });
@@ -199,10 +197,10 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @Description("Resources should be ignored when they are owned by other resources of interest")
     void testIgnoredWhenOwnedByResourceOfInterest() {
         step("Given  the Coordinator observes this namespace", () ->
-                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         ValueHolder<SerializedEntandoResource> owningResource = new ValueHolder<>();
         step("And I have created another resource of interest, a ProvidedCapability", () -> {
-            owningResource.set(clientDouble.createOrPatchEntandoResource(CoordinatorTestUtil.toSerializedResource(
+            owningResource.set(clientDouble.createOrPatchEntandoResource(CoordinatorTestUtils.toSerializedResource(
                     new ProvidedCapabilityBuilder().withNewMetadata().withName("my-capability").withNamespace(OBSERVED_NAMESPACE)
                             .endMetadata()
                             .withNewSpec().withCapability(StandardCapability.DBMS).endSpec().build())));
@@ -220,12 +218,14 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
         step("Then a new pod gets created for the owning resource", () -> {
             await().ignoreExceptions().atMost(10, SECONDS)
                     .until(() -> clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(owningResource.get())) != null);
+            attachment("Controller Pod",
+                    objectMapper.writeValueAsString(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(owningResource.get()))));
         });
         step("Then no new pod gets created for the owned resource", () -> {
             assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))).isNull();
         });
         step("And the ignored event was logged", () -> {
-            final Optional<String> logEntry = EntandoResourceObserver.LOG_ENTRIES.stream()
+            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
                     .filter(s -> s
                             .contains("is ignored because it is not a top level resource"))
                     .findFirst();
@@ -238,7 +238,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             + "same as the 'observedGeneration' property on its status")
     void testGenerationObservedIsSameAsCurrent() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource", () -> {
             testResource.set(createTestResource(10L, Collections.emptyMap()));
@@ -256,7 +256,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))).isNull();
         });
         step("And the ignored event was logged", () -> {
-            final Optional<String> logEntry = EntandoResourceObserver.LOG_ENTRIES.stream()
+            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
                     .filter(s -> s
                             .contains("was ignored because its metadata.generation is still the same as the status.observedGeneration"))
                     .findFirst();
@@ -267,17 +267,16 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
 
     @Test
     @Description(
-            "Resource modification events should be processed when using the annotation '"
-                    + KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME
-                    + "=force' even when the 'generation' property on the metadata of the resource is the "
-                    + "same as the 'observedGeneration' property on its status")
+            "Resource modification events should be processed when using the annotation 'entando.org/processing-instruction=force' even "
+                    + "when the 'generation' property on the metadata of the resource is the same as the 'observedGeneration' property on"
+                    + " its status")
     void testGenerationObservedIsCurrentButForceInstructed() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
 
         step("And I have created an TestResource resource with the 'force' processing instruction", () -> {
-            testResource.set(createTestResource(10L, Collections.singletonMap(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME, "force")));
+            testResource.set(createTestResource(10L, Collections.singletonMap(AnnotationNames.PROCESSING_INSTRUCTION.getName(), "force")));
             attachment("TestResource", objectMapper.writeValueAsString(testResource.get()));
         });
         step("And the generation in the metadata is the same as the observedGeneration in the status", () -> {
@@ -301,10 +300,11 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             final SerializedEntandoResource latestKeycloakServer = clientDouble
                     .load(TestResource.class, testResource.get().getMetadata().getNamespace(),
                             testResource.get().getMetadata().getName());
-            assertThat(KubeUtils.resolveProcessingInstruction(latestKeycloakServer)).isEqualTo(OperatorProcessingInstruction.NONE);
+            assertThat(CoordinatorUtils.resolveProcessingInstruction(latestKeycloakServer)).isEqualTo(OperatorProcessingInstruction.NONE);
+            attachment("TestResource", objectMapper.writeValueAsString(testResource.get()));
         });
         step("And the forced event was logged", () -> {
-            final Optional<String> logEntry = EntandoResourceObserver.LOG_ENTRIES.stream()
+            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
                     .filter(s -> s.contains("has been forced"))
                     .findFirst();
             assertThat(logEntry).isPresent();
@@ -316,7 +316,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             + "resource is higher than the 'observedGeneration' property on its status")
     void testGenerationObservedIsBehind() {
         step("Given Ihe Coordinator observes this namespace", () ->
-                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource", () -> {
             testResource.set(createTestResource(10L, Collections.emptyMap()));
@@ -335,7 +335,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
                     clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get())) != null);
         });
         step("And the generation increment event was logged", () -> {
-            final Optional<String> logEntry = EntandoResourceObserver.LOG_ENTRIES.stream()
+            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
                     .filter(s -> s.contains("is processed after a metadata.generation increment"))
                     .findFirst();
             assertThat(logEntry).isPresent();
@@ -343,17 +343,17 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     }
 
     @Test
-    @Description("When a resource is processed successfully, the annotation '"
-            + EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION + "' should reflect the current version of the operator")
+    @Description("When a resource is processed successfully, the annotation 'entando.org/processed-by-version' should reflect the current"
+            + " version of the operator")
     void testProcessedByVersion() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         step("And the current version of the operator is 6.3.1", () ->
                 System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1"));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource with the version annotation set to 6.3.0", () -> {
             testResource.set(createTestResource(10L,
-                    Collections.singletonMap(EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, "6.3.0")));
+                    Collections.singletonMap(AnnotationNames.PROCESSED_BY_OPERATOR_VERSION.getName(), "6.3.0")));
             attachment("TestResource", objectMapper.writeValueAsString(testResource.get()));
         });
         step("And I have start the ControllerCoordinator", () ->
@@ -361,6 +361,8 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
         step("And a new controller pod was created", () -> {
             await().ignoreExceptions().atMost(3, TimeUnit.SECONDS).until(() ->
                     clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get())) != null);
+            attachment("Controller Pod",
+                    objectMapper.writeValueAsString(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))));
         });
         step("When I update the deployment Phase of the resource to 'successful'", () -> {
             SerializedEntandoResource latestKeycloakServer = clientDouble
@@ -372,7 +374,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             SerializedEntandoResource latestKeycloakServer = clientDouble.load(TestResource.class,
                     testResource.get().getMetadata().getNamespace(),
                     testResource.get().getMetadata().getName());
-            assertThat(KubeUtils.resolveAnnotation(latestKeycloakServer, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION))
+            assertThat(CoordinatorUtils.resolveAnnotation(latestKeycloakServer, AnnotationNames.PROCESSED_BY_OPERATOR_VERSION))
                     .contains("6.3.1");
         });
     }
@@ -382,7 +384,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             + " Operator that is now being replaced")
     void testUpgrade() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         step("And the current version of the operator is 6.3.1", () ->
                 System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1"));
         step("And the version of the operator to replace was 6.3.0", () ->
@@ -391,7 +393,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource that was processed by version 6.3.0", () ->
                 testResource.set(createTestResource(10L,
-                        Collections.singletonMap(EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, "6.3.0"))));
+                        Collections.singletonMap(AnnotationNames.PROCESSED_BY_OPERATOR_VERSION.getName(), "6.3.0"))));
         step("And it has been successfully deployed previously", () -> {
             testResource.set(clientDouble.updatePhase(testResource.get(), EntandoDeploymentPhase.SUCCESSFUL));
             attachment("Processed Resource", objectMapper.writeValueAsString(testResource.get()));
@@ -411,11 +413,11 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
                     testResource.get().getMetadata().getNamespace(),
                     testResource.get().getMetadata().getName());
             assertThat(
-                    KubeUtils.resolveAnnotation(latestKeycloakServer, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION))
+                    CoordinatorUtils.resolveAnnotation(latestKeycloakServer, AnnotationNames.PROCESSED_BY_OPERATOR_VERSION))
                     .contains("6.3.1");
         });
         step("And the upgrade event was logged", () -> {
-            final Optional<String> logEntry = EntandoResourceObserver.LOG_ENTRIES.stream()
+            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
                     .filter(s -> s.contains("needs to be processed as part of the upgrade to the version"))
                     .findFirst();
             assertThat(logEntry).isPresent();
@@ -433,7 +435,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
                         .withNamespace(OBSERVED_NAMESPACE)
                         .withAnnotations(annotations)
                         .build());
-        final SerializedEntandoResource serializedResource = CoordinatorTestUtil.toSerializedResource(keycloakServer);
+        final SerializedEntandoResource serializedResource = CoordinatorTestUtils.toSerializedResource(keycloakServer);
         serializedResource.setDefinition(CustomResourceDefinitionContext.fromCustomResourceType(TestResource.class));
         final SerializedEntandoResource createdResource = clientDouble
                 .createOrPatchEntandoResource(serializedResource);

@@ -42,7 +42,7 @@ class EntandoOperatorMatcherTest {
         EntandoApp entandoApp = new EntandoApp();
         assertTrue(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
         entandoApp.getMetadata().setAnnotations(new HashMap<>());
-        entandoApp.getMetadata().getAnnotations().put(EntandoOperatorMatcher.OPERATOR_ID_ANNOTATION, "myid");
+        entandoApp.getMetadata().getAnnotations().put(AnnotationNames.OPERATOR_ID_ANNOTATION.getName(), "myid");
         assertFalse(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
     }
 
@@ -58,7 +58,7 @@ class EntandoOperatorMatcherTest {
     void testOperatorIdActiveAndMatching() {
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_ID.getJvmSystemProperty(), "myid");
         EntandoApp entandoApp = new EntandoApp();
-        entandoApp.getMetadata().setAnnotations(Collections.singletonMap(EntandoOperatorMatcher.OPERATOR_ID_ANNOTATION, "myid"));
+        entandoApp.getMetadata().setAnnotations(Collections.singletonMap(AnnotationNames.OPERATOR_ID_ANNOTATION.getName(), "myid"));
         assertTrue(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
     }
 
@@ -66,7 +66,7 @@ class EntandoOperatorMatcherTest {
     void testOperatorActiveAndNotMatching() {
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_ID.getJvmSystemProperty(), "myid");
         EntandoApp entandoApp = new EntandoApp();
-        entandoApp.getMetadata().setAnnotations(Collections.singletonMap(EntandoOperatorMatcher.OPERATOR_ID_ANNOTATION, "someid"));
+        entandoApp.getMetadata().setAnnotations(Collections.singletonMap(AnnotationNames.OPERATOR_ID_ANNOTATION.getName(), "someid"));
         assertFalse(EntandoOperatorMatcher.matchesThisOperator(entandoApp));
     }
 

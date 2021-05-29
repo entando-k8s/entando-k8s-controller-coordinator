@@ -4,8 +4,10 @@ pipelineConfig:
   env:
     - name: PIPELINE_CODE
       value: carc
-    - name: TEST_DEPLOYMENT
+    - name: SKIP_OWASP
       value: "true"
+    - name: TEST_DEPLOYMENT
+      value: "false"
     - name: ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP
       value: "entando-docker-image-info-v6.3"
     - name: ENTANDO_K8S_OPERATOR_SECURITY_MODE

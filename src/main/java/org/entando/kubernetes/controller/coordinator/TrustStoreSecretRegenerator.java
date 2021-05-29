@@ -23,7 +23,7 @@ import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 
 public class TrustStoreSecretRegenerator {
 
-    private static AtomicReference<String> lastCaSecretResourceVersion = new AtomicReference<>("");
+    private static final AtomicReference<String> LAST_CA_SECRET_RESOURCE_VERSION = new AtomicReference<>("");
 
     private TrustStoreSecretRegenerator() {
 
@@ -38,10 +38,10 @@ public class TrustStoreSecretRegenerator {
 
     private static void overwriteTrustStoreSecret(SimpleKubernetesClient client, Secret secret) {
         client.overwriteControllerSecret(TrustStoreHelper.newTrustStoreSecret(secret));
-        lastCaSecretResourceVersion.set(secret.getMetadata().getResourceVersion());
+        LAST_CA_SECRET_RESOURCE_VERSION.set(secret.getMetadata().getResourceVersion());
     }
 
     private static boolean hasNewResourceVersion(Secret secret) {
-        return !secret.getMetadata().getResourceVersion().equals(lastCaSecretResourceVersion.get());
+        return !secret.getMetadata().getResourceVersion().equals(LAST_CA_SECRET_RESOURCE_VERSION.get());
     }
 }

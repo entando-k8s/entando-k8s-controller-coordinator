@@ -14,7 +14,7 @@
  *
  */
 
-package org.entando.kubernetes.controller.coordinator.inprocesstests;
+package org.entando.kubernetes.controller.coordinator.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -25,9 +25,9 @@ import java.util.Map;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 
-public class CoordinatorTestUtil {
+public class CoordinatorTestUtils {
 
-    private CoordinatorTestUtil() {
+    private CoordinatorTestUtils() {
 
     }
 
@@ -45,7 +45,7 @@ public class CoordinatorTestUtil {
             final SerializedEntandoResource result = objectMapper
                     .readValue(objectMapper.writeValueAsString(entandoCustomResource), SerializedEntandoResource.class);
             result.setDefinition(CustomResourceDefinitionContext
-                    .fromCustomResourceType((Class<? extends CustomResource>) entandoCustomResource.getClass()));
+                    .fromCustomResourceType((Class<? extends CustomResource<?, ?>>) entandoCustomResource.getClass()));
             return result;
         } catch (IOException e) {
             throw new IllegalStateException(e);

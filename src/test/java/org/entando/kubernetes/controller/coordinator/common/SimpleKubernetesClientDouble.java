@@ -14,7 +14,7 @@
  *
  */
 
-package org.entando.kubernetes.controller.coordinator.inprocesstests;
+package org.entando.kubernetes.controller.coordinator.common;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
@@ -24,9 +24,11 @@ import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefin
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.entando.kubernetes.controller.coordinator.CoordinatorUtils;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
 import org.entando.kubernetes.controller.coordinator.SimpleKubernetesClient;
@@ -34,7 +36,6 @@ import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.support.client.doubles.AbstractK8SClientDouble;
 import org.entando.kubernetes.controller.support.client.doubles.ClusterDouble;
 import org.entando.kubernetes.controller.support.client.doubles.NamespaceDouble;
-import org.entando.kubernetes.model.common.EntandoCustomResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implements SimpleKubernetesClient {
@@ -79,11 +80,10 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
 
     @Override
     public void removePodsAndWait(String namespace, Map<String, String> labels) {
-        final Map<String, Pod> pods = getNamespace(namespace).getPods();
-        pods.values().stream().filter(pod -> CoordinatorTestUtil.matchesLabels(labels, pod))
+        filterPodsByLabel(namespace, labels)
                 .forEach(pod -> {
-                    getCluster().getResourceProcessor().processResource(pods, pod);
-                    pods.remove(pod.getMetadata().getName());
+                    getCluster().getResourceProcessor().processResource(getNamespace(namespace).getPods(), pod);
+                    getNamespace(namespace).getPods().remove(pod.getMetadata().getName());
                 });
     }
 
@@ -97,7 +97,8 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
                             .withNewMetadata()
                             .withNamespace(CONTROLLER_NAMESPACE)
                             .withName(name)
-                            .endMetadata().build());
+                            .endMetadata()
+                            .build());
         }
         return configMap;
     }
@@ -135,12 +136,31 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
     }
 
     public Pod loadPod(String namespace, Map<String, String> labels) {
-        final Map<String, Pod> pods = getNamespace(namespace).getPods();
-        return pods.values().stream().filter(p -> CoordinatorTestUtil.matchesLabels(labels, p)).findFirst().orElse(null);
+        return filterPodsByLabel(namespace, labels).findFirst().orElse(null);
+    }
+
+    public List<Pod> loadPods(String namespace, Map<String, String> labels) {
+        return filterPodsByLabel(namespace, labels).collect(Collectors.toList());
+    }
+
+    private Stream<Pod> filterPodsByLabel(String namespace, Map<String, String> labels) {
+        return getNamespace(namespace).getPods().values().stream().filter(p -> CoordinatorTestUtils.matchesLabels(labels, p));
     }
 
     public SerializedEntandoResource load(Class<?> resourceClass, String namespace, String name) {
-        return (SerializedEntandoResource)getNamespace(namespace).getCustomResources( resourceClass.getSimpleName()).get(name);
+        final String simpleName = resourceClass.getSimpleName();
+        return (SerializedEntandoResource) getNamespace(namespace).getCustomResources(simpleName).get(name);
     }
 
+    public SerializedEntandoResource reload(SerializedEntandoResource r) {
+        return (SerializedEntandoResource) getNamespace(r).getCustomResources(r.getKind()).get(r.getMetadata().getName());
+    }
+
+    public String getNamespace() {
+        return CONTROLLER_NAMESPACE;
+    }
+
+    public void updatePodStatus(Pod podWithStatus) {
+        getCluster().getResourceProcessor().processResource(getNamespace(podWithStatus).getPods(), podWithStatus);
+    }
 }

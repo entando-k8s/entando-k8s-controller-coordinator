@@ -16,12 +16,17 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import static java.lang.String.format;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
 import java.io.IOException;
 import java.util.List;
@@ -35,26 +40,26 @@ import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
 
-public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
+public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
 
-    private static final Logger LOGGER = Logger.getLogger(RawSimpleEntandoOperations.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(DefaultSimpleEntandoOperations.class.getName());
 
     private final KubernetesClient client;
     private final RawCustomResourceOperationsImpl operations;
 
-    public RawSimpleEntandoOperations(KubernetesClient client, RawCustomResourceOperationsImpl operations) {
+    public DefaultSimpleEntandoOperations(KubernetesClient client, RawCustomResourceOperationsImpl operations) {
         this.client = client;
         this.operations = operations;
     }
 
     @Override
     public SimpleEntandoOperations inNamespace(String namespace) {
-        return new RawSimpleEntandoOperations(client, operations.inNamespace(namespace));
+        return new DefaultSimpleEntandoOperations(client, operations.inNamespace(namespace));
     }
 
     @Override
     public SimpleEntandoOperations inAnyNamespace() {
-        return new RawSimpleEntandoOperations(client, operations.inAnyNamespace());
+        return new DefaultSimpleEntandoOperations(client, operations.inAnyNamespace());
     }
 
     @Override
@@ -75,7 +80,7 @@ public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
                     if (cause.getMessage().contains("resourceVersion") && cause.getMessage().contains("too old")) {
                         LOGGER.log(Level.WARNING,
                                 () -> "EntandoResourceObserver closed due to out of date resourceVersion. Reconnecting ... ");
-                        RawSimpleEntandoOperations.this.watch(observer);
+                        DefaultSimpleEntandoOperations.this.watch(observer);
                     } else {
                         LOGGER.log(Level.SEVERE, cause,
                                 () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
@@ -139,23 +144,33 @@ public class RawSimpleEntandoOperations implements SimpleEntandoOperations {
     @Override
     public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
         String namespace = client.getNamespace();
-        Map<String, String> labels = CoordinatorUtils.podLabelsFor(resource);
+        FilterWatchListDeletable<Pod, PodList> podResource = client.pods().inNamespace(namespace).withLabels(
+                CoordinatorUtils.podLabelsFor(resource));
         try {
-            client.pods().inNamespace(namespace).withLabels(labels)
-                    .waitUntilCondition(
-                            pod -> PodResult.of(pod).getState() == State.COMPLETED,
-                            ControllerCoordinatorConfig.getRemovalDelay(),
-                            TimeUnit.SECONDS);
+            waitForCompletionOfPods(podResource);
+            removePodsAndWait(podResource);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(e);
-        } catch (KubernetesClientException e) {
-            LOGGER.log(Level.WARNING, "Some pods remained active after the removal delay period. You can consider increasing the setting "
-                    + ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty());
         }
-        client.pods().inNamespace(namespace).withLabels(labels).list().getItems().stream()
-                .filter(pod -> PodResult.of(pod).getState() == State.COMPLETED && !PodResult.of(pod).hasFailed())
-                .forEach(client.pods().inNamespace(namespace)::delete);
+    }
+
+    private void removePodsAndWait(FilterWatchListDeletable<Pod, PodList> podResource) throws InterruptedException {
+        podResource.delete();
+        podResource.waitUntilCondition(ignore -> podResource.list().getItems().isEmpty(),
+                ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(), TimeUnit.SECONDS);
+    }
+
+    private void waitForCompletionOfPods(FilterWatchListDeletable<Pod, PodList> podResource) throws InterruptedException {
+        try {
+            podResource.waitUntilCondition(
+                    ignored -> podResource.list().getItems().stream().allMatch(pod -> PodResult.of(pod).getState() == State.COMPLETED),
+                    ControllerCoordinatorConfig.getRemovalDelay(), TimeUnit.SECONDS);
+        } catch (KubernetesClientException e) {
+            LOGGER.log(Level.WARNING, () -> format(
+                    "Some pods remained active after the removal delay period. You can consider increasing the setting %s ",
+                    ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty()));
+        }
     }
 
 }

@@ -20,7 +20,6 @@ import static java.lang.String.format;
 
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -33,16 +32,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
-import org.entando.kubernetes.model.capability.ProvidedCapability;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public class EntandoResourceObserver implements Watcher<SerializedEntandoResource> {
 
-    private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
-    public static final List<String> LOG_ENTRIES = new ArrayList<>();
+    private static final LogDelegator LOGGER = new LogDelegator(EntandoResourceObserver.class);
 
     private final Map<String, Deque<String>> cache = new ConcurrentHashMap<>();
     private final Map<String, SerializedEntandoResource> resourcesBeingUpgraded = new ConcurrentHashMap<>();
@@ -95,7 +91,7 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
         return EntandoOperatorConfigBase
                 .lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE)
                 .flatMap(versionToReplace ->
-                        CoordinatorUtils.resolveAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION)
+                        CoordinatorUtils.resolveAnnotation(resource, AnnotationNames.PROCESSED_BY_OPERATOR_VERSION)
                                 .map(versionToReplace::equals))
                 .orElse(false);
     }
@@ -110,6 +106,7 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
             if (performCriteriaProcessing(resource)) {
                 performCallback(action, resource);
             } else if (resource.getStatus().getPhase() == EntandoDeploymentPhase.SUCCESSFUL) {
+                logResource(Level.INFO, "%s %s/%s was processed successfully", resource);
                 markAsUpgraded(resource);
                 if (needsToRemoveSuccessfullyCompletedPods(resource)) {
                     removeSuccessfullyCompletedPods(resource);
@@ -123,16 +120,14 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
     private void markAsUpgraded(SerializedEntandoResource resource) {
         final Optional<String> currentOperatorVersion = EntandoOperatorConfigBase
                 .lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION);
-        currentOperatorVersion
-                .ifPresent(
-                        s -> {
-                            final Optional<String> processedByVersion = CoordinatorUtils
-                                    .resolveAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION);
-                            if (!processedByVersion.map(s::equals).orElse(false)) {
-                                operations.putAnnotation(resource, EntandoOperatorMatcher.ENTANDO_K8S_PROCESSED_BY_OPERATOR_VERSION, s);
-                            }
-                        }
-                );
+        currentOperatorVersion.ifPresent(s -> {
+                    final Optional<String> processedByVersion = CoordinatorUtils
+                            .resolveAnnotation(resource, AnnotationNames.PROCESSED_BY_OPERATOR_VERSION);
+                    if (!processedByVersion.map(s::equals).orElse(false)) {
+                        operations.putAnnotation(resource, AnnotationNames.PROCESSED_BY_OPERATOR_VERSION.getName(), s);
+                    }
+                }
+        );
         resourcesBeingUpgraded.remove(resource.getMetadata().getUid());
     }
 
@@ -166,7 +161,7 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
                 .noneMatch(crdNameMapSync::isOfInterest);
         if (topLevel) {
             logResource(Level.WARNING, "%s %s/%s is a top level resource", resource);
-        }else{
+        } else {
             logResource(Level.WARNING, "%s %s/%s is ignored because it is not a top level resource", resource);
         }
         return topLevel;
@@ -196,9 +191,6 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
     }
 
     private void logResource(Level info, String format, SerializedEntandoResource resource) {
-        if (ControllerCoordinatorConfig.storeLogEntries()) {
-            LOG_ENTRIES.add(format(format, resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
-        }
         LOGGER.log(info,
                 () -> format(format, resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
     }
@@ -208,7 +200,7 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
         if (instruction == OperatorProcessingInstruction.FORCE) {
             //Remove to avoid recursive updates
             final SerializedEntandoResource latestResource = operations
-                    .removeAnnotation(newResource, CoordinatorUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME);
+                    .removeAnnotation(newResource, AnnotationNames.PROCESSING_INSTRUCTION.getName());
             markResourceVersionProcessed(latestResource);
             logResource(Level.WARNING, "Processing of %s %s/%s has been forced using entando.org/processing-instruction.", latestResource);
             return true;
@@ -256,7 +248,7 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
         try {
             scheduler.shutdown();
             if (!scheduler.awaitTermination(i, timeUnit)) {
-                LOGGER.log(Level.WARNING, "Could not shut EntandoResourceObserver down.");
+                LOGGER.log(Level.WARNING, () -> "Could not shut EntandoResourceObserver down.");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

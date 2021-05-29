@@ -41,16 +41,15 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinator;
-import org.entando.kubernetes.controller.coordinator.ImageVersionPreparation;
 import org.entando.kubernetes.controller.spi.common.DbmsDockerVendorStrategy;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMode;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
+import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
-import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.spi.common.SecretUtils;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.spi.container.KeycloakName;
@@ -61,7 +60,6 @@ import org.entando.kubernetes.controller.support.client.impl.integrationtesthelp
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.HttpTestHelper;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.creators.IngressCreator;
 import org.entando.kubernetes.model.common.DbmsVendor;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
@@ -176,7 +174,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //Then I expect to see at least one controller pod
         FilterWatchListDeletable<Pod, PodList> listable = client.pods()
                 .inNamespace(client.getNamespace())
-                .withLabel(ResourceUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
+                .withLabel(LabelNames.RESOURCE_KIND.getName(), "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
         Pod theControllerPod = listable.list().getItems().get(0);
         assertThat(theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(theControllerPod)), is(Action.ADDED.name()));
@@ -288,7 +286,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //Then I expect to see the keycloak controller pod
         FilterWatchListDeletable<Pod, PodList> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
-                .withLabel(ResourceUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
+                .withLabel(LabelNames.RESOURCE_KIND.getName(), "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() > 0);
         Pod theKeycloakControllerPod = keycloakControllerList.list().getItems().get(0);
@@ -320,7 +318,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
         //And the plugin controller pod
         FilterWatchListDeletable<Pod, PodList> pluginControllerList = client.pods()
                 .inNamespace(client.getNamespace())
-                .withLabel(ResourceUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoPlugin")
+                .withLabel(LabelNames.RESOURCE_KIND.getName(), "EntandoPlugin")
                 .withLabel("EntandoPlugin", app.getSpec().getComponents().get(1).getMetadata().getName());
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> pluginControllerList.list().getItems().size() > 0);
         Pod thePluginControllerPod = pluginControllerList.list().getItems().get(0);

@@ -25,7 +25,6 @@ import io.fabric8.kubernetes.client.WatcherException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 
 class CrdNameMapSync implements Watcher<CustomResourceDefinition> {
 
@@ -61,13 +60,8 @@ class CrdNameMapSync implements Watcher<CustomResourceDefinition> {
         Liveness.dead();
     }
 
-    public String getCrdName(SerializedEntandoResource r) {
-        final String key = CoordinatorUtils.keyOf(r);
-        return crdNameMap.getData().get(key);
-    }
-
     public boolean isOfInterest(OwnerReference ownerReference) {
         final String key = CoordinatorUtils.keyOf(ownerReference);
-        return crdNameMap.getData().containsKey(key);
+        return CoordinatorUtils.resolveValue(crdNameMap, key).isPresent();
     }
 }

@@ -22,6 +22,7 @@ import static java.util.Optional.ofNullable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.EventBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
@@ -37,6 +38,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -45,12 +47,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
+import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
+import org.entando.kubernetes.model.common.EntandoCustomResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
 
+    //There will only be once instance per thread for the duration of the Pod's life
+    @SuppressWarnings("java:S5164")
     private static final ThreadLocal<DateTimeFormatter> dateTimeFormatter = ThreadLocal
             .withInitial(() -> DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss'Z'"));
 
@@ -84,6 +90,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
                 .withNamespace(customResource.getMetadata().getNamespace())
                 .withName(customResource.getMetadata().getName() + "-" + NameUtils.randomNumeric(8))
                 .withOwnerReferences(ResourceUtils.buildOwnerReference(customResource))
+                .withLabels(ResourceUtils.labelsFromResource(customResource))
                 .endMetadata()
                 .withCount(1)
                 .withFirstTimestamp(dateTimeFormatter.get().format(LocalDateTime.now()))
@@ -171,7 +178,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
         return Objects.requireNonNullElseGet(this.client.configMaps().inNamespace(getControllerNamespace()).withName(name).get(), () ->
                 this.client.configMaps().inNamespace(getControllerNamespace())
                         .create(new ConfigMapBuilder()
-                                .editMetadata()
+                                .withNewMetadata()
                                 .withNamespace(getControllerNamespace())
                                 .withName(name)
                                 .endMetadata()
@@ -190,20 +197,23 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
 
     @Override
     public void watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher) {
-        this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(CoordinatorUtils.ENTANDO_CRD_OF_INTEREST_LABEL_NAME)
+        this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
                 .watch(customResourceDefinitionWatcher);
     }
 
     @Override
     public Collection<CustomResourceDefinition> loadCustomResourceDefinitionsOfInterest() {
-        return client.apiextensions().v1beta1().customResourceDefinitions().withLabel(CoordinatorUtils.ENTANDO_CRD_OF_INTEREST_LABEL_NAME)
+        return client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
                 .list()
                 .getItems();
     }
 
     @Override
     public SimpleEntandoOperations getOperations(CustomResourceDefinitionContext context) {
-        return new RawSimpleEntandoOperations(client, client.customResource(context));
+        return new DefaultSimpleEntandoOperations(client, client.customResource(context));
     }
 
+    public List<Event> listEventsFor(EntandoCustomResource resource) {
+        return client.v1().events().inAnyNamespace().withLabels(ResourceUtils.labelsFromResource(resource)).list().getItems();
+    }
 }

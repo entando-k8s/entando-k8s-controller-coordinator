@@ -14,7 +14,7 @@
  *
  */
 
-package org.entando.kubernetes.controller.coordinator;
+package org.entando.kubernetes.controller.coordinator.interprocesstests;
 
 import static java.lang.String.format;
 

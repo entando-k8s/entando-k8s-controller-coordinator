@@ -18,49 +18,42 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.util.Optional.ofNullable;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
-import io.fabric8.kubernetes.client.CustomResource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
+import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public class CoordinatorUtils {
 
-    public static final String ENTANDO_RESOURCE_KIND_LABEL_NAME = "EntandoResourceKind";
-    public static final String ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME = "EntandoResourceNamespace";
-    public static final String PROCESSING_INSTRUCTION_ANNOTATION_NAME = "entando.org/processing-instruction";
-    public static final String CONTROLLER_IMAGE_ANNOTATION_NAME = "entando.org/controller-image";
-    /**
-     * comma separated list of capabilities/implementations, e.g. mysql.dbms,postgresql.dbms
-     */
-    public static final String SUPPORTED_CAPABILITIES_ANNOTATION = "entando.org/supported-capabilities";
     public static final String NO_IMAGE = "none";
     public static final String ENTANDO_OPERATOR_CONFIG = "entando-operator-config";
     public static final String CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP = "entando-controller-image-overrides";
     public static final String ENTANDO_CRD_NAMES_CONFIGMAP_NAME = "entando-crd-names";
-    public static final String ENTANDO_CRD_OF_INTEREST_LABEL_NAME = "entando.org/crd-of-interest";
+
+    private CoordinatorUtils() {
+
+    }
 
     public static OperatorProcessingInstruction resolveProcessingInstruction(EntandoCustomResource resource) {
-        return resolveAnnotation(resource, PROCESSING_INSTRUCTION_ANNOTATION_NAME)
+        return resolveAnnotation(resource, AnnotationNames.PROCESSING_INSTRUCTION)
                 .map(value -> OperatorProcessingInstruction
                         .valueOf(value.toUpperCase(Locale.ROOT).replace("-", "_")))
                 .orElse(OperatorProcessingInstruction.NONE);
     }
 
-    public static Optional<String> resolveAnnotation(HasMetadata resource, String name) {
-        return ofNullable(resource.getMetadata().getAnnotations()).map(map -> map.get(name));
+    public static Optional<String> resolveAnnotation(HasMetadata resource, AnnotationNames annotationName) {
+        return ofNullable(resource.getMetadata().getAnnotations()).map(map -> map.get(annotationName.getName()));
     }
 
     public static boolean isOfInterest(CustomResourceDefinition r) {
-        return ofNullable(r.getMetadata().getLabels()).map(labels -> labels.containsKey(ENTANDO_CRD_OF_INTEREST_LABEL_NAME)).orElse(false);
+        return ofNullable(r.getMetadata().getLabels()).map(labels -> labels.containsKey(LabelNames.CRD_OF_INTEREST.getName()))
+                .orElse(false);
     }
 
     public static String keyOf(CustomResourceDefinitionContext definitionContext) {
@@ -93,8 +86,8 @@ public class CoordinatorUtils {
 
     public static Map<String, String> podLabelsFor(EntandoCustomResource resource) {
         return Map.of(
-                ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
-                ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
+                LabelNames.RESOURCE_KIND.getName(), resource.getKind(),
+                LabelNames.RESOURCE_NAMESPACE.getName(), resource.getMetadata().getNamespace(),
                 resource.getKind(), resource.getMetadata().getName());
     }
 }

@@ -27,7 +27,6 @@ import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.quarkus.runtime.Startup;
 import io.quarkus.runtime.StartupEvent;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -36,7 +35,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
@@ -45,8 +43,9 @@ import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public class EntandoControllerCoordinator implements Watcher<CustomResourceDefinition> {
 
+    public static final String CAPABILITY_ORG = ".capability.org";
     private final SimpleKubernetesClient client;
-    private static final Logger LOGGER = Logger.getLogger(EntandoControllerCoordinator.class.getName());
+    private static final LogDelegator LOGGER = new LogDelegator(EntandoControllerCoordinator.class);
     private final Map<String, String> derivedControllerImageMap = new ConcurrentHashMap<>();
     private ConfigMap controllerImageOverrides;
     private final Map<String, EntandoResourceObserver> observers = new ConcurrentHashMap<>();
@@ -74,7 +73,7 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
         client.watchCustomResourceDefinitions(this);
         customResourceDefinitions.forEach(this::startObservingInstances);
         observers.computeIfAbsent(CoordinatorUtils.keyOf(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
-                s -> new EntandoResourceObserver(
+                key -> new EntandoResourceObserver(
                         this.client.getOperations(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
                         this::startImage,
                         crdNameMapSync,
@@ -107,39 +106,39 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
             existingObserver.shutDownAndWait(10, TimeUnit.SECONDS);
             observers.remove(key);
         }
-        final Optional<String> controllerImageAnnotation = CoordinatorUtils
-                .resolveAnnotation(r, CoordinatorUtils.CONTROLLER_IMAGE_ANNOTATION_NAME);
-        controllerImageAnnotation.ifPresent(controllerImage -> derivedControllerImageMap.put(r.getMetadata().getName(), controllerImage));
-        String controllerImage = controllerImageAnnotation
-                .orElseGet(
-                        //TODO consider automatically updating these resources to "successful"
-                        () -> CoordinatorUtils.resolveValue(this.controllerImageOverrides, CoordinatorUtils.keyOf(r)).orElseThrow(() ->
-                                new IllegalStateException(
-                                        format("CRD %s has neither the %s annotation, nor is there and entry in the configmap %s for %s",
-                                                r.getMetadata().getName(),
-                                                CoordinatorUtils.CONTROLLER_IMAGE_ANNOTATION_NAME,
-                                                CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP,
-                                                CoordinatorUtils.keyOf(r)))));
-
-        CoordinatorUtils.resolveAnnotation(r, CoordinatorUtils.SUPPORTED_CAPABILITIES_ANNOTATION)
-                .ifPresent(capabilities -> Arrays.stream(capabilities.split(","))
-                        .forEach(s -> derivedControllerImageMap.put(s + ".capability.org", controllerImage)));
+        final Optional<String> controllerImageAnnotation = CoordinatorUtils.resolveAnnotation(r, AnnotationNames.CONTROLLER_IMAGE);
+        controllerImageAnnotation.ifPresent(controllerImage -> derivedControllerImageMap.put(CoordinatorUtils.keyOf(r), controllerImage));
+        Optional<String> controllerImage = controllerImageAnnotation
+                .or(() -> CoordinatorUtils.resolveValue(this.controllerImageOverrides, CoordinatorUtils.keyOf(r)));
+        if (controllerImage.isEmpty()) {
+            LOGGER.log(Level.WARNING,
+                    () -> format("CRD %s has neither the %s annotation, nor is there an entry in the configmap %s for %s",
+                            r.getMetadata().getName(),
+                            AnnotationNames.CONTROLLER_IMAGE.getName(),
+                            CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP,
+                            CoordinatorUtils.keyOf(r)));
+        }
+        controllerImage.ifPresent(
+                i -> CoordinatorUtils.resolveAnnotation(r, AnnotationNames.SUPPORTED_CAPABILITIES)
+                        .ifPresent(capabilities -> Arrays.stream(capabilities.split(","))
+                                .forEach(s -> derivedControllerImageMap.put(s + CAPABILITY_ORG, i))));
 
     }
 
     private String sanitize(String key) {
-        return key.toLowerCase(Locale.ROOT);//.replace("_", "").replace("-", "").replace(".", "");
+        return key.toLowerCase(Locale.ROOT);
     }
 
     public String getControllerImageFor(SerializedEntandoResource resource) {
+        String imageName;
         if (resource.getKind().equals(ProvidedCapability.class.getSimpleName())) {
-            final String s = ofNullable(resolveCapabilityFromMap(resource, this.controllerImageOverrides.getData()))
+            imageName = ofNullable(resolveCapabilityFromMap(resource, this.controllerImageOverrides.getData()))
                     .orElse(resolveCapabilityFromMap(resource, this.derivedControllerImageMap));
-            return s;
         } else {
-            return ofNullable(resolveCustomControllerFromMap(resource, this.controllerImageOverrides.getData()))
+            imageName = ofNullable(resolveCustomControllerFromMap(resource, this.controllerImageOverrides.getData()))
                     .orElse(resolveCustomControllerFromMap(resource, this.derivedControllerImageMap));
         }
+        return ofNullable(imageName).orElse(CoordinatorUtils.NO_IMAGE);
     }
 
     private String resolveCapabilityFromMap(SerializedEntandoResource pc, Map<String, String> controllerImageMap) {
@@ -148,16 +147,15 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
         final Optional<Map<String, String>> nullableMap = ofNullable(controllerImageMap);
         return implementation
                 .flatMap(impl -> nullableMap
-                        .flatMap(map -> ofNullable(map.get(sanitize(impl + "." + capability + ".capability.org")))))
-                .orElse(nullableMap.map(map -> map.get(sanitize(capability + ".capability.org"))).orElse(null));
+                        .flatMap(map -> ofNullable(map.get(sanitize(impl + "." + capability + CAPABILITY_ORG)))))
+                .orElse(nullableMap.map(map -> map.get(sanitize(capability + CAPABILITY_ORG))).orElse(null));
     }
 
     private String resolveCustomControllerFromMap(SerializedEntandoResource r, Map<String, String> controllerImageMap) {
-        final String crdName = this.crdNameMapSync.getCrdName(r);
-        return ofNullable(controllerImageMap).map(map -> map.get(crdName)).orElse(null);
+        return ofNullable(controllerImageMap).map(map -> map.get(CoordinatorUtils.keyOf(r))).orElse(null);
     }
 
-    private <S extends Serializable, T extends SerializedEntandoResource> void startImage(Action action, T resource) {
+    private void startImage(Action action, SerializedEntandoResource resource) {
         try {
             final String controllerImage = getControllerImageFor(resource);
             if (CoordinatorUtils.NO_IMAGE.equals(controllerImage)) {
@@ -169,7 +167,8 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
                 executor.startControllerFor(action, resource);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, e, () -> format("Could not start the controller image for the %s %s/%s", resource.getKind(),
+                    resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
         }
     }
 
