@@ -90,7 +90,7 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
         step("And I have waited for the pod to be ready", () -> {
             await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() ->
                     PodResult.of(getFabric8Client().pods().inNamespace(NAMESPACE).withName("my-pod").fromServer().get()).getState()
-                            == State.READY);
+                            != State.CREATING);
             attachment("Started Pod", objectMapper
                     .writeValueAsString(getFabric8Client().pods().inNamespace(NAMESPACE).withName("my-pod").fromServer().get()));
         });
