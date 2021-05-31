@@ -19,8 +19,12 @@ package org.entando.kubernetes.controller.coordinator.common;
 import static java.util.Optional.ofNullable;
 import static org.awaitility.Awaitility.await;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorConfig;
 import org.entando.kubernetes.controller.coordinator.CoordinatorUtils;
+import org.entando.kubernetes.controller.coordinator.SerializedResourceWatcher;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.PodResult;
@@ -57,17 +62,38 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
     }
 
     @Override
+    public CustomResourceDefinitionContext getDefinitionContext() {
+        return definitionContext;
+    }
+
+    @Override
     public SimpleEntandoOperations inAnyNamespace() {
         this.namespace = null;
         return this;
     }
 
     @Override
-    public void watch(Watcher<SerializedEntandoResource> watcher) {
+    public void watch(SerializedResourceWatcher watcher) {
+        final CustomResourceWatcher stringWatcher = new CustomResourceWatcher(this, watcher);
+        final Watcher<HasMetadata> watcherDelegate = new Watcher<>() {
+            @Override
+            public void eventReceived(Action action, HasMetadata hasMetadata) {
+                try {
+                    stringWatcher.eventReceived(action, new ObjectMapper().writeValueAsString(hasMetadata));
+                } catch (JsonProcessingException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+
+            @Override
+            public void onClose(WatcherException e) {
+                stringWatcher.onClose(e);
+            }
+        };
         if (ofNullable(this.namespace).isPresent()) {
-            getCluster().getResourceProcessor().watch(watcher, definitionContext, this.namespace);
+            getCluster().getResourceProcessor().watch(watcherDelegate, definitionContext, this.namespace);
         } else {
-            getCluster().getResourceProcessor().watch(watcher, definitionContext);
+            getCluster().getResourceProcessor().watch(watcherDelegate, definitionContext);
         }
     }
 

@@ -16,6 +16,7 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import static io.qameta.allure.Allure.attachment;
 import static io.qameta.allure.Allure.step;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +49,7 @@ import org.entando.kubernetes.model.capability.ProvidedCapabilityBuilder;
 import org.entando.kubernetes.model.capability.StandardCapability;
 import org.entando.kubernetes.model.capability.StandardCapabilityImplementation;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
+import org.entando.kubernetes.test.common.ValueHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -86,7 +88,7 @@ class CrdManagementTest {
         step("Given I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         final CustomResourceDefinition value = objectMapper
-                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrd.test.org.crd.yaml"),
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
@@ -98,9 +100,12 @@ class CrdManagementTest {
             step(format("and the %s annotation ", AnnotationNames.CONTROLLER_IMAGE), () -> {
                 builder.addToAnnotations(AnnotationNames.CONTROLLER_IMAGE.getName(), "test/my-controller");
             });
+            attachment("CustomResourceDefinition", objectMapper.writeValueAsString(builder.endMetadata().build()));
+
         });
         step("When I register my CustomResourceDefinition", () -> {
-            client.getCluster().putCustomResourceDefinition(builder.endMetadata().build());
+            final CustomResourceDefinition crd = client.getCluster().putCustomResourceDefinition(builder.endMetadata().build());
+            attachment("CustomResourceDefinition", objectMapper.writeValueAsString(crd));
         });
 
         step("Then my custom resource definition is mapped in the " + CoordinatorUtils.ENTANDO_CRD_NAMES_CONFIGMAP_NAME + " ConfigMap",
@@ -117,7 +122,7 @@ class CrdManagementTest {
     }
 
     @Test
-    @Description("New instances of my CustomResourceDefinitions should result in my controller image to be executed against the resource")
+    @Description("New instances of my CustomResources should result in my controller image to be executed against the resource")
     void testCustomResourceEvent() throws IOException {
         step("Given I have prepared a cluster scoped deployment of the EntandoOperator",
                 () -> System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE
@@ -125,7 +130,7 @@ class CrdManagementTest {
         step("And I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         final CustomResourceDefinition value = objectMapper
-                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrd.test.org.crd.yaml"),
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
@@ -161,8 +166,56 @@ class CrdManagementTest {
     }
 
     @Test
-    @Description("The operator should automatically mark new instances of my CustomResourceDefinitions to 'successful' when I don't have "
-            + "a controller image for it (yet)")
+    @Description("Updates to my CustomResourceDefinitions should result in their observers being restarted")
+    void crdUpdatesShouldRestartObservers() throws IOException {
+        step("Given I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
+        ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+        final ValueHolder<EntandoResourceObserver> observer = new ValueHolder<>();
+        final ValueHolder<CustomResourceDefinition> crd = new ValueHolder<>();
+        crd.set(objectMapper
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
+                        CustomResourceDefinition.class));
+        final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(crd.get())
+                .editMetadata();
+        step("And I have registered a CustomResourceDefinition with", () -> {
+            step(format("the %s label ", LabelNames.CRD_OF_INTEREST.getName()), () -> {
+                builder.addToLabels(LabelNames.CRD_OF_INTEREST.getName(), "MyCRD");
+
+            });
+            step(format("and the %s annotation ", AnnotationNames.CONTROLLER_IMAGE), () -> {
+                builder.addToAnnotations(AnnotationNames.CONTROLLER_IMAGE.getName(), "test/my-controller");
+            });
+            step("and I have registered my CustomResourceDefinition", () -> {
+                crd.set(client.getCluster().putCustomResourceDefinition(builder.withGeneration(1L).endMetadata().build()));
+            });
+            attachment("CustomResourceDefinition", objectMapper.writeValueAsString(crd.get()));
+        });
+        step("And I have waited for the Operator to start observing state changes against the related CustomResources", () -> {
+            await().atMost(10, TimeUnit.SECONDS).ignoreExceptions()
+                    .until(() ->
+                            entandoControllerCoordinator.getObserver(CustomResourceDefinitionContext.fromCrd(crd.get())).getCrdGeneration()
+                                    == 1L);
+            observer.set(entandoControllerCoordinator.getObserver(CustomResourceDefinitionContext.fromCrd(crd.get())));
+        });
+        step("When I apply an updated version of my CustomResourceDefinition ", () -> {
+            crd.get().getMetadata().setGeneration(2L);
+            client.getCluster().putCustomResourceDefinition(crd.get());
+        });
+        step("Then the Operator has started a new state change observer against the CustomResources", () -> {
+            await().atMost(10, TimeUnit.SECONDS).ignoreExceptions()
+                    .until(() ->
+                            entandoControllerCoordinator.getObserver(CustomResourceDefinitionContext.fromCrd(crd.get()))
+                                    .getCrdGeneration()
+                                    == 2L);
+            assertThat(entandoControllerCoordinator.getObserver(CustomResourceDefinitionContext.fromCrd(crd.get())))
+                    .isNotSameAs(observer.get());
+        });
+    }
+
+    @Test
+    @Description(
+            "The operator should automatically mark new instances of my CustomResourceDefinitions to 'successful' when I don't have "
+                    + "a controller image for it (yet)")
     void testCustomResourceEventWithNoControllerImage() throws IOException {
         step("Given I have prepared a cluster scoped deployment of the EntandoOperator",
                 () -> System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE
@@ -170,7 +223,7 @@ class CrdManagementTest {
         step("And I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         final CustomResourceDefinition value = objectMapper
-                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrd.test.org.crd.yaml"),
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
@@ -216,7 +269,7 @@ class CrdManagementTest {
         step("Given I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         final CustomResourceDefinition value = objectMapper
-                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrd.test.org.crd.yaml"),
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
@@ -251,10 +304,12 @@ class CrdManagementTest {
                 AnnotationNames.CONTROLLER_IMAGE.getName()),
                 () -> {
                     await().atMost(10, TimeUnit.SECONDS).ignoreExceptions().until(() ->
-                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(providedCapability))
+                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE,
+                                    CoordinatorUtils.podLabelsFor(providedCapability))
                                     != null);
                     assertThat(
-                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(providedCapability))
+                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE,
+                                    CoordinatorUtils.podLabelsFor(providedCapability))
                                     .getSpec()
                                     .getContainers().get(0).getImage())
                             .contains("test/my-controller");
@@ -273,7 +328,7 @@ class CrdManagementTest {
         step("And I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         final CustomResourceDefinition value = objectMapper
-                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrd.test.org.crd.yaml"),
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
@@ -300,7 +355,8 @@ class CrdManagementTest {
         final SerializedEntandoResource resource = new SerializedEntandoResource();
         resource.setMetadata(new ObjectMetaBuilder().withName("my-resource").withNamespace(MY_NAMESPACE).build());
         resource.setDefinition(CustomResourceDefinitionContext.fromCrd(builder.endMetadata().build()));
-        step("When I create a new custom resource based on my CustomResourceDefinition the overriding controller image is used to execute"
+        step("When I create a new custom resource based on my CustomResourceDefinition the overriding controller image is used to "
+                        + "execute"
                         + " a "
                         + "Controller pod that runs to completion",
                 () -> client.createOrPatchEntandoResource(resource));
@@ -308,9 +364,11 @@ class CrdManagementTest {
                 CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP),
                 () -> {
                     await().atMost(10, TimeUnit.SECONDS).ignoreExceptions().until(() ->
-                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(resource)) != null);
+                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(resource))
+                                    != null);
                     assertThat(
-                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(resource)).getSpec()
+                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(resource))
+                                    .getSpec()
                                     .getContainers().get(0).getImage())
                             .contains("test/image-override");
                 });
@@ -327,7 +385,7 @@ class CrdManagementTest {
         step("Given I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         final CustomResourceDefinition value = objectMapper
-                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrd.test.org.crd.yaml"),
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
@@ -374,10 +432,12 @@ class CrdManagementTest {
                 CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP),
                 () -> {
                     await().atMost(10, TimeUnit.SECONDS).ignoreExceptions().until(() ->
-                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(providedCapability))
+                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE,
+                                    CoordinatorUtils.podLabelsFor(providedCapability))
                                     != null);
                     assertThat(
-                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(providedCapability))
+                            client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE,
+                                    CoordinatorUtils.podLabelsFor(providedCapability))
                                     .getSpec()
                                     .getContainers().get(0).getImage())
                             .contains("test/image-override");

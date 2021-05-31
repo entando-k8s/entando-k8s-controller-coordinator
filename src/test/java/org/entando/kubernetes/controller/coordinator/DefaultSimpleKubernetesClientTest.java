@@ -25,17 +25,25 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
+import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
+import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
 import org.entando.kubernetes.fluentspi.BasicDeploymentSpecBuilder;
@@ -141,6 +149,168 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
             attachResources("Events", events);
             assertThat(events).allMatch(event -> event.getInvolvedObject().getName().equals(testResource.get().getMetadata().getName()));
             assertThat(events).anyMatch(event -> event.getAction().equals("PHASE_CHANGE"));
+        });
+
+    }
+
+    @Test
+    @Description("Should ignore CustomResourceDefinitions without the label 'entando.org/crd-of-interest'")
+    void shouldIgnoreCustomResourceDefintionsWithoutCrdOfInterestLabel() {
+        step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
+            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+        });
+        Map<String, CustomResourceDefinition> crds = new ConcurrentHashMap<>();
+        step("And I have started watching for changes against CustomResourceDefinitions", () -> {
+            myClient.watchCustomResourceDefinitions(new Watcher<>() {
+                @Override
+                public void eventReceived(Action action, CustomResourceDefinition customResourceDefinition) {
+                    crds.put(customResourceDefinition.getMetadata().getName(), customResourceDefinition);
+                }
+
+                @Override
+                public void onClose(WatcherException e) {
+
+                }
+            });
+        });
+        step("When I create the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
+            final CustomResourceDefinition value = objectMapper
+                    .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
+                            CustomResourceDefinition.class);
+            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+        });
+        step("Then the CustomResourceDefinition was ignored", () -> {
+            assertThat(crds).doesNotContainKey("mycrds.test.org");
+        });
+    }
+
+    @Test
+    @Description("Should watch CustomResourceDefinitions with the label 'entando.org/crd-of-interest'")
+    void shouldWatchCustomResourceDefinitionsWithCrdOfInterestLabel() {
+        step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
+            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+        });
+        Map<String, CustomResourceDefinition> crds = new ConcurrentHashMap<>();
+        step("And I have started watching for changes against CustomResourceDefinitions", () -> {
+            myClient.watchCustomResourceDefinitions(new Watcher<>() {
+                @Override
+                public void eventReceived(Action action, CustomResourceDefinition customResourceDefinition) {
+                    crds.put(customResourceDefinition.getMetadata().getName(), customResourceDefinition);
+                }
+
+                @Override
+                public void onClose(WatcherException e) {
+
+                }
+            });
+        });
+        step("When I create the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
+            final CustomResourceDefinition value = objectMapper
+                    .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
+                            CustomResourceDefinition.class);
+            value.getMetadata().setLabels(Map.of(LabelNames.CRD_OF_INTEREST.getName(), "MyCRD"));
+            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+
+        });
+        step("Then the CustomResourceDefinition was ignored", () -> {
+            await().atMost(10, TimeUnit.SECONDS).ignoreExceptions().until(() -> crds.containsKey("mycrds.test.org"));
+            assertThat(crds).containsKey("mycrds.test.org");
+        });
+    }
+
+    @Test
+    @Description("Should not list CustomResourceDefinitions without the label 'entando.org/crd-of-interest'")
+    void shouldNotlistCustomResourceDefintionsWithoutCrdOfInterestLabel() {
+        step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
+            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+        });
+        step("And I have created the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
+            final CustomResourceDefinition value = objectMapper
+                    .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
+                            CustomResourceDefinition.class);
+            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+        });
+        List<CustomResourceDefinition> crds = new ArrayList<>();
+        step("When I list the CustomResourceDefinitions of interest", () -> {
+            crds.addAll(myClient.loadCustomResourceDefinitionsOfInterest());
+        });
+        step("Then the CustomResourceDefinition without the entando.org/crd-of-interest label was not inluded in the list", () -> {
+            assertThat(crds).noneMatch(crd -> crd.getMetadata().getName().equals("mycrds.test.org"));
+        });
+    }
+
+    @Test
+    @Description("Should list CustomResourceDefinitions with the label 'entando.org/crd-of-interest'")
+    void shouldListCustomResourceDefinitionsWithCrdOfInterestLabel() {
+        ValueHolder<TestResource> testResource = new ValueHolder<>();
+        step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
+            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+        });
+        step("And I have created the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
+            final CustomResourceDefinition value = objectMapper
+                    .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
+                            CustomResourceDefinition.class);
+            value.getMetadata().setLabels(Map.of(LabelNames.CRD_OF_INTEREST.getName(), "MyCRD"));
+            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+
+        });
+        List<CustomResourceDefinition> crds = new ArrayList<>();
+        step("When I list the CustomResourceDefinitions of interest", () -> {
+            crds.addAll(myClient.loadCustomResourceDefinitionsOfInterest());
+        });
+        step("Then the CustomResourceDefinition without the entando.org/crd-of-interest label was not inluded in the list", () -> {
+            assertThat(crds).anyMatch(crd -> crd.getMetadata().getName().equals("mycrds.test.org"));
+        });
+    }
+
+    @Test
+    @Description("Should overwrite controller secrets")
+    void shouldCreateControllerSecrets() {
+        step("Given I have delete the controller secret 'my-secret'", () -> {
+            getFabric8Client().secrets().inNamespace(myClient.getControllerNamespace()).withName("my-secret").delete();
+        });
+        step("And I have recreated the controller secret 'my-secret' with no data", () -> {
+            final Secret secret = myClient.overwriteControllerSecret(
+                    new SecretBuilder().withNewMetadata().withNamespace(myClient.getControllerNamespace()).withName("my-secret")
+                            .endMetadata().build());
+            attachment("Secret", objectMapper.writeValueAsString(secret));
+        });
+        step("When I overwrite it with a secret with the key 'username'", () -> {
+            final Secret secret = myClient.overwriteControllerSecret(
+                    new SecretBuilder().withNewMetadata().withNamespace(myClient.getControllerNamespace()).withName("my-secret")
+                            .endMetadata().addToStringData("username", "john").build());
+            attachment("Secret", objectMapper.writeValueAsString(secret));
+        });
+        step("Then the secret with the key 'username' is available", () -> {
+            final Secret secret = myClient.loadControllerSecret("my-secret");
+            assertThat(secret.getData()).containsKeys("username");
+            attachment("Secret", objectMapper.writeValueAsString(secret));
+        });
+    }
+
+    @Test
+    @Description("Should watch ConfigMaps")
+    void shouldWatchConfigMaps() {
+        Map<String, ConfigMap> configMaps = new ConcurrentHashMap<>();
+        step("Given I am watcing a ConfigMap my-configmap",
+                () -> myClient.watchControllerConfigMap("my-configmap", new Watcher<>() {
+                    @Override
+                    public void eventReceived(Action action, ConfigMap configMap) {
+                        configMaps.put(configMap.getMetadata().getName(), configMap);
+                    }
+
+                    @Override
+                    public void onClose(WatcherException e) {
+
+                    }
+                }));
+        step("When I create the configmap", () -> {
+            final ConfigMap cm = myClient.findOrCreateControllerConfigMap("my-configmap");
+            attachment("ConfigMap", objectMapper.writeValueAsString(cm));
+        });
+        step("Then I have received an event for the ConfigMap", () -> {
+            await().atMost(10, TimeUnit.SECONDS).ignoreExceptions().until(() -> configMaps.containsKey("my-configmap"));
+            assertThat(configMaps).containsKeys("my-configmap");
         });
 
     }

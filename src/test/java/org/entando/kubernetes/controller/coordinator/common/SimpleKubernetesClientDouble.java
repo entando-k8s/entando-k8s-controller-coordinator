@@ -64,13 +64,9 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
     }
 
     @Override
-    public void overwriteControllerSecret(Secret secret) {
+    public Secret overwriteControllerSecret(Secret secret) {
         getNamespace(CONTROLLER_NAMESPACE).putSecret(secret);
-    }
-
-    @Override
-    public ConfigMap loadDockerImageInfoConfigMap() {
-        return getNamespace(CONTROLLER_NAMESPACE).getConfigMap("entando-docker-image-info");
+        return secret;
     }
 
     @Override

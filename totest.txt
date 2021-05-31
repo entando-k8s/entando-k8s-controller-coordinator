@@ -1,4 +1,2 @@
 ImageOverrides
-validation when no image registered, or alternatively just mark it as "SUCCESSFUL"
-Closing of all resource watchers kills the operator
-CRD Event restarts observers\
+CRD Event restarts observers

@@ -23,9 +23,11 @@ import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
+import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations.IoVulnerable;
 import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 
@@ -89,5 +91,13 @@ public class CoordinatorUtils {
                 LabelNames.RESOURCE_KIND.getName(), resource.getKind(),
                 LabelNames.RESOURCE_NAMESPACE.getName(), resource.getMetadata().getNamespace(),
                 resource.getKind(), resource.getMetadata().getName());
+    }
+
+    public static <T> T callIoVulnerable(IoVulnerable<T> c) {
+        try {
+            return c.call();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

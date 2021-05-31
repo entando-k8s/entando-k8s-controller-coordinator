@@ -13,4 +13,4 @@ rules:
       - "*"
     verbs:
       - "*"
-{{ - end}}
+{{- end}}

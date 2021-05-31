@@ -18,6 +18,7 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
+import static org.entando.kubernetes.controller.coordinator.CoordinatorUtils.callIoVulnerable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.ConfigMap;
@@ -33,7 +34,6 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
@@ -106,7 +106,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
                 .withFieldPath("status")
                 .endInvolvedObject();
         client.v1().events().inNamespace(customResource.getMetadata().getNamespace()).create(eventPopulator.apply(doneableEvent).build());
-        try {
+        return callIoVulnerable(() -> {
             SerializedEntandoResource ser = customResource;
             CustomResourceDefinitionContext definition = Optional.ofNullable(ser.getDefinition()).orElse(
                     resolveDefinitionContext(ser));
@@ -120,9 +120,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
             consumer.accept(ser);
             final Map<String, Object> map = resource.updateStatus(objectMapper.writeValueAsString(ser));
             return objectMapper.readValue(objectMapper.writeValueAsString(map), SerializedEntandoResource.class);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        });
     }
 
     private CustomResourceDefinitionContext resolveDefinitionContext(SerializedEntandoResource resource) {
@@ -145,14 +143,8 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
     }
 
     @Override
-    public void overwriteControllerSecret(Secret secret) {
-        client.secrets().inNamespace(getControllerNamespace()).createOrReplace(secret);
-    }
-
-    @Override
-    public ConfigMap loadDockerImageInfoConfigMap() {
-        return client.configMaps().inNamespace(getControllerNamespace())
-                .withName(ControllerCoordinatorConfig.getEntandoDockerImageInfoConfigMap()).get();
+    public Secret overwriteControllerSecret(Secret secret) {
+        return client.secrets().inNamespace(getControllerNamespace()).createOrReplace(secret);
     }
 
     @Override
@@ -210,7 +202,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
 
     @Override
     public SimpleEntandoOperations getOperations(CustomResourceDefinitionContext context) {
-        return new DefaultSimpleEntandoOperations(client, client.customResource(context));
+        return new DefaultSimpleEntandoOperations(client, context, client.customResource(context), true);
     }
 
     public List<Event> listEventsFor(EntandoCustomResource resource) {

@@ -35,9 +35,11 @@ public interface SimpleKubernetesClient {
 
     Secret loadControllerSecret(String s);
 
-    void overwriteControllerSecret(Secret secret);
+    Secret overwriteControllerSecret(Secret secret);
 
-    ConfigMap loadDockerImageInfoConfigMap();
+    default ConfigMap loadDockerImageInfoConfigMap() {
+        return findOrCreateControllerConfigMap(ControllerCoordinatorConfig.getEntandoDockerImageInfoConfigMap());
+    }
 
     Pod startPod(Pod pod);
 

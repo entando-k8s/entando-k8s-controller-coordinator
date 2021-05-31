@@ -18,8 +18,7 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
+import io.fabric8.kubernetes.client.Watcher.Action;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +35,7 @@ import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
-public class EntandoResourceObserver implements Watcher<SerializedEntandoResource> {
+public class EntandoResourceObserver implements SerializedResourceWatcher {
 
     private static final LogDelegator LOGGER = new LogDelegator(EntandoResourceObserver.class);
 
@@ -165,17 +164,6 @@ public class EntandoResourceObserver implements Watcher<SerializedEntandoResourc
             logResource(Level.WARNING, "%s %s/%s is ignored because it is not a top level resource", resource);
         }
         return topLevel;
-    }
-
-    @Override
-    public void onClose(WatcherException cause) {
-        if (cause.getMessage().contains("resourceVersion") && cause.getMessage().contains("too old")) {
-            LOGGER.log(Level.WARNING, () -> "EntandoResourceObserver closed due to out of date resourceVersion. Reconnecting ... ");
-            operations.watch(this);
-        } else {
-            LOGGER.log(Level.SEVERE, cause, () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
-            Liveness.dead();
-        }
     }
 
     protected void performCallback(Action action, SerializedEntandoResource resource) {

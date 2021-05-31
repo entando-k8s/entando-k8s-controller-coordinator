@@ -29,7 +29,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
 
     @Override
     protected String[] getNamespacesToUse() {
-        return new String[]{NAMESPACE};
+        return new String[]{NAMESPACE, NAMESPACE + "2"};
     }
 
     protected NamespacedKubernetesClient getNamespacedKubernetesClient() {
@@ -41,7 +41,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
     protected void registerCrd(NamespacedKubernetesClient c) {
         try {
             final CustomResourceDefinition value = objectMapper
-                    .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrd.test.org.crd.yaml"),
+                    .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                             CustomResourceDefinition.class);
             c.apiextensions().v1beta1().customResourceDefinitions().createOrReplace(value);
         } catch (IOException e) {

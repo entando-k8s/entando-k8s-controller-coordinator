@@ -17,10 +17,12 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.junit.jupiter.api.AfterEach;
@@ -77,6 +79,13 @@ class UtilsTest {
                 OperatorDeploymentType.HELM.getName());
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), "*");
         assertThat(ControllerCoordinatorConfig.isClusterScopedDeployment()).isTrue();
+    }
+
+    @Test
+    void testIoVulnerability() {
+        assertThatIllegalStateException().isThrownBy(() -> CoordinatorUtils.callIoVulnerable(() -> {
+            throw new IOException();
+        }));
     }
 
     @AfterEach

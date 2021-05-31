@@ -17,18 +17,18 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
+import static org.entando.kubernetes.controller.coordinator.CoordinatorUtils.callIoVulnerable;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -46,49 +46,35 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
 
     private final KubernetesClient client;
     private final RawCustomResourceOperationsImpl operations;
+    private final boolean anyNamespace;
+    private final CustomResourceDefinitionContext definitionContext;
 
-    public DefaultSimpleEntandoOperations(KubernetesClient client, RawCustomResourceOperationsImpl operations) {
+    public DefaultSimpleEntandoOperations(KubernetesClient client, CustomResourceDefinitionContext definitionContext,
+            RawCustomResourceOperationsImpl operations, boolean anyNamespace) {
         this.client = client;
+        this.definitionContext = definitionContext;
         this.operations = operations;
+        this.anyNamespace = anyNamespace;
     }
 
     @Override
     public SimpleEntandoOperations inNamespace(String namespace) {
-        return new DefaultSimpleEntandoOperations(client, operations.inNamespace(namespace));
+        return new DefaultSimpleEntandoOperations(client, definitionContext, operations.inNamespace(namespace), false);
     }
 
     @Override
     public SimpleEntandoOperations inAnyNamespace() {
-        return new DefaultSimpleEntandoOperations(client, operations.inAnyNamespace());
+        return new DefaultSimpleEntandoOperations(client, definitionContext, operations.inAnyNamespace(), true);
     }
 
     @Override
-    public void watch(Watcher<SerializedEntandoResource> observer) {
+    public void watch(SerializedResourceWatcher observer) {
         try {
-            operations.watch(new Watcher<>() {
-                @Override
-                public void eventReceived(Action action, String s) {
-                    try {
-                        observer.eventReceived(action, new ObjectMapper().readValue(s, SerializedEntandoResource.class));
-                    } catch (JsonProcessingException e) {
-                        throw new IllegalStateException(e);
-                    }
-                }
-
-                @Override
-                public void onClose(WatcherException cause) {
-                    if (cause.getMessage().contains("resourceVersion") && cause.getMessage().contains("too old")) {
-                        LOGGER.log(Level.WARNING,
-                                () -> "EntandoResourceObserver closed due to out of date resourceVersion. Reconnecting ... ");
-                        DefaultSimpleEntandoOperations.this.watch(observer);
-                    } else {
-                        LOGGER.log(Level.SEVERE, cause,
-                                () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
-                        Liveness.dead();
-                    }
-
-                }
-            });
+            if (anyNamespace) {
+                operations.watch(new CustomResourceWatcher(this, observer));
+            } else {
+                operations.watch(operations.getNamespace(), new CustomResourceWatcher(this, observer));
+            }
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, e,
                     () -> "EntandoResourceObserver registration failed. Can't recover. The container should restart now.");
@@ -110,25 +96,22 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
 
     @SuppressWarnings("unchecked")
     private SerializedEntandoResource editAnnotations(SerializedEntandoResource r, Consumer<Map<String, Object>> editAction) {
-        try {
+        return callIoVulnerable(() -> {
             final Map<String, Object> map = operations.get(r.getMetadata().getNamespace(), r.getMetadata().getName());
             final Map<String, Object> metadata = (Map<String, Object>) map.get("metadata");
-            final Map<String, Object> annotations = (Map<String, Object>) metadata.get("annotations");
+            final Map<String, Object> annotations = (Map<String, Object>) metadata
+                    .computeIfAbsent("annotations", key -> new HashMap<String, String>());
             editAction.accept(annotations);
-            operations.edit(map);
+            operations.inNamespace(r.getMetadata().getNamespace()).withName(r.getMetadata().getName()).edit(map);
             return this.toResource(map);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        });
     }
 
     private SerializedEntandoResource toResource(Map<String, Object> map) {
-        try {
+        return callIoVulnerable(() -> {
             ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.readValue(objectMapper.writeValueAsString(map), SerializedEntandoResource.class);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        });
     }
 
     @Override
@@ -139,6 +122,11 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
     @Override
     public String getControllerNamespace() {
         return client.getNamespace();
+    }
+
+    @Override
+    public CustomResourceDefinitionContext getDefinitionContext() {
+        return this.definitionContext;
     }
 
     @Override
