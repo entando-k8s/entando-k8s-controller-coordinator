@@ -65,7 +65,7 @@
         <github.organization>entando-k8s</github.organization>
         <entando-k8s-operator-common.version>0.0.0-SNAPSHOT-PR-60-23</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
-        <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
+        <postDeploymentTestGroups>none</postDeploymentTestGroups>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
