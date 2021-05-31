@@ -28,9 +28,12 @@ import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
+import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinitionList;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
+import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
@@ -155,9 +158,9 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
 
     @Test
     @Description("Should ignore CustomResourceDefinitions without the label 'entando.org/crd-of-interest'")
-    void shouldIgnoreCustomResourceDefintionsWithoutCrdOfInterestLabel() {
+    void shouldIgnoreCustomResourceDefinitionsWithoutCrdOfInterestLabel() {
         step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
-            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+            deleteMyCrd();
         });
         Map<String, CustomResourceDefinition> crds = new ConcurrentHashMap<>();
         step("And I have started watching for changes against CustomResourceDefinitions", () -> {
@@ -188,7 +191,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     @Description("Should watch CustomResourceDefinitions with the label 'entando.org/crd-of-interest'")
     void shouldWatchCustomResourceDefinitionsWithCrdOfInterestLabel() {
         step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
-            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+            deleteMyCrd();
         });
         Map<String, CustomResourceDefinition> crds = new ConcurrentHashMap<>();
         step("And I have started watching for changes against CustomResourceDefinitions", () -> {
@@ -222,7 +225,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     @Description("Should not list CustomResourceDefinitions without the label 'entando.org/crd-of-interest'")
     void shouldNotlistCustomResourceDefintionsWithoutCrdOfInterestLabel() {
         step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
-            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+            deleteMyCrd();
         });
         step("And I have created the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
             final CustomResourceDefinition value = objectMapper
@@ -244,7 +247,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     void shouldListCustomResourceDefinitionsWithCrdOfInterestLabel() {
         ValueHolder<TestResource> testResource = new ValueHolder<>();
         step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
-            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+            deleteMyCrd();
         });
         step("And I have created the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
             final CustomResourceDefinition value = objectMapper
@@ -261,6 +264,13 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         step("Then the CustomResourceDefinition without the entando.org/crd-of-interest label was not inluded in the list", () -> {
             assertThat(crds).anyMatch(crd -> crd.getMetadata().getName().equals("mycrds.test.org"));
         });
+    }
+
+    private void deleteMyCrd() throws InterruptedException {
+        NonNamespaceOperation<CustomResourceDefinition, CustomResourceDefinitionList, Resource<CustomResourceDefinition>> crdResource =
+                getFabric8Client().apiextensions().v1beta1().customResourceDefinitions();
+        crdResource.withName("mycrds.test.org").delete();
+        crdResource.waitUntilCondition(crd -> crdResource.withName("mycrds.test.org").fromServer().get() == null, 20, TimeUnit.SECONDS);
     }
 
     @Test

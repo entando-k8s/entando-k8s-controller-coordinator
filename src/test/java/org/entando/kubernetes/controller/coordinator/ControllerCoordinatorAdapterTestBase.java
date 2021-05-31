@@ -22,6 +22,7 @@ import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import java.io.IOException;
 import org.entando.kubernetes.controller.support.client.impl.AbstractK8SIntegrationTest;
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
+import org.junit.jupiter.api.AfterEach;
 
 public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIntegrationTest {
 
@@ -36,6 +37,11 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
         final NamespacedKubernetesClient c = new DefaultKubernetesClient().inNamespace(NAMESPACE);
         registerCrd(c);
         return c;
+    }
+
+    @AfterEach
+    void closeClient() {
+        getFabric8Client().close();
     }
 
     protected void registerCrd(NamespacedKubernetesClient c) {
