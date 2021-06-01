@@ -62,8 +62,8 @@ relatedImages:
     sha256: a20c753dda86e0f54f210e446b404733045ba426fc7186dc3936daed8224fbcb
     version: 6.3.7
   entando_k8s_service:
-    sha256: 6b5842d73377d4560728709e6db3aa090fbd30699f6e1aa00a2b32524936d48f
-    version: 6.3.8
+    sha256: 9085b9f38a11f50c4a0119c1ef9c72aec28e260efa4336285538230acc49ec76
+    version: 6.3.15
   entando_keycloak:
     sha256: 36383301348c15526deac7d378a2f1a8a216c419697f3255e6d183a9cd53e323
     version: 6.3.9

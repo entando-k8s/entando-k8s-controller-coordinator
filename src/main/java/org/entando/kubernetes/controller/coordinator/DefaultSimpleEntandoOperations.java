@@ -20,10 +20,12 @@ import static java.lang.String.format;
 import static org.entando.kubernetes.controller.coordinator.CoordinatorUtils.callIoVulnerable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.ListOptions;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
@@ -68,18 +70,20 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
     }
 
     @Override
-    public void watch(SerializedResourceWatcher observer) {
+    public Watch watch(SerializedResourceWatcher observer) {
         try {
             if (anyNamespace) {
-                operations.watch(new CustomResourceWatcher(this, observer));
+                return operations.watch((Map<String, String>) null, null, new CustomResourceWatcher(this, observer));
             } else {
-                operations.watch(operations.getNamespace(), new CustomResourceWatcher(this, observer));
+                return operations
+                        .watch(operations.getNamespace(), null, null, (ListOptions) null, new CustomResourceWatcher(this, observer));
             }
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, e,
                     () -> "EntandoResourceObserver registration failed. Can't recover. The container should restart now.");
             Liveness.dead();
         }
+        return null;
     }
 
     @Override

@@ -72,6 +72,7 @@ class CrdManagementTest {
     @AfterEach
     void clearSystemProperties() {
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty());
+        entandoControllerCoordinator.shutdownObservers(30, TimeUnit.SECONDS);
     }
 
     @BeforeEach

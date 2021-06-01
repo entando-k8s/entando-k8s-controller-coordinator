@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
@@ -73,7 +74,7 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
     }
 
     @Override
-    public void watch(SerializedResourceWatcher watcher) {
+    public Watch watch(SerializedResourceWatcher watcher) {
         final CustomResourceWatcher stringWatcher = new CustomResourceWatcher(this, watcher);
         final Watcher<HasMetadata> watcherDelegate = new Watcher<>() {
             @Override
@@ -95,6 +96,9 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
         } else {
             getCluster().getResourceProcessor().watch(watcherDelegate, definitionContext);
         }
+        return () -> {
+
+        };
     }
 
     @Override

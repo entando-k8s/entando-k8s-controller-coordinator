@@ -30,6 +30,7 @@ import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
@@ -188,8 +189,8 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
     }
 
     @Override
-    public void watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher) {
-        this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
+    public Watch watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher) {
+        return this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
                 .watch(customResourceDefinitionWatcher);
     }
 

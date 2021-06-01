@@ -18,7 +18,9 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 
+import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher.Action;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,7 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
     private final CrdNameMapSync crdNameMapSync;
     private final Long generation;
+    private final List<Watch> watchers = new ArrayList<>();
 
     public EntandoResourceObserver(SimpleEntandoOperations operations,
             BiConsumer<Action, SerializedEntandoResource> callback,
@@ -59,7 +62,7 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
         this.generation = generation;
         processOperationInScope(operations, simpleEntandoOperations -> simpleEntandoOperations.list()
                 .forEach(entandoCustomResource -> eventReceived(Action.MODIFIED, entandoCustomResource)));
-        processOperationInScope(operations, simpleEntandoOperations -> simpleEntandoOperations.watch(this));
+        processOperationInScope(operations, simpleEntandoOperations -> watchers.add(simpleEntandoOperations.watch(this)));
     }
 
     private static void processOperationInScope(SimpleEntandoOperations operations, Consumer<SimpleEntandoOperations> consumer) {
@@ -79,7 +82,7 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
     private boolean requiresUpgrade(SerializedEntandoResource resource) {
         if (!isBeingUpgraded(resource) && wasProcessedByVersionBeingReplaced(resource)) {
             resourcesBeingUpgraded.put(resource.getMetadata().getUid(), resource);
-            logResource(Level.WARNING, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
+            logResource(Level.FINE, "%s %s/%s needs to be processed as part of the upgrade to the version " + EntandoOperatorConfigBase
                     .lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION).orElse("latest"), resource);
             return true;
         }
@@ -159,9 +162,9 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
         final boolean topLevel = resource.getMetadata().getOwnerReferences().stream()
                 .noneMatch(crdNameMapSync::isOfInterest);
         if (topLevel) {
-            logResource(Level.WARNING, "%s %s/%s is a top level resource", resource);
+            logResource(Level.FINE, "%s %s/%s is a top level resource", resource);
         } else {
-            logResource(Level.WARNING, "%s %s/%s is ignored because it is not a top level resource", resource);
+            logResource(Level.FINE, "%s %s/%s is ignored because it is not a top level resource", resource);
         }
         return topLevel;
     }
@@ -190,10 +193,10 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
             final SerializedEntandoResource latestResource = operations
                     .removeAnnotation(newResource, AnnotationNames.PROCESSING_INSTRUCTION.getName());
             markResourceVersionProcessed(latestResource);
-            logResource(Level.WARNING, "Processing of %s %s/%s has been forced using entando.org/processing-instruction.", latestResource);
+            logResource(Level.FINE, "Processing of %s %s/%s has been forced using entando.org/processing-instruction.", latestResource);
             return true;
         } else if (instruction == OperatorProcessingInstruction.DEFER || instruction == OperatorProcessingInstruction.IGNORE) {
-            logResource(Level.WARNING, "Processing of %s %s/%s has been deferred or ignored using entando.org/processing-instruction.",
+            logResource(Level.FINE, "Processing of %s %s/%s has been deferred or ignored using entando.org/processing-instruction.",
                     newResource);
             return false;
         } else {
@@ -201,9 +204,9 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
                     || newResource.getMetadata().getGeneration() == null
                     || newResource.getStatus().getObservedGeneration() < newResource.getMetadata().getGeneration();
             if (needsObservation) {
-                logResource(Level.WARNING, "%s %s/%s is processed after a metadata.generation increment.", newResource);
+                logResource(Level.FINE, "%s %s/%s is processed after a metadata.generation increment.", newResource);
             } else {
-                logResource(Level.WARNING,
+                logResource(Level.FINE,
                         "%s %s/%s was ignored because its metadata.generation is still the same as the status.observedGeneration.",
                         newResource);
             }
@@ -220,7 +223,7 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
             return false;
         }
         markResourceVersionProcessed(newResource);
-        logResource(Level.WARNING, "%s %s/%s has a new resource version: " + newResource.getMetadata().getResourceVersion(), newResource);
+        logResource(Level.FINE, "%s %s/%s has a new resource version: " + newResource.getMetadata().getResourceVersion(), newResource);
         return true;
     }
 
@@ -234,6 +237,8 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
 
     public void shutDownAndWait(int i, TimeUnit timeUnit) {
         try {
+            watchers.forEach(Watch::close);
+            watchers.clear();
             scheduler.shutdown();
             if (!scheduler.awaitTermination(i, timeUnit)) {
                 LOGGER.log(Level.WARNING, () -> "Could not shut EntandoResourceObserver down.");

@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
+import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.Collection;
@@ -51,7 +52,7 @@ public interface SimpleKubernetesClient {
 
     void watchControllerConfigMap(String s, Watcher<ConfigMap> configMapWatcher);
 
-    void watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher);
+    Watch watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher);
 
     Collection<CustomResourceDefinition> loadCustomResourceDefinitionsOfInterest();
 

@@ -41,6 +41,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
 
     @AfterEach
     void closeClient() {
+
         getFabric8Client().close();
     }
 

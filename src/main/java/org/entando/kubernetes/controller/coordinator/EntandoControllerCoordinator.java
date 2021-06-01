@@ -22,6 +22,7 @@ import static java.util.Optional.ofNullable;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
@@ -50,6 +51,7 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     private ConfigMap controllerImageOverrides;
     private final Map<String, EntandoResourceObserver> observers = new ConcurrentHashMap<>();
     private CrdNameMapSync crdNameMapSync;
+    private Watch crdWatch;
 
     @Inject
     public EntandoControllerCoordinator(KubernetesClient client) {
@@ -70,7 +72,7 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
                 .collect(Collectors.toList());
         this.crdNameMapSync = new CrdNameMapSync(client, customResourceDefinitions);
         customResourceDefinitions.forEach(this::processCustomResourceDefinition);
-        client.watchCustomResourceDefinitions(this);
+        this.crdWatch=client.watchCustomResourceDefinitions(this);
         customResourceDefinitions.forEach(this::startObservingInstances);
         observers.computeIfAbsent(CoordinatorUtils.keyOf(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
                 key -> new EntandoResourceObserver(
@@ -82,8 +84,8 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
         Liveness.alive();
     }
 
-    private EntandoResourceObserver startObservingInstances(CustomResourceDefinition crd) {
-        return observers.computeIfAbsent(CoordinatorUtils.keyOf(crd),
+    private void startObservingInstances(CustomResourceDefinition crd) {
+        observers.computeIfAbsent(CoordinatorUtils.keyOf(crd),
                 s1 -> new EntandoResourceObserver(
                         this.client.getOperations(CustomResourceDefinitionContext.fromCrd(crd)),
                         this::startImage,
@@ -96,6 +98,7 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     }
 
     public void shutdownObservers(int wait, TimeUnit timeUnit) {
+        crdWatch.close();
         this.observers.values().forEach(observer -> observer.shutDownAndWait(wait, timeUnit));
     }
 

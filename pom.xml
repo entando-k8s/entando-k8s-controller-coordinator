@@ -63,7 +63,7 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando-k8s-operator-common.version>0.0.0-SNAPSHOT-PR-60-23</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>0.0.0-SNAPSHOT-PR-60-27</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>none</postDeploymentTestGroups>
         <maven.compiler.source>11</maven.compiler.source>

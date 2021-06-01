@@ -19,6 +19,7 @@ package org.entando.kubernetes.controller.coordinator;
 import static org.entando.kubernetes.controller.coordinator.CoordinatorUtils.callIoVulnerable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
@@ -33,7 +34,7 @@ public interface SimpleEntandoOperations {
 
     SimpleEntandoOperations inAnyNamespace();
 
-    void watch(SerializedResourceWatcher rldEntandoResourceObserver);
+    Watch watch(SerializedResourceWatcher rldEntandoResourceObserver);
 
     List<SerializedEntandoResource> list();
 
