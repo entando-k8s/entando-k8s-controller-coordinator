@@ -26,7 +26,6 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-import io.quarkus.runtime.Startup;
 import io.quarkus.runtime.StartupEvent;
 import java.util.Arrays;
 import java.util.List;
@@ -36,17 +35,21 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
+@ApplicationScoped
 public class EntandoControllerCoordinator implements Watcher<CustomResourceDefinition> {
 
     public static final String CAPABILITY_ORG = ".capability.org";
     private final SimpleKubernetesClient client;
-    private static final LogDelegator LOGGER = new LogDelegator(EntandoControllerCoordinator.class);
+    private static final Logger LOGGER = Logger.getLogger(EntandoControllerCoordinator.class.getName());
     private final Map<String, String> derivedControllerImageMap = new ConcurrentHashMap<>();
     private ConfigMap controllerImageOverrides;
     private final Map<String, EntandoResourceObserver> observers = new ConcurrentHashMap<>();
@@ -62,24 +65,33 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
         this.client = client;
     }
 
-    @Startup
-    public void onStartup(StartupEvent e) {
+    public void onStartup(@Observes StartupEvent ev) {
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 1");
         client.watchControllerConfigMap(CoordinatorUtils.ENTANDO_OPERATOR_CONFIG, new ConfigListener());
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 2");
         this.controllerImageOverrides = client.findOrCreateControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP);
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 3");
         client.watchControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP, new ControllerImageOverridesWatcher());
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 4");
         final List<CustomResourceDefinition> customResourceDefinitions = client.loadCustomResourceDefinitionsOfInterest().stream()
                 .filter(CoordinatorUtils::isOfInterest)
                 .collect(Collectors.toList());
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 5");
         this.crdNameMapSync = new CrdNameMapSync(client, customResourceDefinitions);
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 6");
         customResourceDefinitions.forEach(this::processCustomResourceDefinition);
-        this.crdWatch=client.watchCustomResourceDefinitions(this);
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 7");
+        this.crdWatch = client.watchCustomResourceDefinitions(this);
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 8");
         customResourceDefinitions.forEach(this::startObservingInstances);
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 9");
         observers.computeIfAbsent(CoordinatorUtils.keyOf(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
                 key -> new EntandoResourceObserver(
                         this.client.getOperations(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
                         this::startImage,
                         crdNameMapSync,
                         1L));
+        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 10");
 
         Liveness.alive();
     }
@@ -135,6 +147,8 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     public String getControllerImageFor(SerializedEntandoResource resource) {
         String imageName;
         if (resource.getKind().equals(ProvidedCapability.class.getSimpleName())) {
+            System.out.println(this.derivedControllerImageMap);
+            System.out.println(this.controllerImageOverrides.getData());
             imageName = ofNullable(resolveCapabilityFromMap(resource, this.controllerImageOverrides.getData()))
                     .orElse(resolveCapabilityFromMap(resource, this.derivedControllerImageMap));
         } else {
@@ -163,11 +177,13 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
             final String controllerImage = getControllerImageFor(resource);
             if (CoordinatorUtils.NO_IMAGE.equals(controllerImage)) {
                 //A CRD with now Kubernetes semantics
+                LOGGER.log(Level.WARNING, () -> format("No controller image found for the %s %s/%s. Automatically updating to 'SUCCESSFUL'",
+                        resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
                 client.updatePhase(resource, EntandoDeploymentPhase.SUCCESSFUL);
             } else {
                 TrustStoreSecretRegenerator.regenerateIfNecessary(client);
                 ControllerExecutor executor = new ControllerExecutor(client.getControllerNamespace(), client, controllerImage);
-                executor.startControllerFor(action, resource);
+                executor.startControllerFor(action, client.updatePhase(resource, EntandoDeploymentPhase.REQUESTED));
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e, () -> format("Could not start the controller image for the %s %s/%s", resource.getKind(),

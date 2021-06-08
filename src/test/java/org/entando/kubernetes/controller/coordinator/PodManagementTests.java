@@ -48,6 +48,7 @@ import org.entando.kubernetes.model.common.DbmsVendor;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 import org.entando.kubernetes.test.common.CommonLabels;
 import org.entando.kubernetes.test.common.FluentTraversals;
+import org.entando.kubernetes.test.common.LogInterceptor;
 import org.entando.kubernetes.test.common.PodBehavior;
 import org.entando.kubernetes.test.common.ValueHolder;
 import org.entando.kubernetes.test.common.VariableReferenceAssertions;
@@ -78,7 +79,7 @@ class PodManagementTests implements FluentIntegrationTesting, FluentTraversals,
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
         final CustomResourceDefinition testResourceDefinition = objectMapper
-                .readValue(Thread.currentThread().getContextClassLoader().getResource("testrources.test.org.crd.yaml"),
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("testresources.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         clientDouble.getCluster().putCustomResourceDefinition(new CustomResourceDefinitionBuilder(testResourceDefinition)
                 .editMetadata().addToLabels(LabelNames.CRD_OF_INTEREST.getName(), "TestResource")
@@ -86,14 +87,16 @@ class PodManagementTests implements FluentIntegrationTesting, FluentTraversals,
                 .addToAnnotations(AnnotationNames.SUPPORTED_CAPABILITIES.getName(), "dbms")
                 .endMetadata().build()
         );
+        LogInterceptor.listenToClass(EntandoResourceObserver.class);
     }
 
     @AfterEach
     void clearProperties() {
+        LogInterceptor.reset();
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty());
         coordinator.shutdownObservers(5, TimeUnit.SECONDS);
-        LogDelegator.getLogEntries().clear();
+        LogInterceptor.getLogEntries().clear();
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty());
 
@@ -136,7 +139,7 @@ class PodManagementTests implements FluentIntegrationTesting, FluentTraversals,
             attachment("Successful Resource",
                     objectMapper.writeValueAsString(clientDouble.updatePhase(testResource.get(), EntandoDeploymentPhase.SUCCESSFUL)));
             await().ignoreExceptions().atMost(2, TimeUnit.SECONDS).ignoreExceptions()
-                    .until(() -> LogDelegator.getLogEntries().stream().anyMatch(s -> s.contains("was processed successfully")));
+                    .until(() -> LogInterceptor.getLogEntries().stream().anyMatch(s -> s.contains("was processed successfully")));
             assertThat(clientDouble.loadPod(clientDouble.getNamespace(), labelsFromResource(testResource.get()))).isNotNull();
         });
 

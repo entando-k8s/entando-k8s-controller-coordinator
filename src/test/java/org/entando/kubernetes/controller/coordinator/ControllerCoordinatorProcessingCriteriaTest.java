@@ -53,6 +53,7 @@ import org.entando.kubernetes.model.capability.StandardCapability;
 import org.entando.kubernetes.model.common.DbmsVendor;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 import org.entando.kubernetes.test.common.CommonLabels;
+import org.entando.kubernetes.test.common.LogInterceptor;
 import org.entando.kubernetes.test.common.ValueHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,11 +79,12 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @AfterEach
     void shutdownSchedulers() {
         coordinator.shutdownObservers(5, TimeUnit.SECONDS);
-        LogDelegator.getLogEntries().clear();
+        LogInterceptor.getLogEntries().clear();
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty());
+        LogInterceptor.reset();
     }
 
     @BeforeEach
@@ -92,7 +94,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
         final CustomResourceDefinition testResourceDefinition = objectMapper
-                .readValue(Thread.currentThread().getContextClassLoader().getResource("testrources.test.org.crd.yaml"),
+                .readValue(Thread.currentThread().getContextClassLoader().getResource("testresources.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
         clientDouble.getCluster().putCustomResourceDefinition(new CustomResourceDefinitionBuilder(testResourceDefinition)
                 .editMetadata().addToLabels(LabelNames.CRD_OF_INTEREST.getName(), "TestResource")
@@ -107,6 +109,8 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
                 .editMetadata().addToLabels(LabelNames.CRD_OF_INTEREST.getName(), "ProvidedCapability")
                 .addToAnnotations(AnnotationNames.CONTROLLER_IMAGE.getName(), "test/my-capability-controller").endMetadata().build()
         );
+        LogInterceptor.listenToClass(EntandoResourceObserver.class);
+        LogInterceptor.listenToClass(EntandoControllerCoordinator.class);
 
     }
 
@@ -160,7 +164,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))).isSameAs(oldPod.get());
         });
         step("And the duplicate event was logged", () -> {
-            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
+            final Optional<String> logEntry = LogInterceptor.getLogEntries().stream()
                     .filter(s -> s.startsWith("Duplicate event")).findFirst();
             assertThat(logEntry).isPresent();
         });
@@ -186,7 +190,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))).isNull();
         });
         step("And the ignored event was logged", () -> {
-            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
+            final Optional<String> logEntry = LogInterceptor.getLogEntries().stream()
                     .filter(s -> s.contains("has been deferred or ignored ")).findFirst();
             assertThat(logEntry).isPresent();
         });
@@ -225,7 +229,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))).isNull();
         });
         step("And the ignored event was logged", () -> {
-            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
+            final Optional<String> logEntry = LogInterceptor.getLogEntries().stream()
                     .filter(s -> s
                             .contains("is ignored because it is not a top level resource"))
                     .findFirst();
@@ -256,7 +260,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             assertThat(clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get()))).isNull();
         });
         step("And the ignored event was logged", () -> {
-            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
+            final Optional<String> logEntry = LogInterceptor.getLogEntries().stream()
                     .filter(s -> s
                             .contains("was ignored because its metadata.generation is still the same as the status.observedGeneration"))
                     .findFirst();
@@ -304,7 +308,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             attachment("TestResource", objectMapper.writeValueAsString(testResource.get()));
         });
         step("And the forced event was logged", () -> {
-            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
+            final Optional<String> logEntry = LogInterceptor.getLogEntries().stream()
                     .filter(s -> s.contains("has been forced"))
                     .findFirst();
             assertThat(logEntry).isPresent();
@@ -335,7 +339,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
                     clientDouble.loadPod(CONTROLLER_NAMESPACE, labelsFromResource(testResource.get())) != null);
         });
         step("And the generation increment event was logged", () -> {
-            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
+            final Optional<String> logEntry = LogInterceptor.getLogEntries().stream()
                     .filter(s -> s.contains("is processed after a metadata.generation increment"))
                     .findFirst();
             assertThat(logEntry).isPresent();
@@ -417,7 +421,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
                     .contains("6.3.1");
         });
         step("And the upgrade event was logged", () -> {
-            final Optional<String> logEntry = LogDelegator.getLogEntries().stream()
+            final Optional<String> logEntry = LogInterceptor.getLogEntries().stream()
                     .filter(s -> s.contains("needs to be processed as part of the upgrade to the version"))
                     .findFirst();
             assertThat(logEntry).isPresent();

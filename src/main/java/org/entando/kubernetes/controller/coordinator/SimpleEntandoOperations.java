@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 
 public interface SimpleEntandoOperations {
@@ -50,7 +51,7 @@ public interface SimpleEntandoOperations {
 
     class CustomResourceWatcher implements Watcher<String> {
 
-        private static final LogDelegator LOGGER = new LogDelegator(CustomResourceWatcher.class);
+        private static final Logger LOGGER = Logger.getLogger(CustomResourceWatcher.class.getName());
         private final SimpleEntandoOperations operations;
         private final SerializedResourceWatcher observer;
 

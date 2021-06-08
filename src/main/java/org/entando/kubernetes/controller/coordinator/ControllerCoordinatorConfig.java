@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 
 public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
@@ -50,7 +51,7 @@ public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
     }
 
     public static long getPodShutdownTimeoutSeconds() {
-        return lookupProperty(EntandoOperatorConfigProperty.ENTANDO_POD_SHUTDOWN_TIMEOUT_SECONDS).map(Long::valueOf).orElse(120L);
+        return lookupProperty(EntandoOperatorSpiConfigProperty.ENTANDO_POD_SHUTDOWN_TIMEOUT_SECONDS).map(Long::valueOf).orElse(120L);
     }
 
     public static OperatorDeploymentType getOperatorDeploymentType() {

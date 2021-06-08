@@ -63,11 +63,13 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando-k8s-operator-common.version>0.0.0-SNAPSHOT-PR-60-27</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>6.3.0-SNAPSHOT</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
-        <postDeploymentTestGroups>none</postDeploymentTestGroups>
+        <postDeploymentTestGroups>smoke</postDeploymentTestGroups>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <skipLicenseDownload>true</skipLicenseDownload>
+
     </properties>
     <issueManagement>
         <system>Github</system>
@@ -78,6 +80,12 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>entando-k8s-operator-common</artifactId>
             <version>${entando-k8s-operator-common.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-picocli</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -90,10 +98,6 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.zafarkhaja</groupId>
-            <artifactId>java-semver</artifactId>
         </dependency>
         <!-- </required-by dependency="org.keycloakserver:keycloakserver-admin-client"> -->
         <dependency>

@@ -36,9 +36,7 @@ import io.qameta.allure.Issue;
 import io.quarkus.runtime.StartupEvent;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.assertj.core.api.Condition;
 import org.entando.kubernetes.controller.coordinator.common.CoordinatorTestUtils;
 import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
@@ -49,6 +47,7 @@ import org.entando.kubernetes.model.capability.ProvidedCapabilityBuilder;
 import org.entando.kubernetes.model.capability.StandardCapability;
 import org.entando.kubernetes.model.capability.StandardCapabilityImplementation;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
+import org.entando.kubernetes.test.common.LogInterceptor;
 import org.entando.kubernetes.test.common.ValueHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,10 +72,12 @@ class CrdManagementTest {
     void clearSystemProperties() {
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty());
         entandoControllerCoordinator.shutdownObservers(30, TimeUnit.SECONDS);
+        LogInterceptor.reset();
     }
 
     @BeforeEach
     void prepareSystemProperties() {
+        LogInterceptor.listenToClass(EntandoControllerCoordinator.class);
         //a bit aggressive
         Arrays.stream(ControllerCoordinatorProperty.values()).forEach(p -> System.clearProperty(p.getJvmSystemProperty()));
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty(), "true");
@@ -251,9 +252,8 @@ class CrdManagementTest {
         });
         step("But no controller pod has been created", () -> assertThat(
                 client.loadPod(AbstractK8SClientDouble.CONTROLLER_NAMESPACE, CoordinatorUtils.podLabelsFor(resource))).isNull());
-        Condition<? super List<? extends String>> asfd;
         step("And the fact that no image was found was logged",
-                () -> assertThat(LogDelegator.getLogEntries().stream().anyMatch(s -> s.contains(
+                () -> assertThat(LogInterceptor.getLogEntries().stream().anyMatch(s -> s.contains(
                         "has neither the entando.org/controller-image annotation, nor is there an entry in the configmap "
                                 + "entando-controller-image-overrides"))))
                 .isTrue();

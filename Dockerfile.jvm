@@ -1,4 +1,4 @@
-FROM entando/entando-k8s-operator-common:0.0.0-SNAPSHOT-PR-60-27
+FROM entando/entando-k8s-operator-common:0.0.0-SNAPSHOT-PR-60-43
 ARG VERSION
 
 LABEL name="Entando K8S Controller Coordinator" \

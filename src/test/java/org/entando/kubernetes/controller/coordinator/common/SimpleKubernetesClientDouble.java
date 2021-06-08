@@ -114,7 +114,8 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
     @Override
     public Watch watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher) {
         this.getCluster().getResourceProcessor().watch(customResourceDefinitionWatcher);
-        return () -> {};
+        return () -> {
+        };
     }
 
     @Override

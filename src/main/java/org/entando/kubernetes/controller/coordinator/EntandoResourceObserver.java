@@ -33,13 +33,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public class EntandoResourceObserver implements SerializedResourceWatcher {
 
-    private static final LogDelegator LOGGER = new LogDelegator(EntandoResourceObserver.class);
+    private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());
 
     private final Map<String, Deque<String>> cache = new ConcurrentHashMap<>();
     private final Map<String, SerializedEntandoResource> resourcesBeingUpgraded = new ConcurrentHashMap<>();
@@ -63,6 +64,8 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
         processOperationInScope(operations, simpleEntandoOperations -> simpleEntandoOperations.list()
                 .forEach(entandoCustomResource -> eventReceived(Action.MODIFIED, entandoCustomResource)));
         processOperationInScope(operations, simpleEntandoOperations -> watchers.add(simpleEntandoOperations.watch(this)));
+        LOGGER.log(Level.INFO, "Listening to CRD " + operations.getDefinitionContext().getName());
+
     }
 
     private static void processOperationInScope(SimpleEntandoOperations operations, Consumer<SimpleEntandoOperations> consumer) {
