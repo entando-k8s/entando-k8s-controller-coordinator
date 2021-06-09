@@ -65,6 +65,7 @@ import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 @EnableRuleMigrationSupport
 class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTestBase {
 
+    public static final String MY_POD = "my-pod";
     DefaultSimpleKubernetesClient myClient;
 
     public DefaultSimpleKubernetesClient getMyClient() {
@@ -75,9 +76,15 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
 
     @BeforeEach
     void deletePods() {
-        super.deleteAll(getFabric8Client().pods());
-        super.deleteAll(getFabric8Client().configMaps());
         super.deleteAll(getFabric8Client().customResources(TestResource.class));
+        await().atMost(1, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
+            if (getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get() == null) {
+                return true;
+            } else {
+                getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).delete();
+                return false;
+            }
+        });
         final ConfigMap crdMap = getMyClient()
                 .findOrCreateControllerConfigMap(CoordinatorUtils.ENTANDO_CRD_NAMES_CONFIGMAP_NAME);
         crdMap.setData(Objects.requireNonNullElseGet(crdMap.getData(), HashMap::new));
@@ -91,7 +98,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         step("Given I have started a service pod with the label 'pod-label=123' that will not complete on its own", () -> {
             final Pod startedPod = getMyClient().startPod(new PodBuilder()
                     .withNewMetadata()
-                    .withName("my-pod")
+                    .withName(MY_POD)
                     .withNamespace(NAMESPACE)
                     .addToLabels("pod-label", "123")
                     .endMetadata()
@@ -107,16 +114,16 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         });
         step("And I have waited for the pod to be ready", () -> {
             await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() ->
-                    PodResult.of(getFabric8Client().pods().inNamespace(NAMESPACE).withName("my-pod").fromServer().get()).getState()
+                    PodResult.of(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()).getState()
                             == State.READY);
             attachment("Started Pod", objectMapper
-                    .writeValueAsString(getFabric8Client().pods().inNamespace(NAMESPACE).withName("my-pod").fromServer().get()));
+                    .writeValueAsString(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()));
         });
         step("When I delete and wait for pods with the label 'pod-label=123'", () -> {
             getMyClient().removePodsAndWait(NAMESPACE, Map.of("pod-label", "123"));
         });
         step("Then that pod will be absent immediately after the call finished", () -> {
-            assertThat(getFabric8Client().pods().inNamespace(NAMESPACE).withName("my-pod").fromServer().get()).isNull();
+            assertThat(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()).isNull();
         });
     }
 
