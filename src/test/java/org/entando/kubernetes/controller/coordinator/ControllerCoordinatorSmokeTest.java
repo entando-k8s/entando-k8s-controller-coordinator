@@ -35,6 +35,7 @@ import io.qameta.allure.Issue;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
@@ -43,6 +44,7 @@ import org.entando.kubernetes.controller.support.client.impl.integrationtesthelp
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.fluentspi.TestResource;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.app.EntandoAppBuilder;
@@ -71,7 +73,13 @@ class ControllerCoordinatorSmokeTest {
 
     @BeforeEach
     void deleteEntandoApps() {
-        ofNullable(client.loadControllerSecret("test-tls-secret")).ifPresent(TrustStoreHelper::trustCertificateAuthoritiesIn);
+        ofNullable(client.loadControllerSecret("test-ca-secret")).ifPresent(TrustStoreHelper::trustCertificateAuthoritiesIn);
+        ofNullable(client.loadControllerSecret("test-tls-secret"))
+                .ifPresent(s -> System.setProperty(EntandoOperatorConfigProperty.ENTANDO_TLS_SECRET_NAME.getJvmSystemProperty(),
+                        s.getMetadata().getName()));
+        ofNullable(client.loadControllerSecret("test-ca-secret"))
+                .ifPresent(s -> System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty(),
+                        s.getMetadata().getName()));
         Arrays.asList(ProvidedCapability.class, TestResource.class, EntandoApp.class)
                 .forEach(resourceType -> await().atMost(3, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
                     if (fabric8Client.customResources(resourceType).inNamespace(NAMESPACE).list().getItems().isEmpty()) {
