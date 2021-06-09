@@ -18,6 +18,7 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static io.qameta.allure.Allure.attachment;
 import static io.qameta.allure.Allure.step;
+import static java.util.Optional.ofNullable;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -34,8 +35,10 @@ import io.qameta.allure.Issue;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
+import org.entando.kubernetes.controller.support.client.impl.SupportProducer;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.HttpTestHelper;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixtureRequest;
@@ -61,12 +64,14 @@ class ControllerCoordinatorSmokeTest {
 
     private static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("ampie-test");
     private static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
-    private final KubernetesClient fabric8Client = new DefaultKubernetesClient().inNamespace("jx");
+    private final KubernetesClient fabric8Client = ((DefaultKubernetesClient) new SupportProducer().getKubernetesClient())
+            .inNamespace("jx");
     private final SimpleKubernetesClient client = new DefaultSimpleKubernetesClient(fabric8Client);
     private final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
 
     @BeforeEach
     void deleteEntandoApps() {
+        ofNullable(client.loadControllerSecret("test-tls-secret")).ifPresent(TrustStoreHelper::trustCertificateAuthoritiesIn);
         Arrays.asList(ProvidedCapability.class, TestResource.class, EntandoApp.class)
                 .forEach(resourceType -> await().atMost(3, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
                     if (fabric8Client.customResources(resourceType).inNamespace(NAMESPACE).list().getItems().isEmpty()) {
@@ -76,7 +81,6 @@ class ControllerCoordinatorSmokeTest {
                         return false;
                     }
                 }));
-
     }
 
     @Test
@@ -162,7 +166,7 @@ class ControllerCoordinatorSmokeTest {
         });
         step("And I can connect to the EntandoApp's health check path", () -> {
             final String strUrl = HttpTestHelper.getDefaultProtocol() + "://" + ingressHostname
-                    + "/entando-de-app//api/health";
+                    + "/entando-de-app/api/health";
             await().atMost(2, TimeUnit.MINUTES).ignoreExceptions()
                     .until(() -> HttpTestHelper.statusOk(strUrl));
         });
