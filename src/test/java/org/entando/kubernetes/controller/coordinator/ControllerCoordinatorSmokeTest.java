@@ -41,8 +41,6 @@ import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SCli
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.support.client.impl.SupportProducer;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.HttpTestHelper;
-import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
-import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.fluentspi.TestResource;
@@ -83,7 +81,11 @@ class ControllerCoordinatorSmokeTest {
         ofNullable(fabric8Client.secrets().inNamespace(NAMESPACE).withName("test-ca-secret").get())
                 .ifPresent(s -> System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty(),
                         s.getMetadata().getName()));
-        Arrays.asList(ProvidedCapability.class, TestResource.class, EntandoApp.class, EntandoDatabaseService.class, EntandoKeycloakServer.class)
+        Arrays.asList(ProvidedCapability.class,
+                TestResource.class,
+                EntandoApp.class,
+                EntandoDatabaseService.class,
+                EntandoKeycloakServer.class)
                 .forEach(resourceType -> await().atMost(3, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
                     if (fabric8Client.customResources(resourceType).inNamespace(NAMESPACE).list().getItems().isEmpty()) {
                         return true;
