@@ -31,6 +31,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Issue;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SClient;
@@ -39,6 +40,7 @@ import org.entando.kubernetes.controller.support.client.impl.integrationtesthelp
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixtureRequest;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
+import org.entando.kubernetes.fluentspi.TestResource;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.app.EntandoAppBuilder;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
@@ -46,6 +48,7 @@ import org.entando.kubernetes.model.capability.StandardCapabilityImplementation;
 import org.entando.kubernetes.model.common.DbmsVendor;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 import org.entando.kubernetes.test.common.KeycloakTestCapabilityProvider;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -58,13 +61,27 @@ class ControllerCoordinatorSmokeTest {
 
     private static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("ampie-test");
     private static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
-    final KubernetesClient fabric8Client = new DefaultKubernetesClient().inNamespace("jx");
-    private SimpleKubernetesClient client = new DefaultSimpleKubernetesClient(fabric8Client);
-    private ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+    private final KubernetesClient fabric8Client = new DefaultKubernetesClient().inNamespace("jx");
+    private final SimpleKubernetesClient client = new DefaultSimpleKubernetesClient(fabric8Client);
+    private final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+
+    @BeforeEach
+    void deleteEntandoApps() {
+        Arrays.asList(ProvidedCapability.class, TestResource.class, EntandoApp.class)
+                .forEach(resourceType -> await().atMost(3, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
+                    if (fabric8Client.customResources(resourceType).inNamespace(NAMESPACE).list().getItems().isEmpty()) {
+                        return true;
+                    } else {
+                        fabric8Client.customResources(resourceType).inNamespace(NAMESPACE).delete();
+                        return false;
+                    }
+                }));
+
+    }
 
     @Test
     @Description("Should deploy all the capabilities required for an EntandoApp")
-    void smokeTest() throws Exception {
+    void smokeTest() {
         fabric8Client.customResources(ProvidedCapability.class).inNamespace(NAMESPACE).delete();
         await().atMost(20, TimeUnit.SECONDS).ignoreExceptions()
                 .until(() -> fabric8Client.customResources(ProvidedCapability.class).inNamespace(NAMESPACE).list().getItems().isEmpty());
@@ -93,7 +110,7 @@ class ControllerCoordinatorSmokeTest {
                     new DefaultSimpleK8SClient(fabric8Client),
                     NAMESPACE);
             final ProvidedCapability keycloakCapability = keycloakProvider.createKeycloakCapability();
-            await().atMost(1, TimeUnit.MINUTES).ignoreExceptions()
+            await().atMost(2, TimeUnit.MINUTES).ignoreExceptions()
                     .until(() -> fabric8Client.customResources(ProvidedCapability.class).inNamespace(NAMESPACE)
                             .withName(keycloakCapability.getMetadata().getName()).fromServer().get().getStatus().getPhase()
                             == EntandoDeploymentPhase.SUCCESSFUL);
