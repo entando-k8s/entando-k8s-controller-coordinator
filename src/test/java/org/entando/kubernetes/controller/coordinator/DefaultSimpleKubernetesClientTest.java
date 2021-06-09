@@ -65,7 +65,7 @@ import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 @EnableRuleMigrationSupport
 class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTestBase {
 
-    public static final String MY_POD = "my-pod";
+
     DefaultSimpleKubernetesClient myClient;
 
     public DefaultSimpleKubernetesClient getMyClient() {
@@ -76,15 +76,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
 
     @BeforeEach
     void deletePods() {
-        super.deleteAll(getFabric8Client().customResources(TestResource.class));
-        await().atMost(1, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
-            if (getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get() == null) {
-                return true;
-            } else {
-                getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).delete();
-                return false;
-            }
-        });
+        super.deletePods();
         final ConfigMap crdMap = getMyClient()
                 .findOrCreateControllerConfigMap(CoordinatorUtils.ENTANDO_CRD_NAMES_CONFIGMAP_NAME);
         crdMap.setData(Objects.requireNonNullElseGet(crdMap.getData(), HashMap::new));

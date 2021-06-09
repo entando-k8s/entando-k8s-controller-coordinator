@@ -39,6 +39,9 @@ import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
 import org.entando.kubernetes.fluentspi.TestResource;
+import org.entando.kubernetes.model.app.EntandoApp;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
+import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.test.common.ValueHolder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -70,18 +73,6 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
         return this.myClient;
     }
 
-    @BeforeEach
-    void deletePods() {
-        super.deleteAll(getFabric8Client().customResources(TestResource.class));
-        await().atMost(1, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
-            if (getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get() == null) {
-                return true;
-            } else {
-                getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).delete();
-                return false;
-            }
-        });
-    }
 
     @Test
     @Description("Should delete pods and wait until they have been successfully deleted ")
