@@ -52,6 +52,8 @@ import org.entando.kubernetes.model.capability.ProvidedCapability;
 import org.entando.kubernetes.model.capability.StandardCapabilityImplementation;
 import org.entando.kubernetes.model.common.DbmsVendor;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
+import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.test.common.KeycloakTestCapabilityProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -73,14 +75,15 @@ class ControllerCoordinatorSmokeTest {
 
     @BeforeEach
     void deleteEntandoApps() {
-        ofNullable(client.loadControllerSecret("test-ca-secret")).ifPresent(TrustStoreHelper::trustCertificateAuthoritiesIn);
-        ofNullable(client.loadControllerSecret("test-tls-secret"))
+        ofNullable(fabric8Client.secrets().inNamespace(NAMESPACE).withName("test-ca-secret").get())
+                .ifPresent(TrustStoreHelper::trustCertificateAuthoritiesIn);
+        ofNullable(fabric8Client.secrets().inNamespace(NAMESPACE).withName("test-tls-secret").get())
                 .ifPresent(s -> System.setProperty(EntandoOperatorConfigProperty.ENTANDO_TLS_SECRET_NAME.getJvmSystemProperty(),
                         s.getMetadata().getName()));
-        ofNullable(client.loadControllerSecret("test-ca-secret"))
+        ofNullable(fabric8Client.secrets().inNamespace(NAMESPACE).withName("test-ca-secret").get())
                 .ifPresent(s -> System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty(),
                         s.getMetadata().getName()));
-        Arrays.asList(ProvidedCapability.class, TestResource.class, EntandoApp.class)
+        Arrays.asList(ProvidedCapability.class, TestResource.class, EntandoApp.class, EntandoDatabaseService.class, EntandoKeycloakServer.class)
                 .forEach(resourceType -> await().atMost(3, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
                     if (fabric8Client.customResources(resourceType).inNamespace(NAMESPACE).list().getItems().isEmpty()) {
                         return true;
@@ -94,13 +97,6 @@ class ControllerCoordinatorSmokeTest {
     @Test
     @Description("Should deploy all the capabilities required for an EntandoApp")
     void smokeTest() {
-        fabric8Client.customResources(ProvidedCapability.class).inNamespace(NAMESPACE).delete();
-        await().atMost(20, TimeUnit.SECONDS).ignoreExceptions()
-                .until(() -> fabric8Client.customResources(ProvidedCapability.class).inNamespace(NAMESPACE).list().getItems().isEmpty());
-        TestFixturePreparation.prepareTestFixture(fabric8Client,
-                new TestFixtureRequest().deleteAll(EntandoApp.class)
-                        .fromNamespace(NAMESPACE));
-
         String ingressHostname = MY_APP + "." + NAMESPACE + "." + EntandoOperatorConfig.getDefaultRoutingSuffix().orElse("apps.serv.run");
         //TODO migrate this to TestResource and create a really simple Controller for it to execute
         step("Given that the entando-k8s-controller-coordinator has been deployed along with the entando-k8s-service", () -> {
@@ -175,6 +171,7 @@ class ControllerCoordinatorSmokeTest {
         step("And I can connect to the EntandoApp's health check path", () -> {
             final String strUrl = HttpTestHelper.getDefaultProtocol() + "://" + ingressHostname
                     + "/entando-de-app/api/health";
+            System.out.println("Attempting to connect to " + strUrl);
             await().atMost(2, TimeUnit.MINUTES).ignoreExceptions()
                     .until(() -> HttpTestHelper.statusOk(strUrl));
         });

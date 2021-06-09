@@ -57,7 +57,7 @@ relatedImages:
     version: 6.3.8
   entando_k8s_keycloak_controller:
     sha256: 76609a063c158163cc0813b8dfb73555416841d749466c9549c8d413bb91af36
-    version: 0.0.0-SNAPSHOT-PR-28-10
+    version: 0.0.0-SNAPSHOT-PR-28-12
   entando_k8s_plugin_controller:
     sha256: a20c753dda86e0f54f210e446b404733045ba426fc7186dc3936daed8224fbcb
     version: 6.3.7
