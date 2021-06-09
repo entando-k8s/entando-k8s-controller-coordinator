@@ -27,6 +27,7 @@ import org.entando.kubernetes.controller.support.client.impl.AbstractK8SIntegrat
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
 import org.entando.kubernetes.fluentspi.TestResource;
 import org.entando.kubernetes.model.app.EntandoApp;
+import org.entando.kubernetes.model.capability.ProvidedCapability;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.junit.jupiter.api.AfterEach;
@@ -54,6 +55,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
         super.deleteAll(getFabric8Client().customResources(EntandoApp.class));
         super.deleteAll(getFabric8Client().customResources(EntandoKeycloakServer.class));
         super.deleteAll(getFabric8Client().customResources(EntandoDatabaseService.class));
+        super.deleteAll(getFabric8Client().customResources(ProvidedCapability.class));
         await().atMost(1, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
             if (getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get() == null) {
                 return true;
