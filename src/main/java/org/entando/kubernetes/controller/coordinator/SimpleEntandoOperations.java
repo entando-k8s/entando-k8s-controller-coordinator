@@ -16,17 +16,9 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import static org.entando.kubernetes.controller.coordinator.CoordinatorUtils.callIoVulnerable;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.client.Watch;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-import java.io.IOException;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 
 public interface SimpleEntandoOperations {
@@ -49,43 +41,4 @@ public interface SimpleEntandoOperations {
 
     String getControllerNamespace();
 
-    class CustomResourceWatcher implements Watcher<String> {
-
-        private static final Logger LOGGER = Logger.getLogger(CustomResourceWatcher.class.getName());
-        private final SimpleEntandoOperations operations;
-        private final SerializedResourceWatcher observer;
-
-        public CustomResourceWatcher(SimpleEntandoOperations operations, SerializedResourceWatcher observer) {
-            this.operations = operations;
-            this.observer = observer;
-        }
-
-        @Override
-        public void eventReceived(Action action, String s) {
-            callIoVulnerable(() -> {
-                final SerializedEntandoResource r = new ObjectMapper().readValue(s, SerializedEntandoResource.class);
-                r.setDefinition(operations.getDefinitionContext());
-                observer.eventReceived(action, r);
-                return null;
-            });
-
-        }
-
-        @Override
-        public void onClose(WatcherException cause) {
-            if (cause.getMessage().contains("resourceVersion") && cause.getMessage().contains("too old")) {
-                LOGGER.log(Level.WARNING, () -> "EntandoResourceObserver closed due to out of date resourceVersion. Reconnecting ... ");
-                operations.watch(observer);
-            } else {
-                LOGGER.log(Level.SEVERE, cause, () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
-                Liveness.dead();
-            }
-        }
-
-    }
-
-    interface IoVulnerable<T> {
-
-        T call() throws IOException;
-    }
 }

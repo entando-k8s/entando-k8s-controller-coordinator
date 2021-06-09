@@ -131,6 +131,8 @@ class PodManagementTests implements FluentIntegrationTesting, FluentTraversals,
                     .on(thePrimaryContainerOn(firstPod.get()))).isEqualTo(testResource.get().getMetadata().getName());
             assertThat(theVariableNamed(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_NAMESPACE.name())
                     .on(thePrimaryContainerOn(firstPod.get()))).isEqualTo(testResource.get().getMetadata().getNamespace());
+            assertThat(theVariableNamed(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_KIND.name())
+                    .on(thePrimaryContainerOn(firstPod.get()))).isEqualTo(testResource.get().getKind());
 
         });
         step("And this pod remains present even if I complete the deployment of the TestResource successfully", () -> {
@@ -158,9 +160,10 @@ class PodManagementTests implements FluentIntegrationTesting, FluentTraversals,
                         "false"));
         ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created a new TestResource resource", () -> {
+            final TestResource entandoCustomResource = new TestResource().withNames(clientDouble.getNamespace(), "test-keycloak")
+                    .withSpec(new BasicDeploymentSpecBuilder().withDbms(DbmsVendor.EMBEDDED).build());
             testResource.set(clientDouble.createOrPatchEntandoResource(CoordinatorTestUtils.toSerializedResource(
-                    new TestResource().withNames(clientDouble.getNamespace(), "test-keycloak")
-                            .withSpec(new BasicDeploymentSpecBuilder().withDbms(DbmsVendor.EMBEDDED).build()))));
+                    entandoCustomResource)));
             attachment("TestResource", objectMapper.writeValueAsString(testResource.get()));
         });
         ValueHolder<Pod> firstPod = new ValueHolder<>();
@@ -172,10 +175,9 @@ class PodManagementTests implements FluentIntegrationTesting, FluentTraversals,
         });
         step("When I force a second attempt at processing the resource", () -> {
             final SerializedEntandoResource reloaded = clientDouble.reload(testResource.get());
-            reloaded.getMetadata().setAnnotations(Map.of(AnnotationNames.PROCESSING_INSTRUCTION.name(), "force"));
+            reloaded.getMetadata().setAnnotations(Map.of(AnnotationNames.PROCESSING_INSTRUCTION.getName(), "force"));
             clientDouble.createOrPatchEntandoResource(reloaded);
         });
-        ValueHolder<Pod> secondPod = new ValueHolder<>();
         step("Then a new pod was created", () -> {
             await().atMost(4, TimeUnit.SECONDS).ignoreExceptions()
                     .until(() -> {
@@ -190,14 +192,6 @@ class PodManagementTests implements FluentIntegrationTesting, FluentTraversals,
             final List<Pod> pods = clientDouble.loadPods(clientDouble.getNamespace(), labelsFromResource(testResource.get()));
             assertThat(pods.size()).isOne();
         });
-        //        //And the pod is given the necessary information to resolve the resource being processed
-        //        assertThat(theVariableNamed(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_NAME.name())
-        //                        .on(thePrimaryContainerOn(theControllerPod.get())),
-        //                is(testResource.getMetadata().getName()));
-        //        assertThat(theVariableNamed(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_NAMESPACE.name())
-        //                        .on(thePrimaryContainerOn(theControllerPod.get())),
-        //                is(testResource.getMetadata().getNamespace()));
-
     }
 
     @Test

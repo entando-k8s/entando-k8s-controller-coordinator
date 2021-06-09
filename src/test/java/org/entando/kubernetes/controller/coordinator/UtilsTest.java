@@ -18,6 +18,7 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -83,7 +84,7 @@ class UtilsTest {
 
     @Test
     void testIoVulnerability() {
-        assertThatIllegalStateException().isThrownBy(() -> CoordinatorUtils.callIoVulnerable(() -> {
+        assertThatIllegalStateException().isThrownBy(() -> ioSafe(() -> {
             throw new IOException();
         }));
     }

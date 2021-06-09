@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.entando.kubernetes.controller.coordinator.ControllerCoordinatorConfig;
 import org.entando.kubernetes.controller.coordinator.CoordinatorUtils;
+import org.entando.kubernetes.controller.coordinator.CustomResourceStringWatcher;
 import org.entando.kubernetes.controller.coordinator.SerializedResourceWatcher;
 import org.entando.kubernetes.controller.coordinator.SimpleEntandoOperations;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
@@ -75,30 +76,33 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
 
     @Override
     public Watch watch(SerializedResourceWatcher watcher) {
-        final CustomResourceWatcher stringWatcher = new CustomResourceWatcher(this, watcher);
-        final Watcher<HasMetadata> watcherDelegate = new Watcher<>() {
-            @Override
-            public void eventReceived(Action action, HasMetadata hasMetadata) {
-                try {
-                    stringWatcher.eventReceived(action, new ObjectMapper().writeValueAsString(hasMetadata));
-                } catch (JsonProcessingException e) {
-                    throw new IllegalStateException(e);
-                }
-            }
+        final CustomResourceStringWatcher stringWatcher = new CustomResourceStringWatcher(watcher,
+                getDefinitionContext(),
+                customResourceWatcher -> {
+                    final Watcher<HasMetadata> watcherDelegate = new Watcher<>() {
+                        @Override
+                        public void eventReceived(Action action, HasMetadata hasMetadata) {
+                            try {
+                                customResourceWatcher.eventReceived(action, new ObjectMapper().writeValueAsString(hasMetadata));
+                            } catch (JsonProcessingException e) {
+                                throw new IllegalStateException(e);
+                            }
+                        }
 
-            @Override
-            public void onClose(WatcherException e) {
-                stringWatcher.onClose(e);
-            }
-        };
-        if (ofNullable(this.namespace).isPresent()) {
-            getCluster().getResourceProcessor().watch(watcherDelegate, definitionContext, this.namespace);
-        } else {
-            getCluster().getResourceProcessor().watch(watcherDelegate, definitionContext);
-        }
-        return () -> {
-
-        };
+                        @Override
+                        public void onClose(WatcherException e) {
+                            customResourceWatcher.onClose(e);
+                        }
+                    };
+                    if (ofNullable(this.namespace).isPresent()) {
+                        getCluster().getResourceProcessor().watch(watcherDelegate, definitionContext, this.namespace);
+                    } else {
+                        getCluster().getResourceProcessor().watch(watcherDelegate, definitionContext);
+                    }
+                    return () -> {
+                    };
+                });
+        return stringWatcher;
     }
 
     @Override

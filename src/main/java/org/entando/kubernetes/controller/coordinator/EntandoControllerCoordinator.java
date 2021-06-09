@@ -23,8 +23,6 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.quarkus.runtime.StartupEvent;
 import java.util.Arrays;
@@ -45,13 +43,13 @@ import org.entando.kubernetes.model.capability.ProvidedCapability;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 @ApplicationScoped
-public class EntandoControllerCoordinator implements Watcher<CustomResourceDefinition> {
+public class EntandoControllerCoordinator implements RestartingWatcher<CustomResourceDefinition> {
 
     public static final String CAPABILITY_ORG = ".capability.org";
     private final SimpleKubernetesClient client;
     private static final Logger LOGGER = Logger.getLogger(EntandoControllerCoordinator.class.getName());
     private final Map<String, String> derivedControllerImageMap = new ConcurrentHashMap<>();
-    private ConfigMap controllerImageOverrides;
+    private ControllerImageOverridesWatcher controllerImageOverrides;
     private final Map<String, EntandoResourceObserver> observers = new ConcurrentHashMap<>();
     private CrdNameMapSync crdNameMapSync;
     private Watch crdWatch;
@@ -66,34 +64,23 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     }
 
     public void onStartup(@Observes StartupEvent ev) {
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 1");
-        client.watchControllerConfigMap(CoordinatorUtils.ENTANDO_OPERATOR_CONFIG, new ConfigListener());
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 2");
-        this.controllerImageOverrides = client.findOrCreateControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP);
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 3");
-        client.watchControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP, new ControllerImageOverridesWatcher());
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 4");
+        new ConfigListener(client);
+        this.controllerImageOverrides = new ControllerImageOverridesWatcher(client);
         final List<CustomResourceDefinition> customResourceDefinitions = client.loadCustomResourceDefinitionsOfInterest().stream()
                 .filter(CoordinatorUtils::isOfInterest)
                 .collect(Collectors.toList());
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 5");
         this.crdNameMapSync = new CrdNameMapSync(client, customResourceDefinitions);
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 6");
         customResourceDefinitions.forEach(this::processCustomResourceDefinition);
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 7");
-        this.crdWatch = client.watchCustomResourceDefinitions(this);
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 8");
+        getRestartingAction().run();
         customResourceDefinitions.forEach(this::startObservingInstances);
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 9");
         observers.computeIfAbsent(CoordinatorUtils.keyOf(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
                 key -> new EntandoResourceObserver(
                         this.client.getOperations(CustomResourceDefinitionContext.fromCustomResourceType(ProvidedCapability.class)),
                         this::startImage,
                         crdNameMapSync,
                         1L));
-        LOGGER.log(Level.SEVERE, "Starting up controller-coordinator 10");
-
         Liveness.alive();
+        LOGGER.log(Level.INFO, "The EntandoControllerCoordinator has started up successfully");
     }
 
     private void startObservingInstances(CustomResourceDefinition crd) {
@@ -124,7 +111,7 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
         final Optional<String> controllerImageAnnotation = CoordinatorUtils.resolveAnnotation(r, AnnotationNames.CONTROLLER_IMAGE);
         controllerImageAnnotation.ifPresent(controllerImage -> derivedControllerImageMap.put(CoordinatorUtils.keyOf(r), controllerImage));
         Optional<String> controllerImage = controllerImageAnnotation
-                .or(() -> CoordinatorUtils.resolveValue(this.controllerImageOverrides, CoordinatorUtils.keyOf(r)));
+                .or(() -> CoordinatorUtils.resolveValue(getControllerImageOverrides(), CoordinatorUtils.keyOf(r)));
         if (controllerImage.isEmpty()) {
             LOGGER.log(Level.WARNING,
                     () -> format("CRD %s has neither the %s annotation, nor is there an entry in the configmap %s for %s",
@@ -140,6 +127,10 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
 
     }
 
+    private ConfigMap getControllerImageOverrides() {
+        return this.controllerImageOverrides.getControllerImageOverrides();
+    }
+
     private String sanitize(String key) {
         return key.toLowerCase(Locale.ROOT);
     }
@@ -147,12 +138,10 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     public String getControllerImageFor(SerializedEntandoResource resource) {
         String imageName;
         if (resource.getKind().equals(ProvidedCapability.class.getSimpleName())) {
-            System.out.println(this.derivedControllerImageMap);
-            System.out.println(this.controllerImageOverrides.getData());
-            imageName = ofNullable(resolveCapabilityFromMap(resource, this.controllerImageOverrides.getData()))
+            imageName = ofNullable(resolveCapabilityFromMap(resource, getControllerImageOverrides().getData()))
                     .orElse(resolveCapabilityFromMap(resource, this.derivedControllerImageMap));
         } else {
-            imageName = ofNullable(resolveCustomControllerFromMap(resource, this.controllerImageOverrides.getData()))
+            imageName = ofNullable(resolveCustomControllerFromMap(resource, getControllerImageOverrides().getData()))
                     .orElse(resolveCustomControllerFromMap(resource, this.derivedControllerImageMap));
         }
         return ofNullable(imageName).orElse(CoordinatorUtils.NO_IMAGE);
@@ -200,23 +189,8 @@ public class EntandoControllerCoordinator implements Watcher<CustomResourceDefin
     }
 
     @Override
-    public void onClose(WatcherException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "EntandoControllerCoordinator closed. Can't reconnect. The container should restart now.");
-        Liveness.dead();
+    public Runnable getRestartingAction() {
+        return () -> this.crdWatch = client.watchCustomResourceDefinitions(this);
     }
 
-    private class ControllerImageOverridesWatcher implements Watcher<ConfigMap> {
-
-        @Override
-        public void eventReceived(Action action, ConfigMap configMap) {
-            EntandoControllerCoordinator.this.controllerImageOverrides = configMap;
-        }
-
-        @Override
-        public void onClose(WatcherException cause) {
-            LOGGER.log(Level.SEVERE, cause,
-                    () -> "ConfigMapObserver closed. Can't reconnect. The container should restart now.");
-            Liveness.dead();
-        }
-    }
 }

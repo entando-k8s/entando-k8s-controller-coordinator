@@ -20,13 +20,12 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
-import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class CrdNameMapSync implements Watcher<CustomResourceDefinition> {
+class CrdNameMapSync implements RestartingWatcher<CustomResourceDefinition> {
 
     private static final Logger LOGGER = Logger.getLogger(CrdNameMapSync.class.getName());
     private ConfigMap crdNameMap;
@@ -37,7 +36,12 @@ class CrdNameMapSync implements Watcher<CustomResourceDefinition> {
         crdNameMap = client.findOrCreateControllerConfigMap(CoordinatorUtils.ENTANDO_CRD_NAMES_CONFIGMAP_NAME);
         customResourceDefinitions.forEach(this::syncName);
         this.crdNameMap = client.patchControllerConfigMap(crdNameMap);
-        client.watchCustomResourceDefinitions(this);
+        getRestartingAction().run();
+    }
+
+    @Override
+    public Runnable getRestartingAction() {
+        return () -> this.client.watchCustomResourceDefinitions(this);
     }
 
     @Override

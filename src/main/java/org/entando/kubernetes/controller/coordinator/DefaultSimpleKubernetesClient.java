@@ -18,7 +18,8 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
-import static org.entando.kubernetes.controller.coordinator.CoordinatorUtils.callIoVulnerable;
+import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.interruptionSafe;
+import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.ConfigMap;
@@ -107,7 +108,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
                 .withFieldPath("status")
                 .endInvolvedObject();
         client.v1().events().inNamespace(customResource.getMetadata().getNamespace()).create(eventPopulator.apply(doneableEvent).build());
-        return callIoVulnerable(() -> {
+        return ioSafe(() -> {
             SerializedEntandoResource ser = customResource;
             CustomResourceDefinitionContext definition = Optional.ofNullable(ser.getDefinition()).orElse(
                     resolveDefinitionContext(ser));
@@ -157,13 +158,9 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
     public void removePodsAndWait(String namespace, Map<String, String> labels) {
         FilterWatchListDeletable<Pod, PodList> podResource = client.pods().inNamespace(namespace).withLabels(labels);
         podResource.delete();
-        try {
-            podResource.waitUntilCondition(pod -> podResource.list().getItems().isEmpty(),
-                    ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(), TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
-        }
+        interruptionSafe(() ->
+                podResource.waitUntilCondition(pod -> podResource.list().getItems().isEmpty(),
+                        ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(), TimeUnit.SECONDS));
     }
 
     @Override

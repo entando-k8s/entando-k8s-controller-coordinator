@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.WatcherException;
 import java.io.File;
 import java.nio.file.Paths;
+import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
@@ -43,7 +44,7 @@ class ConfigListenerTest {
     @Test
     void shoulReflectLatestConfig() {
         //Given the operator is alive and listening to K8S resource events
-        final ConfigListener configListener = new ConfigListener();
+        final ConfigListener configListener = new ConfigListener(new SimpleKubernetesClientDouble());
         //When the entando-operator-config configmap is updated
         configListener.eventReceived(Action.MODIFIED, new ConfigMapBuilder()
                 .addToData(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "400")
@@ -60,7 +61,7 @@ class ConfigListenerTest {
         final File file = Paths.get("/tmp/EntandoControllerCoordinator.ready").toFile();
         Liveness.alive();
         assertTrue(file.exists());
-        final ConfigListener configListener = new ConfigListener();
+        final ConfigListener configListener = new ConfigListener(new SimpleKubernetesClientDouble());
         //When the Operator loses the connection to the ConfigMap listener
         configListener.onClose(new WatcherException("Something went wrong"));
         //Then the operator has been killed

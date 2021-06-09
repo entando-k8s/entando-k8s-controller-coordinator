@@ -322,7 +322,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
         step("Given Ihe Coordinator observes this namespace", () ->
                 System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
-        step("And I have created an TestResource resource", () -> {
+        step("And I have created a TestResource resource", () -> {
             testResource.set(createTestResource(10L, Collections.emptyMap()));
             attachment("TestResource", objectMapper.writeValueAsString(testResource.get()));
         });

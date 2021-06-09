@@ -17,7 +17,8 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
-import static org.entando.kubernetes.controller.coordinator.CoordinatorUtils.callIoVulnerable;
+import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.interruptionSafe;
+import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.ListOptions;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -66,24 +68,27 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
 
     @Override
     public SimpleEntandoOperations inAnyNamespace() {
-        return new DefaultSimpleEntandoOperations(client, definitionContext, operations.inAnyNamespace(), true);
+        return new DefaultSimpleEntandoOperations(client, getDefinitionContext(), operations.inAnyNamespace(), true);
     }
 
     @Override
     public Watch watch(SerializedResourceWatcher observer) {
-        try {
-            if (anyNamespace) {
-                return operations.watch((Map<String, String>) null, null, new CustomResourceWatcher(this, observer));
-            } else {
-                return operations
-                        .watch(operations.getNamespace(), null, null, (ListOptions) null, new CustomResourceWatcher(this, observer));
+        Function<CustomResourceStringWatcher, Watch> restartingAction = customResourceWatcher -> {
+            try {
+                if (anyNamespace) {
+                    return operations.watch((Map<String, String>) null, null, customResourceWatcher);
+                } else {
+                    return operations
+                            .watch(operations.getNamespace(), null, null, (ListOptions) null, customResourceWatcher);
+                }
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, e,
+                        () -> "EntandoResourceObserver registration failed. Can't recover. The container should restart now.");
+                Liveness.dead();
+                throw new IllegalStateException();
             }
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, e,
-                    () -> "EntandoResourceObserver registration failed. Can't recover. The container should restart now.");
-            Liveness.dead();
-        }
-        return null;
+        };
+        return new CustomResourceStringWatcher(observer, definitionContext, restartingAction);
     }
 
     @Override
@@ -100,7 +105,7 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
 
     @SuppressWarnings("unchecked")
     private SerializedEntandoResource editAnnotations(SerializedEntandoResource r, Consumer<Map<String, Object>> editAction) {
-        return callIoVulnerable(() -> {
+        return ioSafe(() -> {
             final Map<String, Object> map = operations.get(r.getMetadata().getNamespace(), r.getMetadata().getName());
             final Map<String, Object> metadata = (Map<String, Object>) map.get("metadata");
             final Map<String, Object> annotations = (Map<String, Object>) metadata
@@ -112,7 +117,7 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
     }
 
     private SerializedEntandoResource toResource(Map<String, Object> map) {
-        return callIoVulnerable(() -> {
+        return ioSafe(() -> {
             ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.readValue(objectMapper.writeValueAsString(map), SerializedEntandoResource.class);
         });
@@ -138,13 +143,11 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
         String namespace = client.getNamespace();
         FilterWatchListDeletable<Pod, PodList> podResource = client.pods().inNamespace(namespace).withLabels(
                 CoordinatorUtils.podLabelsFor(resource));
-        try {
+        interruptionSafe(() -> {
             waitForCompletionOfPods(podResource);
             removePodsAndWait(podResource);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
-        }
+            return null;
+        });
     }
 
     private void removePodsAndWait(FilterWatchListDeletable<Pod, PodList> podResource) throws InterruptedException {
@@ -159,7 +162,7 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
                     ignored -> podResource.list().getItems().stream().allMatch(pod -> PodResult.of(pod).getState() == State.COMPLETED),
                     ControllerCoordinatorConfig.getRemovalDelay(), TimeUnit.SECONDS);
         } catch (KubernetesClientException e) {
-            LOGGER.log(Level.WARNING, () -> format(
+            LOGGER.log(Level.WARNING, e, () -> format(
                     "Some pods remained active after the removal delay period. You can consider increasing the setting %s ",
                     ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty()));
         }

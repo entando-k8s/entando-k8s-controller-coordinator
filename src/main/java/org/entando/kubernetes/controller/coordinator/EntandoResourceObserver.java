@@ -17,6 +17,7 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import static java.lang.String.format;
+import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.interruptionSafe;
 
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher.Action;
@@ -64,8 +65,7 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
         processOperationInScope(operations, simpleEntandoOperations -> simpleEntandoOperations.list()
                 .forEach(entandoCustomResource -> eventReceived(Action.MODIFIED, entandoCustomResource)));
         processOperationInScope(operations, simpleEntandoOperations -> watchers.add(simpleEntandoOperations.watch(this)));
-        LOGGER.log(Level.INFO, "Listening to CRD " + operations.getDefinitionContext().getName());
-
+        LOGGER.log(Level.INFO, () -> format("Listening to CRD '%s'", operations.getDefinitionContext().getName()));
     }
 
     private static void processOperationInScope(SimpleEntandoOperations operations, Consumer<SimpleEntandoOperations> consumer) {
@@ -118,7 +118,8 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
                 }
             }
         } catch (Exception e) {
-            logFailure(resource, e);
+            LOGGER.log(Level.SEVERE, e, () -> format("Could not process the %s %s/%s", resource.getKind(),
+                    resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
         }
     }
 
@@ -146,11 +147,6 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
                 .map(aLong -> aLong.equals(resource.getMetadata().getGeneration()))
                 .orElse(false)
                 && resource.getStatus().getPhase() == EntandoDeploymentPhase.SUCCESSFUL;
-    }
-
-    private void logFailure(SerializedEntandoResource resource, Exception e) {
-        LOGGER.log(Level.SEVERE, e, () -> format("Could not process the %s %s/%s", resource.getKind(),
-                resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
     }
 
     private boolean performCriteriaProcessing(SerializedEntandoResource resource) {
@@ -239,17 +235,15 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
     }
 
     public void shutDownAndWait(int i, TimeUnit timeUnit) {
-        try {
+        interruptionSafe(() -> {
             watchers.forEach(Watch::close);
             watchers.clear();
             scheduler.shutdown();
             if (!scheduler.awaitTermination(i, timeUnit)) {
                 LOGGER.log(Level.WARNING, () -> "Could not shut EntandoResourceObserver down.");
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
-        }
+            return null;
+        });
     }
 
     public Long getCrdGeneration() {

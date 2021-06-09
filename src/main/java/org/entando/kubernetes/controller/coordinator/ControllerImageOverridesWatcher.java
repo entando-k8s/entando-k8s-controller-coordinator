@@ -17,25 +17,29 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
-import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 
-public class ConfigListener implements RestartingWatcher<ConfigMap> {
+public class ControllerImageOverridesWatcher implements RestartingWatcher<ConfigMap> {
 
     private final SimpleKubernetesClient client;
+    private ConfigMap controllerImageOverrides;
 
-    public ConfigListener(SimpleKubernetesClient client) {
+    public ControllerImageOverridesWatcher(SimpleKubernetesClient client) {
         this.client = client;
+        this.controllerImageOverrides = client.findOrCreateControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP);
         getRestartingAction().run();
     }
 
     @Override
-    public void eventReceived(Action action, ConfigMap resource) {
-        EntandoOperatorConfigBase.setConfigMap(resource);
+    public void eventReceived(Action action, ConfigMap configMap) {
+        this.controllerImageOverrides = configMap;
+    }
+
+    public ConfigMap getControllerImageOverrides() {
+        return controllerImageOverrides;
     }
 
     @Override
     public Runnable getRestartingAction() {
-        return () -> client.watchControllerConfigMap(CoordinatorUtils.ENTANDO_OPERATOR_CONFIG, this);
+        return () -> client.watchControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP, this);
     }
-
 }

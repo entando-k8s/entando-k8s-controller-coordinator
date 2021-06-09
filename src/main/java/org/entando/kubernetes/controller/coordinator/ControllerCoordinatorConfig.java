@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Optional;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
-import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 
 public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
 
@@ -44,10 +43,6 @@ public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
         } else {
             return getNamespacesToObserve().stream().anyMatch("*"::equals);
         }
-    }
-
-    public static boolean storeLogEntries() {
-        return lookupProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES).map(s -> s.equals("true")).orElse(false);
     }
 
     public static long getPodShutdownTimeoutSeconds() {
