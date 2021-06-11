@@ -97,7 +97,8 @@ class ControllerCoordinatorSmokeTest {
     @Test
     @Description("Should deploy all the capabilities required for an EntandoApp")
     void smokeTest() {
-        String ingressHostname = MY_APP + "." + NAMESPACE + "." + EntandoOperatorConfig.getDefaultRoutingSuffix().orElse("apps.serv.run");
+        //NB!!! Wildcard certs can't have more than 1 segment before the defaultRoutingSuffix: https://datatracker.ietf.org/doc/html/rfc2818#section-3.1
+        String ingressHostname = MY_APP + "-" + NAMESPACE + "." + EntandoOperatorConfig.getDefaultRoutingSuffix().orElse("apps.serv.run");
         //TODO migrate this to TestResource and create a really simple Controller for it to execute. However, keep in mind
         //that the operator service account doesn't have access to TestResources
         step("Given that the entando-k8s-controller-coordinator has been deployed along with the entando-k8s-service", () -> {
