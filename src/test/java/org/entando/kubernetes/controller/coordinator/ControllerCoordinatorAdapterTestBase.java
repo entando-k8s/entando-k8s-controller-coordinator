@@ -24,46 +24,27 @@ import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.support.client.impl.AbstractK8SIntegrationTest;
-import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
-import org.entando.kubernetes.fluentspi.TestResource;
-import org.entando.kubernetes.model.app.EntandoApp;
-import org.entando.kubernetes.model.capability.ProvidedCapability;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
-import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 
 public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIntegrationTest {
 
     public static final String MY_POD = "my-pod";
-    public static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("coordinator-namespace");
+
+    protected void awaitDefaultToken(String namespace) {
+        await().atMost(30, TimeUnit.SECONDS).ignoreExceptions()
+                .until(() -> getFabric8Client().secrets().inNamespace(namespace).list()
+                        .getItems().stream().anyMatch(secret -> isValidTokenSecret(secret, "default")));
+    }
 
     @Override
     protected String[] getNamespacesToUse() {
-        return new String[]{NAMESPACE, NAMESPACE + "2"};
+        return new String[]{MY_APP_NAMESPACE_1, MY_APP_NAMESPACE_2};
     }
 
     protected NamespacedKubernetesClient getNamespacedKubernetesClient() {
-        final NamespacedKubernetesClient c = new DefaultKubernetesClient().inNamespace(NAMESPACE);
+        final NamespacedKubernetesClient c = new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1);
         registerCrd(c);
         return c;
-    }
-
-    @BeforeEach
-    void deletePods() {
-        super.deleteAll(getFabric8Client().customResources(TestResource.class));
-        super.deleteAll(getFabric8Client().customResources(EntandoApp.class));
-        super.deleteAll(getFabric8Client().customResources(EntandoKeycloakServer.class));
-        super.deleteAll(getFabric8Client().customResources(EntandoDatabaseService.class));
-        super.deleteAll(getFabric8Client().customResources(ProvidedCapability.class));
-        await().atMost(1, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
-            if (getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get() == null) {
-                return true;
-            } else {
-                getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).delete();
-                return false;
-            }
-        });
     }
 
     @AfterEach

@@ -16,9 +16,6 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
@@ -28,37 +25,12 @@ public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
     private ControllerCoordinatorConfig() {
     }
 
-    public static boolean garbageCollectSuccessfullyCompletedPods() {
-        return lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS).map(Boolean::valueOf)
-                .orElse(false);
-    }
-
     public static Optional<String> getOperatorServiceAccount() {
         return lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_SERVICEACCOUNT);
     }
 
-    public static boolean isClusterScopedDeployment() {
-        if (getOperatorDeploymentType() == OperatorDeploymentType.OLM) {
-            return getNamespacesToObserve().isEmpty();
-        } else {
-            return getNamespacesToObserve().stream().anyMatch("*"::equals);
-        }
-    }
-
     public static long getPodShutdownTimeoutSeconds() {
         return lookupProperty(EntandoOperatorSpiConfigProperty.ENTANDO_POD_SHUTDOWN_TIMEOUT_SECONDS).map(Long::valueOf).orElse(120L);
-    }
-
-    public static OperatorDeploymentType getOperatorDeploymentType() {
-        return lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE)
-                .map(OperatorDeploymentType::resolve)
-                .orElse(OperatorDeploymentType.HELM);
-    }
-
-    public static List<String> getNamespacesToObserve() {
-        return lookupProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE).map(s -> s.split(SEPERATOR_PATTERN))
-                .map(Arrays::asList)
-                .orElse(new ArrayList<>());
     }
 
     public static Integer getRemovalDelay() {
@@ -67,7 +39,4 @@ public class ControllerCoordinatorConfig extends EntandoOperatorConfigBase {
                 .orElse(30);
     }
 
-    public static String getEntandoDockerImageInfoConfigMap() {
-        return lookupProperty(ControllerCoordinatorProperty.ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP).orElse("entando-docker-image-info");
-    }
 }

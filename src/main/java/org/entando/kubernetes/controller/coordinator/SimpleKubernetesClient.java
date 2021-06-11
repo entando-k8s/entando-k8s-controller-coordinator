@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.Collection;
 import java.util.Map;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public interface SimpleKubernetesClient {
@@ -39,7 +40,7 @@ public interface SimpleKubernetesClient {
     Secret overwriteControllerSecret(Secret secret);
 
     default ConfigMap loadDockerImageInfoConfigMap() {
-        return findOrCreateControllerConfigMap(ControllerCoordinatorConfig.getEntandoDockerImageInfoConfigMap());
+        return findOrCreateControllerConfigMap(EntandoOperatorConfig.getEntandoDockerImageInfoConfigMap());
     }
 
     Pod startPod(Pod pod);

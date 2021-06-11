@@ -46,6 +46,7 @@ import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.client.doubles.EntandoResourceClientDouble;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.FluentIntegrationTesting;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.fluentspi.BasicDeploymentSpecBuilder;
 import org.entando.kubernetes.fluentspi.TestResource;
 import org.entando.kubernetes.model.capability.ProvidedCapabilityBuilder;
@@ -80,7 +81,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     void shutdownSchedulers() {
         coordinator.shutdownObservers(5, TimeUnit.SECONDS);
         LogInterceptor.getLogEntries().clear();
-        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
+        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty());
@@ -90,7 +91,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @BeforeEach
     void prepareCrds() throws IOException {
         System.setProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty(), "true");
-        System.clearProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
+        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION_TO_REPLACE.getJvmSystemProperty());
         final CustomResourceDefinition testResourceDefinition = objectMapper
@@ -118,7 +119,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @Description("Should run existing resources when starting up the ControllerCoordinator")
     void testExistingResourcesProcessed() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource", () ->
                 testResource.set(createTestResource(1L, Collections.emptyMap())));
@@ -137,7 +138,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @Description("Resource modification events should be ignored when Kubernetes it twice with the same resource version")
     void testDuplicatesIgnored() {
         step("Given the Coordinator observes this namespace", () -> {
-            System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
+            System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE);
             coordinator.onStartup(new StartupEvent());
         });
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
@@ -175,7 +176,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             + ".org/processing-instruction=ignore'")
     void testIgnoreInstruction() {
         step("Given e Coordinator observes this namespace", () ->
-                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
 
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource with the 'ignore' processing instruction", () -> {
@@ -201,7 +202,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     @Description("Resources should be ignored when they are owned by other resources of interest")
     void testIgnoredWhenOwnedByResourceOfInterest() {
         step("Given  the Coordinator observes this namespace", () ->
-                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         ValueHolder<SerializedEntandoResource> owningResource = new ValueHolder<>();
         step("And I have created another resource of interest, a ProvidedCapability", () -> {
             owningResource.set(clientDouble.createOrPatchEntandoResource(CoordinatorTestUtils.toSerializedResource(
@@ -242,7 +243,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             + "same as the 'observedGeneration' property on its status")
     void testGenerationObservedIsSameAsCurrent() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created an TestResource resource", () -> {
             testResource.set(createTestResource(10L, Collections.emptyMap()));
@@ -276,7 +277,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
                     + " its status")
     void testGenerationObservedIsCurrentButForceInstructed() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
 
         step("And I have created an TestResource resource with the 'force' processing instruction", () -> {
@@ -320,7 +321,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             + "resource is higher than the 'observedGeneration' property on its status")
     void testGenerationObservedIsBehind() {
         step("Given Ihe Coordinator observes this namespace", () ->
-                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
         step("And I have created a TestResource resource", () -> {
             testResource.set(createTestResource(10L, Collections.emptyMap()));
@@ -351,7 +352,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             + " version of the operator")
     void testProcessedByVersion() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         step("And the current version of the operator is 6.3.1", () ->
                 System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1"));
         final ValueHolder<SerializedEntandoResource> testResource = new ValueHolder<>();
@@ -388,7 +389,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
             + " Operator that is now being replaced")
     void testUpgrade() {
         step("Given the Coordinator observes this namespace", () ->
-                System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
+                System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(), OBSERVED_NAMESPACE));
         step("And the current version of the operator is 6.3.1", () ->
                 System.setProperty(ControllerCoordinatorProperty.ENTANDO_K8S_OPERATOR_VERSION.getJvmSystemProperty(), "6.3.1"));
         step("And the version of the operator to replace was 6.3.0", () ->

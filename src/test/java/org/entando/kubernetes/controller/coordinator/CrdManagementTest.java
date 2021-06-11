@@ -42,6 +42,7 @@ import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClie
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.support.client.doubles.AbstractK8SClientDouble;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
 import org.entando.kubernetes.model.capability.ProvidedCapabilityBuilder;
 import org.entando.kubernetes.model.capability.StandardCapability;
@@ -127,7 +128,7 @@ class CrdManagementTest {
     @Description("New instances of my CustomResources should result in my controller image to be executed against the resource")
     void testCustomResourceEvent() throws IOException {
         step("Given I have prepared a cluster scoped deployment of the EntandoOperator",
-                () -> System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE
+                () -> System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE
                         .getJvmSystemProperty(), "*"));
         step("And I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
@@ -220,7 +221,7 @@ class CrdManagementTest {
                     + "a controller image for it (yet)")
     void testCustomResourceEventWithNoControllerImage() throws IOException {
         step("Given I have prepared a cluster scoped deployment of the EntandoOperator",
-                () -> System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE
+                () -> System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE
                         .getJvmSystemProperty(), "*"));
         step("And I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
@@ -265,7 +266,7 @@ class CrdManagementTest {
             + "ProvidedCapability")
     void testCapabilityEvent() throws IOException {
         step("Given I prepared a namespace scoped deployment of the EntandoOperator",
-                () -> System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE
+                () -> System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE
                         .getJvmSystemProperty(), MY_NAMESPACE));
         step("Given I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
@@ -324,7 +325,7 @@ class CrdManagementTest {
             + " ConfigMap to be executed against the resource rather than the one on my CRD's annotation")
     void testCustomResourceEventWithControllerImageOverride() throws IOException {
         step("Given I have prepared a cluster scoped deployment of the EntandoOperator",
-                () -> System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE
+                () -> System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE
                         .getJvmSystemProperty(), "*"));
         step("And I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
@@ -381,7 +382,7 @@ class CrdManagementTest {
             + CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP + " ConfigMap to be executed against the ProvidedCapability")
     void testCapabilityEventWithControllerImageOverride() throws IOException {
         step("Given I prepared a namespace scoped deployment of the EntandoOperator",
-                () -> System.setProperty(ControllerCoordinatorProperty.ENTANDO_NAMESPACES_TO_OBSERVE
+                () -> System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE
                         .getJvmSystemProperty(), MY_NAMESPACE));
         step("Given I have started the Entando Operator", () -> entandoControllerCoordinator.onStartup(new StartupEvent()));
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());

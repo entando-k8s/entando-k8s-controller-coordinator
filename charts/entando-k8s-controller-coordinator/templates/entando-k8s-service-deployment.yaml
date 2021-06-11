@@ -14,7 +14,7 @@ spec:
         deployment: entando-k8s-service
     spec:
       restartPolicy: Always
-      serviceAccountName: entando-k8s-service
+      serviceAccountName: entando-operator
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
       securityContext: {}

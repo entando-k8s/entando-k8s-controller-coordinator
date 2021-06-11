@@ -39,11 +39,7 @@ import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
 import org.entando.kubernetes.fluentspi.TestResource;
-import org.entando.kubernetes.model.app.EntandoApp;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
-import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.test.common.ValueHolder;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
@@ -77,13 +73,14 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
     @Test
     @Description("Should delete pods and wait until they have been successfully deleted ")
     void shouldRemoveSuccessfullyCompletedPods() {
-        final TestResource testResource = new TestResource().withNames(NAMESPACE, "my-test-resource");
+        awaitDefaultToken(MY_APP_NAMESPACE_1);
+        final TestResource testResource = new TestResource().withNames(MY_APP_NAMESPACE_1, "my-test-resource");
         step("Given I have a TestResource", () -> attachment("TestResource", objectMapper.writeValueAsString(testResource)));
         step("And I have started a service pod with the label associated with this resource that will complete after 1 second", () -> {
-            final Pod startedPod = getFabric8Client().pods().inNamespace(NAMESPACE).create(new PodBuilder()
+            final Pod startedPod = getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).create(new PodBuilder()
                     .withNewMetadata()
                     .withName(MY_POD)
-                    .withNamespace(NAMESPACE)
+                    .withNamespace(MY_APP_NAMESPACE_1)
                     .addToLabels(CoordinatorUtils.podLabelsFor(testResource))
                     .endMetadata()
                     .withNewSpec()
@@ -99,16 +96,16 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
         });
         step("And I have waited for the pod to be ready", () -> {
             await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() ->
-                    PodResult.of(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()).getState()
+                    PodResult.of(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()).getState()
                             != State.CREATING);
             attachment("Started Pod", objectMapper
-                    .writeValueAsString(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()));
+                    .writeValueAsString(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()));
         });
         step("When I remove all the successfully completed pods", () -> {
             getMyOperations().removeSuccessfullyCompletedPods(CoordinatorTestUtils.toSerializedResource(testResource));
         });
         step("Then that pod will be absent immediately after the call finished", () -> {
-            assertThat(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()).isNull();
+            assertThat(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()).isNull();
         });
     }
 
@@ -117,8 +114,8 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
     void shouldAndAndRemoveAnnotations() {
         ValueHolder<SerializedEntandoResource> resource = new ValueHolder<>();
         step("Given I have a TestResource", () -> {
-            final TestResource testResource = new TestResource().withNames(NAMESPACE, "my-test-resource");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE).create(testResource);
+            final TestResource testResource = new TestResource().withNames(MY_APP_NAMESPACE_1, "my-test-resource");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1).create(testResource);
             resource.set(CoordinatorTestUtils.toSerializedResource(testResource));
             attachment("TestResource", objectMapper.writeValueAsString(resource.get()));
         });
@@ -142,12 +139,12 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
     @Test
     @Description("Should list in any namespace")
     void shouldListInAnyNamespace() {
-        step(format("Given I have created two TestResource in namespaces %s and %s", NAMESPACE, NAMESPACE + "1"), () -> {
-            final TestResource testResource1 = new TestResource().withNames(NAMESPACE, "my-test-resource1");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE).create(testResource1);
+        step(format("Given I have created two TestResource in namespaces %s and %s", MY_APP_NAMESPACE_1, MY_APP_NAMESPACE_1 + "1"), () -> {
+            final TestResource testResource1 = new TestResource().withNames(MY_APP_NAMESPACE_1, "my-test-resource1");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1).create(testResource1);
             attachment("TestResource 1", objectMapper.writeValueAsString(testResource1));
-            final TestResource testResource2 = new TestResource().withNames(NAMESPACE + "2", "my-test-resource2");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE + "2").create(testResource2);
+            final TestResource testResource2 = new TestResource().withNames(MY_APP_NAMESPACE_2, "my-test-resource2");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_2).create(testResource2);
             attachment("TestResource 2", objectMapper.writeValueAsString(testResource2));
         });
         List<SerializedEntandoResource> actual = new ArrayList<>();
@@ -164,17 +161,17 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
     @Test
     @Description("Should list in a single namespace")
     void shouldListInSingleNamespace() {
-        step(format("Given I have created two TestResource in namespaces %s and %s", NAMESPACE, NAMESPACE + "1"), () -> {
-            final TestResource testResource1 = new TestResource().withNames(NAMESPACE, "my-test-resource1");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE).create(testResource1);
+        step(format("Given I have created two TestResource in namespaces %s and %s", MY_APP_NAMESPACE_1, MY_APP_NAMESPACE_1 + "1"), () -> {
+            final TestResource testResource1 = new TestResource().withNames(MY_APP_NAMESPACE_1, "my-test-resource1");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1).create(testResource1);
             attachment("TestResource 1", objectMapper.writeValueAsString(testResource1));
-            final TestResource testResource2 = new TestResource().withNames(NAMESPACE + "2", "my-test-resource2");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE + "2").create(testResource2);
+            final TestResource testResource2 = new TestResource().withNames(MY_APP_NAMESPACE_2, "my-test-resource2");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_2).create(testResource2);
             attachment("TestResource 2", objectMapper.writeValueAsString(testResource2));
         });
         List<SerializedEntandoResource> actual = new ArrayList<>();
         step("When I list TestResources in any namespace", () -> {
-            actual.addAll(getMyOperations().inNamespace(NAMESPACE).list());
+            actual.addAll(getMyOperations().inNamespace(MY_APP_NAMESPACE_1).list());
         });
         step("Then both resources are found", () -> {
             await().atMost(10, TimeUnit.SECONDS).ignoreExceptions().until(() -> actual.size() == 1);
@@ -193,12 +190,12 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
                     (action, serializedEntandoResource) -> resourcesObserved
                             .put(serializedEntandoResource.getMetadata().getName(), serializedEntandoResource));
         });
-        step(format("When  I create two TestResource in namespaces %s and %s", NAMESPACE, NAMESPACE + "1"), () -> {
-            final TestResource testResource1 = new TestResource().withNames(NAMESPACE, "my-test-resource1");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE).create(testResource1);
+        step(format("When  I create two TestResource in namespaces %s and %s", MY_APP_NAMESPACE_1, MY_APP_NAMESPACE_1 + "1"), () -> {
+            final TestResource testResource1 = new TestResource().withNames(MY_APP_NAMESPACE_1, "my-test-resource1");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1).create(testResource1);
             attachment("TestResource 1", objectMapper.writeValueAsString(testResource1));
-            final TestResource testResource2 = new TestResource().withNames(NAMESPACE + "2", "my-test-resource2");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE + "2").create(testResource2);
+            final TestResource testResource2 = new TestResource().withNames(MY_APP_NAMESPACE_2, "my-test-resource2");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_2).create(testResource2);
             attachment("TestResource 2", objectMapper.writeValueAsString(testResource2));
         });
         step("Then both resources were observed", () -> {
@@ -212,17 +209,17 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
     @Description("Should watch in a single namespace")
     void shouldWatchInSingleNamespace() {
         final Map<String, SerializedEntandoResource> resourcesObserved = new ConcurrentHashMap<>();
-        step(format("Given I have registered a Watcher for TestResource in namespace %s", NAMESPACE + "2"), () -> {
-            getMyOperations().inNamespace(NAMESPACE + "2").watch(
+        step(format("Given I have registered a Watcher for TestResource in namespace %s", MY_APP_NAMESPACE_2), () -> {
+            getMyOperations().inNamespace(MY_APP_NAMESPACE_2).watch(
                     (action, serializedEntandoResource) -> resourcesObserved
                             .put(serializedEntandoResource.getMetadata().getName(), serializedEntandoResource));
         });
-        step(format("When  I create two TestResource in namespaces %s and %s", NAMESPACE, NAMESPACE + "1"), () -> {
-            final TestResource testResource1 = new TestResource().withNames(NAMESPACE, "my-test-resource1");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE).create(testResource1);
+        step(format("When  I create two TestResource in namespaces %s and %s", MY_APP_NAMESPACE_1, MY_APP_NAMESPACE_1 + "1"), () -> {
+            final TestResource testResource1 = new TestResource().withNames(MY_APP_NAMESPACE_1, "my-test-resource1");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1).create(testResource1);
             attachment("TestResource 1", objectMapper.writeValueAsString(testResource1));
-            final TestResource testResource2 = new TestResource().withNames(NAMESPACE + "2", "my-test-resource2");
-            getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE + "2").create(testResource2);
+            final TestResource testResource2 = new TestResource().withNames(MY_APP_NAMESPACE_2, "my-test-resource2");
+            getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_2).create(testResource2);
             attachment("TestResource 2", objectMapper.writeValueAsString(testResource2));
         });
         step("Then both resources were observed", () -> {

@@ -37,6 +37,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
 public class EntandoResourceObserver implements SerializedResourceWatcher {
@@ -69,10 +70,10 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
     }
 
     private static void processOperationInScope(SimpleEntandoOperations operations, Consumer<SimpleEntandoOperations> consumer) {
-        if (ControllerCoordinatorConfig.isClusterScopedDeployment()) {
+        if (EntandoOperatorConfig.isClusterScopedDeployment()) {
             consumer.accept(operations.inAnyNamespace());
         } else {
-            List<String> namespaces = ControllerCoordinatorConfig.getNamespacesToObserve();
+            List<String> namespaces = EntandoOperatorConfig.getNamespacesToObserve();
             if (namespaces.isEmpty()) {
                 namespaces.add(operations.getControllerNamespace());
             }
@@ -142,7 +143,7 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
     }
 
     private boolean needsToRemoveSuccessfullyCompletedPods(SerializedEntandoResource resource) {
-        return ControllerCoordinatorConfig.garbageCollectSuccessfullyCompletedPods()
+        return EntandoOperatorConfig.garbageCollectSuccessfullyCompletedPods()
                 && Optional.ofNullable(resource.getMetadata().getGeneration())
                 .map(aLong -> aLong.equals(resource.getMetadata().getGeneration()))
                 .orElse(false)

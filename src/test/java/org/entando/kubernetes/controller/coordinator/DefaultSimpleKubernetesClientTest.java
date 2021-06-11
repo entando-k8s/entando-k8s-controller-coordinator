@@ -65,18 +65,18 @@ import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 @EnableRuleMigrationSupport
 class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTestBase {
 
+    private static final String MY_APP = "my-app";
 
     DefaultSimpleKubernetesClient myClient;
 
     public DefaultSimpleKubernetesClient getMyClient() {
         this.myClient = Objects.requireNonNullElseGet(this.myClient,
-                () -> new DefaultSimpleKubernetesClient(new DefaultKubernetesClient().inNamespace(NAMESPACE)));
+                () -> new DefaultSimpleKubernetesClient(new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1)));
         return this.myClient;
     }
 
     @BeforeEach
-    void deletePods() {
-        super.deletePods();
+    void createCrdNameMap() {
         final ConfigMap crdMap = getMyClient()
                 .findOrCreateControllerConfigMap(CoordinatorUtils.ENTANDO_CRD_NAMES_CONFIGMAP_NAME);
         crdMap.setData(Objects.requireNonNullElseGet(crdMap.getData(), HashMap::new));
@@ -91,7 +91,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
             final Pod startedPod = getMyClient().startPod(new PodBuilder()
                     .withNewMetadata()
                     .withName(MY_POD)
-                    .withNamespace(NAMESPACE)
+                    .withNamespace(MY_APP_NAMESPACE_1)
                     .addToLabels("pod-label", "123")
                     .endMetadata()
                     .withNewSpec()
@@ -106,16 +106,16 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         });
         step("And I have waited for the pod to be ready", () -> {
             await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() ->
-                    PodResult.of(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()).getState()
+                    PodResult.of(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()).getState()
                             == State.READY);
             attachment("Started Pod", objectMapper
-                    .writeValueAsString(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()));
+                    .writeValueAsString(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()));
         });
         step("When I delete and wait for pods with the label 'pod-label=123'", () -> {
-            getMyClient().removePodsAndWait(NAMESPACE, Map.of("pod-label", "123"));
+            getMyClient().removePodsAndWait(MY_APP_NAMESPACE_1, Map.of("pod-label", "123"));
         });
         step("Then that pod will be absent immediately after the call finished", () -> {
-            assertThat(getFabric8Client().pods().inNamespace(NAMESPACE).withName(MY_POD).fromServer().get()).isNull();
+            assertThat(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()).isNull();
         });
     }
 
@@ -124,11 +124,12 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     void shouldUpdateStatusOfOpaqueCustomResource() throws IOException {
         ValueHolder<TestResource> testResource = new ValueHolder<>();
         step("Given I have created an instance of the CustomResourceDefinition TestResource", () -> {
-            testResource.set(getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE).create(new TestResource()
-                    .withNames(NAMESPACE, MY_APP)
-                    .withSpec(new BasicDeploymentSpecBuilder()
-                            .withReplicas(1)
-                            .build())));
+            testResource
+                    .set(getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1).create(new TestResource()
+                            .withNames(MY_APP_NAMESPACE_1, MY_APP)
+                            .withSpec(new BasicDeploymentSpecBuilder()
+                                    .withReplicas(1)
+                                    .build())));
             attachResource("TestResource", testResource.get());
         });
         SerializedEntandoResource serializedEntandoResource = objectMapper
@@ -141,7 +142,8 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         step("When I update its phase to 'successful'", () ->
                 getMyClient().updatePhase(serializedEntandoResource, EntandoDeploymentPhase.SUCCESSFUL));
         step("Then the updated status reflects on the TestResource", () -> {
-            final TestResource actual = getFabric8Client().customResources(TestResource.class).inNamespace(NAMESPACE).withName(MY_APP)
+            final TestResource actual = getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1)
+                    .withName(MY_APP)
                     .get();
             assertThat(actual.getStatus().getPhase()).isEqualTo(EntandoDeploymentPhase.SUCCESSFUL);
             attachResource("TestResource", actual);
