@@ -39,7 +39,7 @@ relatedImages:
     version: 6.3.66
   entando_k8s_app_controller:
     sha256: a46f844daac12da570387e4756a9f3f922622788265aff8c0a2fe49861c67c71
-    version: 0.0.0-SNAPSHOT-PR-32-12
+    version: 0.0.0-SNAPSHOT-PR-32-13
   entando_k8s_app_plugin_link_controller:
     sha256: aa7ba0861705213434e610530c5bf5da1bdb33f1834d3c346174f5a28145c0bd
     version: 6.3.5
