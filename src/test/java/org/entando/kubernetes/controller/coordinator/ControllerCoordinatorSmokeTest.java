@@ -43,7 +43,6 @@ import org.entando.kubernetes.controller.support.client.impl.SupportProducer;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.HttpTestHelper;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.fluentspi.TestResource;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.app.EntandoAppBuilder;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
@@ -82,7 +81,6 @@ class ControllerCoordinatorSmokeTest {
                 .ifPresent(s -> System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CA_SECRET_NAME.getJvmSystemProperty(),
                         s.getMetadata().getName()));
         Arrays.asList(ProvidedCapability.class,
-                TestResource.class,
                 EntandoApp.class,
                 EntandoDatabaseService.class,
                 EntandoKeycloakServer.class)
@@ -100,7 +98,8 @@ class ControllerCoordinatorSmokeTest {
     @Description("Should deploy all the capabilities required for an EntandoApp")
     void smokeTest() {
         String ingressHostname = MY_APP + "." + NAMESPACE + "." + EntandoOperatorConfig.getDefaultRoutingSuffix().orElse("apps.serv.run");
-        //TODO migrate this to TestResource and create a really simple Controller for it to execute
+        //TODO migrate this to TestResource and create a really simple Controller for it to execute. However, keep in mind
+        //that the operator service account doesn't have access to TestResources
         step("Given that the entando-k8s-controller-coordinator has been deployed along with the entando-k8s-service", () -> {
             final Service k8sSvc = fabric8Client.services().inNamespace(NAMESPACE).withName("entando-k8s-service")
                     .get();
