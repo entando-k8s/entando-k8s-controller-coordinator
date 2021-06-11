@@ -124,12 +124,11 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     void shouldUpdateStatusOfOpaqueCustomResource() throws IOException {
         ValueHolder<TestResource> testResource = new ValueHolder<>();
         step("Given I have created an instance of the CustomResourceDefinition TestResource", () -> {
-            testResource
-                    .set(getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1).create(new TestResource()
-                            .withNames(MY_APP_NAMESPACE_1, MY_APP)
-                            .withSpec(new BasicDeploymentSpecBuilder()
-                                    .withReplicas(1)
-                                    .build())));
+            testResource.set(createTestResource(new TestResource()
+                    .withNames(MY_APP_NAMESPACE_1, MY_APP)
+                    .withSpec(new BasicDeploymentSpecBuilder()
+                            .withReplicas(1)
+                            .build())));
             attachResource("TestResource", testResource.get());
         });
         SerializedEntandoResource serializedEntandoResource = objectMapper
@@ -178,10 +177,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
             });
         });
         step("When I create the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
-            final CustomResourceDefinition value = objectMapper
-                    .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
-                            CustomResourceDefinition.class);
-            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+            super.registerCrdResource(getFabric8Client(), "mycrds.test.org.crd.yaml");
         });
         step("Then the CustomResourceDefinition was ignored", () -> {
             assertThat(crds).doesNotContainKey("mycrds.test.org");
@@ -246,11 +242,10 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     @Test
     @Description("Should list CustomResourceDefinitions with the label 'entando.org/crd-of-interest'")
     void shouldListCustomResourceDefinitionsWithCrdOfInterestLabel() {
-        ValueHolder<TestResource> testResource = new ValueHolder<>();
         step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
             deleteMyCrd();
         });
-        step("And I have created the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
+        step("And I have created the CustomResourceDefinition MyCRD with the label 'entando.org/crd-of-interest'", () -> {
             final CustomResourceDefinition value = objectMapper
                     .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                             CustomResourceDefinition.class);
