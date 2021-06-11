@@ -49,7 +49,8 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
 
     @AfterEach
     void closeClient() {
-
+        getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
+        getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().withName("testresources.test.org").delete();
         getFabric8Client().close();
     }
 
