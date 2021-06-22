@@ -51,7 +51,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
             registerCrdResource(c, "mycrds.test.org.crd.yaml");
             await().atMost(20, TimeUnit.SECONDS).ignoreExceptions().until(() -> {
                 if (c.namespaces().withName(MY_APP_NAMESPACE_1).fromServer().get() == null) {
-                    c.namespaces().create(new NamespaceBuilder().withNewMetadata().withName(MY_APP_NAMESPACE_1).endMetadata().build());
+                    TestFixturePreparation.createNamespace(c,MY_APP_NAMESPACE_1);
                 }
                 //Wait for the API to be 100% available
                 final TestResource testResource1 = c.customResources(TestResource.class)
