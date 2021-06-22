@@ -17,6 +17,8 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarSource;
+import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.client.Watcher.Action;
@@ -101,6 +103,11 @@ public class ControllerExecutor {
                 null));
         addTo(result, new EnvVar(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_NAME.name(), resource.getMetadata().getName(), null));
         addTo(result, new EnvVar(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_KIND.name(), resource.getKind(), null));
+        addTo(result, new EnvVar(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.name(),null, new EnvVarSourceBuilder()
+                .withNewFieldRef()
+                .withFieldPath("metadata.name")
+                .endFieldRef()
+                .build()));
         return new ArrayList<>(result.values());
     }
 
