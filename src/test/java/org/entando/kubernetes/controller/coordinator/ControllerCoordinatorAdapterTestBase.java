@@ -48,7 +48,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
         try (final DefaultKubernetesClient c = new DefaultKubernetesClient()) {
             registerCrdResource(c, "testresources.test.org.crd.yaml");
             registerCrdResource(c, "mycrds.test.org.crd.yaml");
-            await().atMost(10, TimeUnit.SECONDS).ignoreExceptions().until(() -> {
+            await().atMost(20, TimeUnit.SECONDS).ignoreExceptions().until(() -> {
                 //Wait for the API to be 100% available
                 final TestResource testResource1 = c.customResources(TestResource.class)
                         .inNamespace(new TestResource().withNames(MY_APP_NAMESPACE_1, "my-app").getMetadata().getNamespace())
