@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.entando.kubernetes.controller.coordinator.common.CoordinatorTestUtils;
 import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
@@ -88,7 +89,7 @@ class LivenessTests implements FluentIntegrationTesting, FluentTraversals,
     }
 
     @AfterEach
-    void clearProperties() {
+    void clearProperties() throws TimeoutException {
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty());
         coordinator.shutdownObservers(5, TimeUnit.SECONDS);

@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
@@ -47,13 +48,13 @@ public class ControllerExecutor {
         this.imageName = imageName;
     }
 
-    public Pod startControllerFor(Action action, SerializedEntandoResource resource) {
+    public Pod startControllerFor(Action action, SerializedEntandoResource resource) throws TimeoutException {
         removeObsoleteControllerPods(resource);
         Pod pod = buildControllerPod(action, resource);
         return client.startPod(pod);
     }
 
-    private void removeObsoleteControllerPods(SerializedEntandoResource resource) {
+    private void removeObsoleteControllerPods(SerializedEntandoResource resource) throws TimeoutException {
         //We need to make sure they all terminate so that we don't have racing conditions between 2 controllers
         // processing the same resource
         this.client.removePodsAndWait(controllerNamespace, CoordinatorUtils.podLabelsFor(resource));

@@ -37,6 +37,7 @@ import io.quarkus.runtime.StartupEvent;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.entando.kubernetes.controller.coordinator.common.CoordinatorTestUtils;
 import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
@@ -70,7 +71,7 @@ class CrdManagementTest {
     final EntandoControllerCoordinator entandoControllerCoordinator = new EntandoControllerCoordinator(client);
 
     @AfterEach
-    void clearSystemProperties() {
+    void clearSystemProperties() throws TimeoutException {
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_STORE_LOG_ENTRIES.getJvmSystemProperty());
         entandoControllerCoordinator.shutdownObservers(30, TimeUnit.SECONDS);
         LogInterceptor.reset();

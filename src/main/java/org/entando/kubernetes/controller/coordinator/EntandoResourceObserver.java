@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -139,7 +140,13 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
     }
 
     private void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
-        scheduler.execute(() -> operations.removeSuccessfullyCompletedPods(resource));
+        scheduler.submit(() -> {
+            try {
+                operations.removeSuccessfullyCompletedPods(resource);
+            } catch (TimeoutException timeoutException) {
+                LOGGER.warning(timeoutException.getMessage());
+            }
+        });
     }
 
     private boolean needsToRemoveSuccessfullyCompletedPods(SerializedEntandoResource resource) {
@@ -235,7 +242,7 @@ public class EntandoResourceObserver implements SerializedResourceWatcher {
         }
     }
 
-    public void shutDownAndWait(int i, TimeUnit timeUnit) {
+    public void shutDownAndWait(int i, TimeUnit timeUnit) throws TimeoutException {
         interruptionSafe(() -> {
             watchers.forEach(Watch::close);
             watchers.clear();

@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.spi.common.SecretUtils;
 import org.entando.kubernetes.controller.support.client.impl.AbstractK8SIntegrationTest;
+import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.fluentspi.TestResource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -39,7 +40,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
     protected void awaitDefaultToken(String namespace) {
         await().atMost(30, TimeUnit.SECONDS).ignoreExceptions()
                 .until(() -> getFabric8Client().secrets().inNamespace(namespace).list()
-                        .getItems().stream().anyMatch(secret -> isValidTokenSecret(secret, "default")));
+                        .getItems().stream().anyMatch(secret -> TestFixturePreparation.isValidTokenSecret(secret, "default")));
     }
 
     @BeforeAll

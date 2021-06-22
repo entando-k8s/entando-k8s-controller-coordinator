@@ -26,12 +26,14 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.quarkus.runtime.StartupEvent;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -96,16 +98,22 @@ public class EntandoControllerCoordinator implements RestartingWatcher<CustomRes
         return observers.get(CoordinatorUtils.keyOf(context));
     }
 
-    public void shutdownObservers(int wait, TimeUnit timeUnit) {
+    public void shutdownObservers(int wait, TimeUnit timeUnit) throws TimeoutException {
         crdWatch.close();
-        this.observers.values().forEach(observer -> observer.shutDownAndWait(wait, timeUnit));
+        for (EntandoResourceObserver observer : this.observers.values()) {
+            observer.shutDownAndWait(wait, timeUnit);
+        }
     }
 
     private void processCustomResourceDefinition(CustomResourceDefinition r) {
         final String key = CoordinatorUtils.keyOf(r);
         final EntandoResourceObserver existingObserver = observers.get(key);
         if (existingObserver != null && existingObserver.getCrdGeneration() < r.getMetadata().getGeneration()) {
-            existingObserver.shutDownAndWait(10, TimeUnit.SECONDS);
+            try {
+                existingObserver.shutDownAndWait(10, TimeUnit.SECONDS);
+            } catch (TimeoutException timeoutException) {
+                LOGGER.warning(timeoutException.getMessage());
+            }
             observers.remove(key);
         }
         final Optional<String> controllerImageAnnotation = CoordinatorUtils.resolveAnnotation(r, AnnotationNames.CONTROLLER_IMAGE);

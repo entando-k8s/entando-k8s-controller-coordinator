@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.controller.coordinator.common.CoordinatorTestUtils;
 import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
@@ -78,7 +79,7 @@ class ControllerCoordinatorProcessingCriteriaTest implements FluentIntegrationTe
     ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
 
     @AfterEach
-    void shutdownSchedulers() {
+    void shutdownSchedulers() throws TimeoutException {
         coordinator.shutdownObservers(5, TimeUnit.SECONDS);
         LogInterceptor.getLogEntries().clear();
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());

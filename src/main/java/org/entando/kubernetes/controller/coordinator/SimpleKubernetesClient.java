@@ -25,6 +25,7 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
@@ -45,7 +46,7 @@ public interface SimpleKubernetesClient {
 
     Pod startPod(Pod pod);
 
-    void removePodsAndWait(String namespace, Map<String, String> labels);
+    void removePodsAndWait(String namespace, Map<String, String> labels) throws TimeoutException;
 
     ConfigMap findOrCreateControllerConfigMap(String name);
 

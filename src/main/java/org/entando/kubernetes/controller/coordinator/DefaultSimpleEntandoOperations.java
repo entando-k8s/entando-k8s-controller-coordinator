@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -139,7 +140,7 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
     }
 
     @Override
-    public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) {
+    public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) throws TimeoutException {
         String namespace = client.getNamespace();
         FilterWatchListDeletable<Pod, PodList> podResource = client.pods().inNamespace(namespace).withLabels(
                 CoordinatorUtils.podLabelsFor(resource));

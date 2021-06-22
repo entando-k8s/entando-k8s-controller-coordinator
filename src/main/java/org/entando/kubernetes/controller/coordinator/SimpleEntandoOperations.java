@@ -19,6 +19,7 @@ package org.entando.kubernetes.controller.coordinator;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 
 public interface SimpleEntandoOperations {
@@ -35,7 +36,7 @@ public interface SimpleEntandoOperations {
 
     SerializedEntandoResource putAnnotation(SerializedEntandoResource r, String name, String value);
 
-    void removeSuccessfullyCompletedPods(SerializedEntandoResource resource);
+    void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) throws TimeoutException;
 
     CustomResourceDefinitionContext getDefinitionContext();
 

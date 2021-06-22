@@ -46,6 +46,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
@@ -155,7 +156,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
     }
 
     @Override
-    public void removePodsAndWait(String namespace, Map<String, String> labels) {
+    public void removePodsAndWait(String namespace, Map<String, String> labels) throws TimeoutException {
         FilterWatchListDeletable<Pod, PodList> podResource = client.pods().inNamespace(namespace).withLabels(labels);
         podResource.delete();
         interruptionSafe(() ->
