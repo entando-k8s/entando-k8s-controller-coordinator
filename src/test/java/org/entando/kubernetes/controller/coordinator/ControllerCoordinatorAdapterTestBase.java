@@ -20,6 +20,7 @@ import static org.awaitility.Awaitility.await;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -49,6 +50,9 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
             registerCrdResource(c, "testresources.test.org.crd.yaml");
             registerCrdResource(c, "mycrds.test.org.crd.yaml");
             await().atMost(20, TimeUnit.SECONDS).ignoreExceptions().until(() -> {
+                if (c.namespaces().withName(MY_APP_NAMESPACE_1).fromServer().get() == null) {
+                    c.namespaces().create(new NamespaceBuilder().withNewMetadata().withName(MY_APP_NAMESPACE_1).endMetadata().build());
+                }
                 //Wait for the API to be 100% available
                 final TestResource testResource1 = c.customResources(TestResource.class)
                         .inNamespace(new TestResource().withNames(MY_APP_NAMESPACE_1, "my-app").getMetadata().getNamespace())
