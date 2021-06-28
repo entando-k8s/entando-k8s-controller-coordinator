@@ -58,12 +58,6 @@ class CrdNameMapSync implements RestartingWatcher<CustomResourceDefinition> {
         crdNameMap = new ConfigMapBuilder(crdNameMap).addToData(key, r.getMetadata().getName()).build();
     }
 
-    @Override
-    public void onClose(WatcherException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "EntandoControllerCoordinator closed. Can't reconnect. The container should restart now.");
-        Liveness.dead();
-    }
-
     public boolean isOfInterest(OwnerReference ownerReference) {
         final String key = CoordinatorUtils.keyOf(ownerReference);
         return CoordinatorUtils.resolveValue(crdNameMap, key).isPresent();
