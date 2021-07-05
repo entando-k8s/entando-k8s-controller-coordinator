@@ -16,10 +16,18 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import io.fabric8.kubernetes.api.model.EventBuilder;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.time.LocalDateTime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
+import org.entando.kubernetes.controller.spi.common.FormatUtils;
 
 public interface RestartingWatcher<T> extends Watcher<T> {
 
@@ -34,6 +42,32 @@ public interface RestartingWatcher<T> extends Watcher<T> {
         } else {
             Logger.getLogger(getClass().getName())
                     .log(Level.SEVERE, cause, () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
+            //This code is temporary just to try to figure out why it is restarting so often
+            final DefaultKubernetesClient client = new DefaultKubernetesClient();
+            final Pod pod = client.pods().inNamespace(client.getNamespace()).withName(EntandoOperatorSpiConfig.getControllerPodName())
+                    .get();
+            final StringWriter message = new StringWriter();
+            cause.printStackTrace(new PrintWriter(message));
+            client.v1().events().inNamespace(client.getNamespace()).create(new EventBuilder()
+                    .withNewMetadata()
+                    .withNamespace(client.getNamespace())
+                    .withName(EntandoOperatorSpiConfig.getControllerPodName() + "-restart")
+                    .addToLabels("entando-operator-restarted", "true")
+                    .endMetadata()
+                    .withCount(1)
+                    .withFirstTimestamp(FormatUtils.format(LocalDateTime.now()))
+                    .withLastTimestamp(FormatUtils.format(LocalDateTime.now()))
+                    .withNewInvolvedObject()
+                    .withApiVersion("")
+                    .withKind("Pod")
+                    .withNamespace(client.getNamespace())
+                    .withName(EntandoOperatorSpiConfig.getControllerPodName())
+                    .withUid(pod.getMetadata().getUid())
+                    .withResourceVersion(pod.getMetadata().getResourceVersion())
+                    .withFieldPath("status")
+                    .endInvolvedObject()
+                    .withMessage(message.toString())
+                    .build());
             Liveness.dead();
         }
 

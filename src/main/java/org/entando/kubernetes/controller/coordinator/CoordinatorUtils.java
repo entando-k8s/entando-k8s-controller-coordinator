@@ -86,6 +86,7 @@ public class CoordinatorUtils {
 
     public static Map<String, String> podLabelsFor(EntandoCustomResource resource) {
         return Map.of(
+                LabelNames.JOB_KIND.getName(), "deployer",
                 LabelNames.RESOURCE_KIND.getName(), resource.getKind(),
                 LabelNames.RESOURCE_NAMESPACE.getName(), resource.getMetadata().getNamespace(),
                 resource.getKind(), resource.getMetadata().getName());
