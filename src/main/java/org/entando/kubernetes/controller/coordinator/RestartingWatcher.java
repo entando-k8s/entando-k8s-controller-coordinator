@@ -42,32 +42,6 @@ public interface RestartingWatcher<T> extends Watcher<T> {
         } else {
             Logger.getLogger(getClass().getName())
                     .log(Level.SEVERE, cause, () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
-            //This code is temporary just to try to figure out why it is restarting so often
-            final DefaultKubernetesClient client = new DefaultKubernetesClient();
-            final Pod pod = client.pods().inNamespace(client.getNamespace()).withName(EntandoOperatorSpiConfig.getControllerPodName())
-                    .get();
-            final StringWriter message = new StringWriter();
-            cause.printStackTrace(new PrintWriter(message));
-            client.v1().events().inNamespace(client.getNamespace()).create(new EventBuilder()
-                    .withNewMetadata()
-                    .withNamespace(client.getNamespace())
-                    .withName(EntandoOperatorSpiConfig.getControllerPodName() + "-restart")
-                    .addToLabels("entando-operator-restarted", "true")
-                    .endMetadata()
-                    .withCount(1)
-                    .withFirstTimestamp(FormatUtils.format(LocalDateTime.now()))
-                    .withLastTimestamp(FormatUtils.format(LocalDateTime.now()))
-                    .withNewInvolvedObject()
-                    .withApiVersion("")
-                    .withKind("Pod")
-                    .withNamespace(client.getNamespace())
-                    .withName(EntandoOperatorSpiConfig.getControllerPodName())
-                    .withUid(pod.getMetadata().getUid())
-                    .withResourceVersion(pod.getMetadata().getResourceVersion())
-                    .withFieldPath("status")
-                    .endInvolvedObject()
-                    .withMessage(message.toString())
-                    .build());
             Liveness.dead();
         }
 
