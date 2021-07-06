@@ -37,18 +37,18 @@ import org.entando.kubernetes.controller.support.common.EntandoImageResolver;
 public class ControllerExecutor {
 
     private final SimpleKubernetesClient client;
-    private final EntandoImageResolver imageResolver;
+    private EntandoImageResolver imageResolver;
     private final String controllerNamespace;
     private final String imageName;
 
     public ControllerExecutor(String controllerNamespace, SimpleKubernetesClient client, String imageName) {
         this.controllerNamespace = controllerNamespace;
         this.client = client;
-        this.imageResolver = new EntandoImageResolver(client.loadDockerImageInfoConfigMap());
         this.imageName = imageName;
     }
 
     public Pod startControllerFor(Action action, SerializedEntandoResource resource) throws TimeoutException {
+        this.imageResolver = new EntandoImageResolver(client.loadDockerImageInfoConfigMap(), resource);
         removeObsoleteControllerPods(resource);
         Pod pod = buildControllerPod(action, resource);
         return client.startPod(pod);
@@ -104,7 +104,7 @@ public class ControllerExecutor {
                 null));
         addTo(result, new EnvVar(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_NAME.name(), resource.getMetadata().getName(), null));
         addTo(result, new EnvVar(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_KIND.name(), resource.getKind(), null));
-        addTo(result, new EnvVar(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.name(),null, new EnvVarSourceBuilder()
+        addTo(result, new EnvVar(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.name(), null, new EnvVarSourceBuilder()
                 .withNewFieldRef()
                 .withFieldPath("metadata.name")
                 .endFieldRef()
