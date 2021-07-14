@@ -18,9 +18,16 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.Secret;
 import java.nio.file.Paths;
+import java.util.List;
 import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
@@ -36,12 +43,22 @@ class TrustStoreSecretRegeneratorTest {
     @Test
     void testRegenerate() {
         final SimpleKubernetesClientDouble client = new SimpleKubernetesClientDouble();
-        CertificateSecretHelper.buildCertificateSecretsFromDirectory(
+        Secret oldCaSecret = CertificateSecretHelper.buildCertificateSecretsFromDirectory(
                 client.getControllerNamespace(),
                 Paths.get("src", "test", "resources", "tls", "ampie.dynu.net")
-        ).stream().peek(s -> s.getMetadata().setResourceVersion("1")).forEach(client::overwriteControllerSecret);
+        ).get(0);
+        client.overwriteControllerSecret(oldCaSecret);
         TrustStoreSecretRegenerator.regenerateIfNecessary(client);
-        assertThat(client.loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET), notNullValue());
+        Secret oldTrustStoreSecret = client.loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET);
+        assertThat(oldTrustStoreSecret, notNullValue());
+        Secret newCaSecret = client.loadControllerSecret(EntandoOperatorSpiConfig.getCertificateAuthoritySecretName().get());
+        //add file
+        newCaSecret.getData().put("some-other.crt", oldCaSecret.getData().get("ca.crt"));
+        client.overwriteControllerSecret(newCaSecret);
+        TrustStoreSecretRegenerator.regenerateIfNecessary(client);
+        Secret newTrustStoreSecret = client.loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET);
+        assertThat(newTrustStoreSecret, notNullValue());
+        assertNotEquals(newTrustStoreSecret.getMetadata().getResourceVersion(), oldTrustStoreSecret.getMetadata().getResourceVersion());
     }
 
     @AfterEach

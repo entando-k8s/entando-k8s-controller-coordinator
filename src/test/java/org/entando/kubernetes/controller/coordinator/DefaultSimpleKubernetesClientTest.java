@@ -18,11 +18,13 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static io.qameta.allure.Allure.attachment;
 import static io.qameta.allure.Allure.step;
+import static java.util.Optional.ofNullable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Event;
+import io.fabric8.kubernetes.api.model.EventBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
@@ -30,6 +32,7 @@ import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinitionList;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
@@ -38,6 +41,7 @@ import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +50,11 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
+import org.entando.kubernetes.controller.spi.common.FormatUtils;
 import org.entando.kubernetes.controller.spi.common.LabelNames;
+import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
 import org.entando.kubernetes.fluentspi.BasicDeploymentSpecBuilder;
@@ -68,10 +76,13 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     private static final String MY_APP = "my-app";
 
     DefaultSimpleKubernetesClient myClient;
+    private NamespacedKubernetesClient kubernetesClient;
 
     public DefaultSimpleKubernetesClient getMyClient() {
+        this.kubernetesClient = Objects
+                .requireNonNullElseGet(this.kubernetesClient, () -> new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1));
         this.myClient = Objects.requireNonNullElseGet(this.myClient,
-                () -> new DefaultSimpleKubernetesClient(new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1)));
+                () -> new DefaultSimpleKubernetesClient(kubernetesClient));
         return this.myClient;
     }
 
@@ -317,6 +328,52 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         step("Then I have received an event for the ConfigMap", () -> {
             await().atMost(10, TimeUnit.SECONDS).ignoreExceptions().until(() -> configMaps.containsKey("my-configmap"));
             assertThat(configMaps).containsKeys("my-configmap");
+        });
+
+    }
+
+    @Test
+    @Description("Should issue Death events")
+    void shouldIssueDeathEvent() {
+        ValueHolder<Pod> startedPod = new ValueHolder<>();
+        step("Given I have started a dummy pod with the name 'my-pod'", () -> {
+            startedPod.set(getMyClient().startPod(new PodBuilder()
+                    .withNewMetadata()
+                    .withName(MY_POD)
+                    .withNamespace(MY_APP_NAMESPACE_1)
+                    .endMetadata()
+                    .withNewSpec()
+                    .addNewContainer()
+                    .withImage("busybox")
+                    .withName("busybox")
+                    .endContainer()
+                    .endSpec()
+                    .build()));
+            System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.getJvmSystemProperty(),
+                    startedPod.get().getMetadata().getName());
+            attachment("Started Pod", objectMapper.writeValueAsString(startedPod.get()));
+        });
+        Event event = new EventBuilder()
+                .withNewMetadata()
+                .withName(EntandoOperatorSpiConfig.getControllerPodName() + "-restart-" + NameUtils.randomNumeric(4))
+                .addToLabels("entando-operator-restarted", "true")
+                .endMetadata()
+                .withCount(1)
+                .withFirstTimestamp(FormatUtils.format(LocalDateTime.now()))
+                .withLastTimestamp(FormatUtils.format(LocalDateTime.now()))
+                .withMessage("blah")
+                .build();
+
+        step("When issue a death event against this pod",
+                () -> myClient.issueOperatorDeathEvent(event));
+
+        step("It reflects on the cluster", () -> {
+            Event actual = kubernetesClient.v1().events()
+                    .withName(event.getMetadata().getName())
+                    .fromServer().get();
+            assertThat(actual).isNotNull();
+            assertThat(actual.getInvolvedObject().getUid()).isEqualTo(startedPod.get().getMetadata().getUid());
+
         });
 
     }

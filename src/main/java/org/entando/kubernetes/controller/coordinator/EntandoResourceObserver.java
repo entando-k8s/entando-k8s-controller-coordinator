@@ -19,6 +19,7 @@ package org.entando.kubernetes.controller.coordinator;
 import static java.lang.String.format;
 import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.interruptionSafe;
 
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import java.util.ArrayList;

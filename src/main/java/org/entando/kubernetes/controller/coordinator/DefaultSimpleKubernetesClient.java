@@ -56,7 +56,7 @@ import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
-public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
+public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implements SimpleKubernetesClient {
 
     //There will only be once instance per thread for the duration of the Pod's life
     @SuppressWarnings("java:S5164")
@@ -64,11 +64,10 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
             .withInitial(() -> DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss'Z'"));
 
     Map<String, CustomResourceDefinitionContext> definitionContextMap = new ConcurrentHashMap<>();
-    private final KubernetesClient client;
 
     public DefaultSimpleKubernetesClient(KubernetesClient client) {
+        super(client);
 
-        this.client = client;
     }
 
     @Override
@@ -132,7 +131,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
                         .withName(ofNullable(
                                 ofNullable(findOrCreateControllerConfigMap(CoordinatorUtils.ENTANDO_CRD_NAMES_CONFIGMAP_NAME).getData())
                                         .orElse(Collections.emptyMap()).get(key))
-                                .orElseThrow(IllegalStateException::new)).get()));
+                                .orElseThrow(IllegalStateException::new)).fromServer().get()));
     }
 
     @Override
@@ -142,7 +141,7 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
 
     @Override
     public Secret loadControllerSecret(String s) {
-        return client.secrets().inNamespace(getControllerNamespace()).withName(s).get();
+        return client.secrets().inNamespace(getControllerNamespace()).withName(s).fromServer().get();
     }
 
     @Override
@@ -166,14 +165,16 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
 
     @Override
     public ConfigMap findOrCreateControllerConfigMap(String name) {
-        return Objects.requireNonNullElseGet(this.client.configMaps().inNamespace(getControllerNamespace()).withName(name).get(), () ->
-                this.client.configMaps().inNamespace(getControllerNamespace())
-                        .create(new ConfigMapBuilder()
-                                .withNewMetadata()
-                                .withNamespace(getControllerNamespace())
-                                .withName(name)
-                                .endMetadata()
-                                .build()));
+        return Objects.requireNonNullElseGet(
+                this.client.configMaps().inNamespace(getControllerNamespace()).withName(name).fromServer().get(),
+                () ->
+                        this.client.configMaps().inNamespace(getControllerNamespace())
+                                .create(new ConfigMapBuilder()
+                                        .withNewMetadata()
+                                        .withNamespace(getControllerNamespace())
+                                        .withName(name)
+                                        .endMetadata()
+                                        .build()));
     }
 
     @Override
@@ -202,6 +203,11 @@ public class DefaultSimpleKubernetesClient implements SimpleKubernetesClient {
     @Override
     public SimpleEntandoOperations getOperations(CustomResourceDefinitionContext context) {
         return new DefaultSimpleEntandoOperations(client, context, client.customResource(context), true);
+    }
+
+    @Override
+    public void deleteControllerSecret(String secretName) {
+        client.secrets().inNamespace(getControllerNamespace()).withName(secretName).delete();
     }
 
     public List<Event> listEventsFor(EntandoCustomResource resource) {

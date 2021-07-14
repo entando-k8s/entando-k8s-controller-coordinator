@@ -19,6 +19,7 @@ package org.entando.kubernetes.controller.coordinator;
 import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.function.Function;
@@ -29,6 +30,7 @@ public class CustomResourceStringWatcher implements RestartingWatcher<String>, W
     private final SerializedResourceWatcher observer;
     private final CustomResourceDefinitionContext definitionContext;
     private final Function<CustomResourceStringWatcher, Watch> restartingFunction;
+    private DeathEventIssuer deathEventIssuer;
     private Watch watch;
 
     public Watch getWatch() {
@@ -37,16 +39,23 @@ public class CustomResourceStringWatcher implements RestartingWatcher<String>, W
 
     public CustomResourceStringWatcher(SerializedResourceWatcher observer,
             CustomResourceDefinitionContext definitionContext,
-            Function<CustomResourceStringWatcher, Watch> restartingFunction) {
+            Function<CustomResourceStringWatcher, Watch> restartingFunction,
+            DeathEventIssuer deathEventIssuer) {
         this.observer = observer;
         this.definitionContext = definitionContext;
         this.restartingFunction = restartingFunction;
+        this.deathEventIssuer = deathEventIssuer;
         getRestartingAction().run();
     }
 
     @Override
     public Runnable getRestartingAction() {
         return () -> this.watch = restartingFunction.apply(this);
+    }
+
+    @Override
+    public void issueOperatorDeathEvent(Event event) {
+        deathEventIssuer.issueOperatorDeathEvent(event);
     }
 
     @Override

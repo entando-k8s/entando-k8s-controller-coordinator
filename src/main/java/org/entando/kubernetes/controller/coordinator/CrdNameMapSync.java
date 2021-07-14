@@ -18,6 +18,7 @@ package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.WatcherException;
@@ -42,6 +43,11 @@ class CrdNameMapSync implements RestartingWatcher<CustomResourceDefinition> {
     @Override
     public Runnable getRestartingAction() {
         return () -> this.client.watchCustomResourceDefinitions(this);
+    }
+
+    @Override
+    public void issueOperatorDeathEvent(Event event) {
+        client.issueOperatorDeathEvent(event);
     }
 
     @Override

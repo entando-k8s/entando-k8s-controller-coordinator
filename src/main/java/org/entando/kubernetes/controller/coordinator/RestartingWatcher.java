@@ -16,9 +16,8 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.EventBuilder;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import java.io.PrintWriter;
@@ -28,20 +27,37 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
 import org.entando.kubernetes.controller.spi.common.FormatUtils;
+import org.entando.kubernetes.controller.spi.common.NameUtils;
 
 public interface RestartingWatcher<T> extends Watcher<T> {
 
     Runnable getRestartingAction();
 
+    void issueOperatorDeathEvent(Event event);
+
     @Override
     default void onClose(WatcherException cause) {
-        if (cause.getMessage().contains("resourceVersion") && cause.getMessage().contains("too old")) {
+        final StringWriter stringWriter = new StringWriter();
+        cause.printStackTrace(new PrintWriter(stringWriter));
+        String message = stringWriter.toString();
+        if (message.contains("too old")) {
             Logger.getLogger(getClass().getName())
                     .log(Level.WARNING, () -> "EntandoResourceObserver closed due to out of date resourceVersion. Reconnecting ... ");
             getRestartingAction().run();
         } else {
             Logger.getLogger(getClass().getName())
                     .log(Level.SEVERE, cause, () -> "EntandoResourceObserver closed. Can't reconnect. The container should restart now.");
+            Event event = new EventBuilder()
+                    .withNewMetadata()
+                    .withName(EntandoOperatorSpiConfig.getControllerPodName() + "-restart-" + NameUtils.randomNumeric(4))
+                    .addToLabels("entando-operator-restarted", "true")
+                    .endMetadata()
+                    .withCount(1)
+                    .withFirstTimestamp(FormatUtils.format(LocalDateTime.now()))
+                    .withLastTimestamp(FormatUtils.format(LocalDateTime.now()))
+                    .withMessage(message)
+                    .build();
+            issueOperatorDeathEvent(event);
             Liveness.dead();
         }
 

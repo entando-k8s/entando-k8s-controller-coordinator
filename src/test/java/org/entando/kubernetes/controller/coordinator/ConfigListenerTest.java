@@ -28,6 +28,7 @@ import java.io.File;
 import java.nio.file.Paths;
 import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
@@ -39,6 +40,7 @@ class ConfigListenerTest {
     @AfterEach
     void resetConfigMap() {
         EntandoOperatorConfigBase.setConfigMap(null);
+        System.clearProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.getJvmSystemProperty());
     }
 
     @Test
@@ -47,6 +49,10 @@ class ConfigListenerTest {
         final ConfigListener configListener = new ConfigListener(new SimpleKubernetesClientDouble());
         //When the entando-operator-config configmap is updated
         configListener.eventReceived(Action.MODIFIED, new ConfigMapBuilder()
+                .withNewMetadata()
+                .withName("some-map")
+                .withNamespace("some-namespce")
+                .endMetadata()
                 .addToData(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "400")
                 .build());
         //Then the latest property value reflects
@@ -57,6 +63,7 @@ class ConfigListenerTest {
 
     @Test
     void shouldKillTheOperator() {
+        System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.getJvmSystemProperty(), "my-pod");
         //Given the operator is alive and listening to K8S resource events
         final File file = Paths.get("/tmp/EntandoControllerCoordinator.ready").toFile();
         Liveness.alive();

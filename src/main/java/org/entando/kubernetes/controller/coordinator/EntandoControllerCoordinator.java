@@ -20,6 +20,7 @@ import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
@@ -199,6 +200,11 @@ public class EntandoControllerCoordinator implements RestartingWatcher<CustomRes
     @Override
     public Runnable getRestartingAction() {
         return () -> this.crdWatch = client.watchCustomResourceDefinitions(this);
+    }
+
+    @Override
+    public void issueOperatorDeathEvent(Event event) {
+        client.issueOperatorDeathEvent(event);
     }
 
 }

@@ -18,6 +18,7 @@ package org.entando.kubernetes.controller.coordinator.common;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
@@ -66,7 +67,13 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
 
     @Override
     public Secret overwriteControllerSecret(Secret secret) {
-        getNamespace(CONTROLLER_NAMESPACE).putSecret(secret);
+        Secret existing = loadControllerSecret(secret.getMetadata().getName());
+        if (existing != null) {
+            //mimic a patch
+            secret.getMetadata().setUid(existing.getMetadata().getUid());
+            secret.getMetadata().setResourceVersion(existing.getMetadata().getResourceVersion());
+        }
+        getCluster().getResourceProcessor().processResource(getNamespace(CONTROLLER_NAMESPACE).getSecrets(), secret);
         return secret;
     }
 
@@ -127,6 +134,17 @@ public class SimpleKubernetesClientDouble extends AbstractK8SClientDouble implem
     @Override
     public SimpleEntandoOperations getOperations(CustomResourceDefinitionContext context) {
         return new SimpleEntandoOperationsDouble(getNamespaces(), context, getCluster());
+    }
+
+    @Override
+    public void deleteControllerSecret(String secretName) {
+        getNamespace(CONTROLLER_NAMESPACE).getSecrets().remove(secretName);
+    }
+
+    @Override
+    public void issueOperatorDeathEvent(Event event) {
+        event.getMetadata().setNamespace(getNamespace());
+        getNamespace(event).putEvent(event);
     }
 
     public SerializedEntandoResource createOrPatchEntandoResource(SerializedEntandoResource resource) {

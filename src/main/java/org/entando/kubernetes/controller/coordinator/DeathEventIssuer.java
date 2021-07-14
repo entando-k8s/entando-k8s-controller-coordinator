@@ -17,11 +17,8 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.Event;
-import io.fabric8.kubernetes.client.Watcher.Action;
-import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 
-public interface SerializedResourceWatcher {
+public interface DeathEventIssuer {
 
-    void eventReceived(Action action, SerializedEntandoResource resource);
-
+    void issueOperatorDeathEvent(Event event);
 }

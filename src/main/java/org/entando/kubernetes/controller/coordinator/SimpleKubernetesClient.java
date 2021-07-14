@@ -17,6 +17,7 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
@@ -30,7 +31,7 @@ import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
-public interface SimpleKubernetesClient {
+public interface SimpleKubernetesClient extends DeathEventIssuer {
 
     SerializedEntandoResource updatePhase(SerializedEntandoResource resource, EntandoDeploymentPhase phase);
 
@@ -59,4 +60,6 @@ public interface SimpleKubernetesClient {
     Collection<CustomResourceDefinition> loadCustomResourceDefinitionsOfInterest();
 
     SimpleEntandoOperations getOperations(CustomResourceDefinitionContext context);
+
+    void deleteControllerSecret(String secretName);
 }

@@ -38,6 +38,7 @@ import java.util.concurrent.TimeoutException;
 import org.entando.kubernetes.controller.coordinator.common.CoordinatorTestUtils;
 import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.FluentIntegrationTesting;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
@@ -92,6 +93,7 @@ class LivenessTests implements FluentIntegrationTesting, FluentTraversals,
     void clearProperties() throws TimeoutException {
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty());
         System.clearProperty(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty());
+        System.clearProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.getJvmSystemProperty());
         coordinator.shutdownObservers(5, TimeUnit.SECONDS);
         LogInterceptor.getLogEntries().clear();
         System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty());
@@ -102,6 +104,8 @@ class LivenessTests implements FluentIntegrationTesting, FluentTraversals,
     @Test
     @Description("Should create a  controller pod that points to the newly created resource")
     void shouldCreateControllerPodPointingToResource() {
+        System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.getJvmSystemProperty(), "my-pod");
+
         step("Given the Coordinator observes its own namespace", () -> {
             System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
                     clientDouble.getNamespace());

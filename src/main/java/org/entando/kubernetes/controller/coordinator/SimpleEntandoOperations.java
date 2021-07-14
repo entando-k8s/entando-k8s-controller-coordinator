@@ -16,13 +16,14 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 
-public interface SimpleEntandoOperations {
+public interface SimpleEntandoOperations extends DeathEventIssuer {
 
     SimpleEntandoOperations inNamespace(String namespace);
 

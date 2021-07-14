@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.Watch;
@@ -101,7 +102,7 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
                     }
                     return () -> {
                     };
-                });
+                }, this);
         return stringWatcher;
     }
 
@@ -161,5 +162,11 @@ public class SimpleEntandoOperationsDouble extends AbstractK8SClientDouble imple
     @Override
     public String getControllerNamespace() {
         return CONTROLLER_NAMESPACE;
+    }
+
+    @Override
+    public void issueOperatorDeathEvent(Event event) {
+        event.getMetadata().setNamespace(getControllerNamespace());
+        getNamespace(event).putEvent(event);
     }
 }

@@ -45,7 +45,7 @@ import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
 
-public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
+public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase implements SimpleEntandoOperations {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultSimpleEntandoOperations.class.getName());
 
@@ -56,6 +56,7 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
 
     public DefaultSimpleEntandoOperations(KubernetesClient client, CustomResourceDefinitionContext definitionContext,
             RawCustomResourceOperationsImpl operations, boolean anyNamespace) {
+        super(client);
         this.client = client;
         this.definitionContext = definitionContext;
         this.operations = operations;
@@ -89,7 +90,7 @@ public class DefaultSimpleEntandoOperations implements SimpleEntandoOperations {
                 throw new IllegalStateException();
             }
         };
-        return new CustomResourceStringWatcher(observer, definitionContext, restartingAction);
+        return new CustomResourceStringWatcher(observer, definitionContext, restartingAction, this);
     }
 
     @Override

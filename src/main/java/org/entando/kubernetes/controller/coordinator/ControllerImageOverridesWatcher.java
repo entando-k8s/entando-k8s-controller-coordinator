@@ -17,6 +17,7 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.Event;
 
 public class ControllerImageOverridesWatcher implements RestartingWatcher<ConfigMap> {
 
@@ -41,5 +42,10 @@ public class ControllerImageOverridesWatcher implements RestartingWatcher<Config
     @Override
     public Runnable getRestartingAction() {
         return () -> client.watchControllerConfigMap(CoordinatorUtils.CONTROLLER_IMAGE_OVERRIDES_CONFIGMAP, this);
+    }
+
+    @Override
+    public void issueOperatorDeathEvent(Event event) {
+        client.issueOperatorDeathEvent(event);
     }
 }

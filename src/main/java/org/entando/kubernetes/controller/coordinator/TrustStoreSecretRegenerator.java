@@ -16,32 +16,41 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Secret;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 
 public class TrustStoreSecretRegenerator {
 
-    private static final AtomicReference<String> LAST_CA_SECRET_RESOURCE_VERSION = new AtomicReference<>("");
+    private static final AtomicReference<Secret> LAST_CA_SECRET = new AtomicReference<>();
 
     private TrustStoreSecretRegenerator() {
 
     }
 
     public static void regenerateIfNecessary(SimpleKubernetesClient client) {
-        EntandoOperatorSpiConfig.getCertificateAuthoritySecretName()
-                .map(client::loadControllerSecret)
-                .filter(TrustStoreSecretRegenerator::hasNewResourceVersion)
-                .ifPresent(secret -> overwriteTrustStoreSecret(client, secret));
-    }
-
-    private static void overwriteTrustStoreSecret(SimpleKubernetesClient client, Secret secret) {
-        client.overwriteControllerSecret(TrustStoreHelper.newTrustStoreSecret(secret));
-        LAST_CA_SECRET_RESOURCE_VERSION.set(secret.getMetadata().getResourceVersion());
-    }
-
-    private static boolean hasNewResourceVersion(Secret secret) {
-        return !secret.getMetadata().getResourceVersion().equals(LAST_CA_SECRET_RESOURCE_VERSION.get());
+        Optional<Secret> caSecret = EntandoOperatorSpiConfig.getCertificateAuthoritySecretName()
+                .flatMap(name -> Optional.ofNullable(client.loadControllerSecret(name)));
+        LAST_CA_SECRET.getAndUpdate(lastSecret -> {
+            if (caSecret.isPresent()) {
+                Secret newValue = caSecret.get();
+                if (lastSecret == null
+                        || client.loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET) == null
+                        || !lastSecret.getMetadata().getUid().equals(newValue.getMetadata().getUid())
+                        || !lastSecret.getMetadata().getResourceVersion().equals(newValue.getMetadata().getResourceVersion())
+                ) {
+                    client.overwriteControllerSecret(TrustStoreHelper.newTrustStoreSecret(newValue));
+                    return newValue;
+                } else {
+                    return lastSecret;
+                }
+            } else {
+                client.deleteControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET);
+                return null;
+            }
+        });
     }
 }
