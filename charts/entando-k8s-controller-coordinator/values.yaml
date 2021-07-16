@@ -57,7 +57,7 @@ relatedImages:
     sha256: 37cbb78136bfb1a1d17c46df0cf610f76678ddde35ba0de8684f3722406bf988
     version: 0.0.0-SNAPSHOT-PR-28-29
   entando_k8s_plugin_controller:
-    sha256:6dc1b4affae769e878c2707bd15de9b0da0ba564e3f38cfb617064245be69926
+    sha256: 6dc1b4affae769e878c2707bd15de9b0da0ba564e3f38cfb617064245be69926
     version: 0.0.0-SNAPSHOT-PR-27-19
   entando_k8s_service:
     sha256: 4bb4300f3affa1afb2b5c99b92f0bbe5ba32dd6b358aeab5f053f5b33ada6086
