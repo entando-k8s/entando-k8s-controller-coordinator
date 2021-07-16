@@ -2,12 +2,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: pod-viewer
+  name: ingress-viewer
 rules:
   - apiGroups:
-      - ""
+      - "extensions"
+      - "networking.k8s.io"
     resources:
-      - pods
+      - "ingresses"
     verbs:
       - "list"
       - "get"

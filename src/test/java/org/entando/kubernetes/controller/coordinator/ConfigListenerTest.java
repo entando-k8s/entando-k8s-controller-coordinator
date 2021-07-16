@@ -14,7 +14,7 @@
  *
  */
 
-package org.entando.kubernetes.controller.coordinator.inprocesstests;
+package org.entando.kubernetes.controller.coordinator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -22,50 +22,55 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher.Action;
+import io.fabric8.kubernetes.client.WatcherException;
 import java.io.File;
 import java.nio.file.Paths;
-import org.entando.kubernetes.controller.coordinator.ConfigListener;
-import org.entando.kubernetes.controller.coordinator.EntandoControllerCoordinatorProperty;
-import org.entando.kubernetes.controller.coordinator.Liveness;
+import org.entando.kubernetes.controller.coordinator.common.SimpleKubernetesClientDouble;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorConfigBase;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tags({@Tag("unit"), @Tag("pre-deployment")})
+@Tags({@Tag("in-process"), @Tag("unit"), @Tag("pre-deployment")})
 class ConfigListenerTest {
 
     @AfterEach
     void resetConfigMap() {
         EntandoOperatorConfigBase.setConfigMap(null);
+        System.clearProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.getJvmSystemProperty());
     }
 
     @Test
     void shoulReflectLatestConfig() {
         //Given the operator is alive and listening to K8S resource events
-        final ConfigListener configListener = new ConfigListener();
+        final ConfigListener configListener = new ConfigListener(new SimpleKubernetesClientDouble());
         //When the entando-operator-config configmap is updated
         configListener.eventReceived(Action.MODIFIED, new ConfigMapBuilder()
-                .addToData(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "400")
+                .withNewMetadata()
+                .withName("some-map")
+                .withNamespace("some-namespce")
+                .endMetadata()
+                .addToData(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY.getJvmSystemProperty(), "400")
                 .build());
         //Then the latest property value reflects
         assertThat(
-                EntandoOperatorConfigBase.lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY).get(),
+                EntandoOperatorConfigBase.lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_CONTROLLER_REMOVAL_DELAY).get(),
                 is("400"));
     }
 
     @Test
     void shouldKillTheOperator() {
+        System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_CONTROLLER_POD_NAME.getJvmSystemProperty(), "my-pod");
         //Given the operator is alive and listening to K8S resource events
         final File file = Paths.get("/tmp/EntandoControllerCoordinator.ready").toFile();
         Liveness.alive();
         assertTrue(file.exists());
-        final ConfigListener configListener = new ConfigListener();
+        final ConfigListener configListener = new ConfigListener(new SimpleKubernetesClientDouble());
         //When the Operator loses the connection to the ConfigMap listener
-        configListener.onClose(new KubernetesClientException("Something went wrong"));
+        configListener.onClose(new WatcherException("Something went wrong"));
         //Then the operator has been killed
         assertFalse(file.exists());
     }

@@ -1,0 +1,12 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: entando-k8s-service
+spec:
+  ports:
+    - name: k8s-svc-port
+      protocol: TCP
+      port: 8084
+      targetPort: 8084
+  selector:
+    deployment: entando-k8s-service

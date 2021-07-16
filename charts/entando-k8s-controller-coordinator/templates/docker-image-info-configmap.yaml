@@ -19,10 +19,6 @@ data:
     {"version":"{{ .Values.relatedImages.entando_k8s_app_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-app-plugin-link-controller: >-
     {"version":"{{ .Values.relatedImages.entando_k8s_app_plugin_link_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
-  entando-k8s-cluster-infrastructure-controller: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_cluster_infrastructure_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
-  entando-k8s-composite-app-controller: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_composite_app_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-database-service-controller: >-
     {"version":"{{ .Values.relatedImages.entando_k8s_database_service_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-dbjob: >-
@@ -35,8 +31,6 @@ data:
     {"version":"{{ .Values.relatedImages.entando_k8s_service.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-keycloak: >-
     {"version":"{{ .Values.relatedImages.entando_keycloak.version }}","executable-type":"","registry":"docker.io","organization":"entando"}
-  entando-plugin-sidecar: >-
-    {"version":"{{ .Values.relatedImages.entando_plugin_sidecar.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-process-driven-plugin: >-
     {"version":"{{ .Values.relatedImages.entando_process_driven_plugin.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-redhat-sso: >-

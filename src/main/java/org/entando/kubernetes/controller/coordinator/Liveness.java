@@ -45,7 +45,7 @@ public class Liveness {
 
     private static Path aliveFile() {
         return Paths
-                .get(EntandoOperatorConfigBase.lookupProperty(EntandoControllerCoordinatorProperty.ENTANDO_K8S_PROBE_FOLDER).orElse("/tmp"),
+                .get(EntandoOperatorConfigBase.lookupProperty(ControllerCoordinatorProperty.ENTANDO_K8S_PROBE_FOLDER).orElse("/tmp"),
                         EntandoControllerCoordinator.class.getSimpleName() + ".ready");
     }
 
