@@ -3,18 +3,26 @@ kind: ConfigMap
 metadata:
   name: entando-docker-image-info
 data:
-  app-builder: >-
-    {"version":"{{ .Values.relatedImages.app_builder.version }}","executable-type":"n/a","registry":"docker.io","organization":"entando"}
+  app-builder-6-3: >-
+    {"version":"{{ .Values.relatedImages.app_builder_6_3.version }}","executable-type":"n/a","registry":"docker.io","organization":"entando","repository":"app-builder"}
+  app-builder-6-4: >-
+    {"version":"{{ .Values.relatedImages.app_builder_6_4.version }}","executable-type":"n/a","registry":"docker.io","organization":"entando","repository":"app-builder"}
   busybox: >-
     {"version":"latest","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-avatar-plugin: >-
     {"version":"6.0.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
-  entando-component-manager: >-
-    {"version":"{{ .Values.relatedImages.entando_component_manager.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
-  entando-de-app-eap: >-
-    {"version":"{{ .Values.relatedImages.entando_de_app_eap.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
-  entando-de-app-wildfly: >-
-    {"version":"{{ .Values.relatedImages.entando_de_app_wildfly.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+  entando-component-manager-6-3: >-
+    {"version":"{{ .Values.relatedImages.entando_component_manager_6_3.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-component-manager"}
+  entando-component-manager-6-4: >-
+    {"version":"{{ .Values.relatedImages.entando_component_manager_6_4.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-component-manager"}
+  entando-de-app-eap-6-3: >-
+    {"version":"{{ .Values.relatedImages.entando_de_app_eap_6_3.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-de-app-eap"}
+  entando-de-app-eap-6-4: >-
+    {"version":"{{ .Values.relatedImages.entando_de_app_eap_6_4.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-de-app-eap"}
+  entando-de-app-wildfly-6-3: >-
+    {"version":"{{ .Values.relatedImages.entando_de_app_wildfly_6_3.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-de-app-wildfly"}
+  entando-de-app-wildfly-6-4: >-
+    {"version":"{{ .Values.relatedImages.entando_de_app_wildfly_6_4.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-de-app-wildfly"}
   entando-k8s-app-controller: >-
     {"version":"{{ .Values.relatedImages.entando_k8s_app_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
   entando-k8s-app-plugin-link-controller: >-

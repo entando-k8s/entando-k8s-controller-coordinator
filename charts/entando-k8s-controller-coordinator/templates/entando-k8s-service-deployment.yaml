@@ -28,6 +28,16 @@ spec:
               memory: 192Mi
           name: k8s-svc-container
           env:
+            - name: ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE
+              value: 'helm'
+            - name: ENTANDO_NAMESPACES_TO_OBSERVE
+  {{- if .Values.clusterScope }}
+              value: '*'
+  {{- else }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+  {{- end}}
             - name: SERVER_SERVLET_CONTEXT_PATH
               value: /k8s
           ports:

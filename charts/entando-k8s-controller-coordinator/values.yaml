@@ -20,7 +20,10 @@ relatedImages:
   rhel8_postgresql_12:
     sha256: f4e5c728b644bf1888ec8086424852ed74b5596a511be29e636fb10218fc9b6f
     version: latest
-  app_builder:
+  app_builder_6_3:
+    sha256: 39584207318bc61053321890d76567dbc2c9bc075f16d1950c79c625e75b159f
+    version: 6.3.77
+  app_builder_6_4:
     sha256: 39584207318bc61053321890d76567dbc2c9bc075f16d1950c79c625e75b159f
     version: 6.3.77
   busybox:
@@ -29,13 +32,22 @@ relatedImages:
   entando_avatar_plugin:
     sha256: 3ff5425ca1b27c609614879bf1c8a25df4e6c0c560caa683d272eccd6090cee6
     version: 6.0.5
-  entando_component_manager:
+  entando_component_manager_6_3:
     sha256: 28001329222a626c8ccf5c6f4e509da59c4e8788179b0f164634d1f74706c1f3
     version: 6.3.22
-  entando_de_app_eap:
+  entando_component_manager_6_4:
+    sha256: 28001329222a626c8ccf5c6f4e509da59c4e8788179b0f164634d1f74706c1f3
+    version: 6.3.22
+  entando_de_app_eap_6_3:
     sha256: 6eef37cd92b969f5d5a876fe233de076f142f75eed5006f847b108581c892615
     version: 6.3.66
-  entando_de_app_wildfly:
+  entando_de_app_eap_6_4:
+    sha256: 6eef37cd92b969f5d5a876fe233de076f142f75eed5006f847b108581c892615
+    version: 6.3.66
+  entando_de_app_wildfly_6_3:
+    sha256: e7e25c52962fb529ea0cbdba7afb41b576d0095ab1fa6ddee06dc24514f7211d
+    version: 6.3.66
+  entando_de_app_wildfly_6_4:
     sha256: e7e25c52962fb529ea0cbdba7afb41b576d0095ab1fa6ddee06dc24514f7211d
     version: 6.3.66
   entando_k8s_app_controller:
