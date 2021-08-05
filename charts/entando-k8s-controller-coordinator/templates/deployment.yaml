@@ -27,6 +27,12 @@ spec:
           env:
             - name: ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE
               value: 'helm'
+            - name: ENTANDO_POD_READINESS_TIMEOUT_SECONDS
+              value: '2000'
+            - name: ENTANDO_POD_COMPLETION_TIMEOUT_SECONDS
+              value: '2000'
+            - name: ENTANDO_POD_SHUTDOWN_TIMEOUT_SECONDS
+              value: '2000'
             - name: ENTANDO_NAMESPACES_TO_OBSERVE
   {{- if .Values.clusterScope }}
               value: '*'

@@ -51,29 +51,29 @@ relatedImages:
     sha256: e7e25c52962fb529ea0cbdba7afb41b576d0095ab1fa6ddee06dc24514f7211d
     version: 6.3.66
   entando_k8s_app_controller:
-    sha256: 983d112752873dfca8b20f05ce35046040cd883db19e9c89ad64ba162549c050
-    version: 0.0.0-SNAPSHOT-PR-32-52
+    sha256: 655483f8515a445967fd1c522b6310df869004129a19343d115e30e01db3c436
+    version: 0.0.0-SNAPSHOT-PR-32-53
   entando_k8s_app_plugin_link_controller:
-    sha256: ea0da4a006d5eb8f75c215a0bca37689f58d0513ea0250919e1313b130db3b9f
-    version: 0.0.0-SNAPSHOT-PR-15-15
+    sha256: 28bce6fd610b96021b47599e1b65245493b42b003fbc1e831aae1a29a4808786
+    version: 0.0.0-SNAPSHOT-PR-15-17
   entando_k8s_controller_coordinator:
     sha256: 7382ec22a9bf4f4b1dcb6203fd82f13fcfbb0bad237aba9400d76cdb96ccda53
     version: 0.0.0-SNAPSHOT-B39
   entando_k8s_database_service_controller:
-    sha256: d63e37ca21a6f5c2896bb47a80f8e72cbcfd0d1f7c25e7097378af632c0b96f4
-    version: 0.0.0-SNAPSHOT-PR-10-21
+    sha256: 42713fafb3070eaeefc85a64c0c62d8ccd57f32977e176200d82e0ed05dcd92c
+    version: 0.0.0-SNAPSHOT-PR-10-24
   entando_k8s_dbjob:
     sha256: 8ae47dbf93201965106663299f06daad544982fa244d4a0f365a1b717727e5ed
     version: 6.3.8
   entando_k8s_keycloak_controller:
-    sha256: 37cbb78136bfb1a1d17c46df0cf610f76678ddde35ba0de8684f3722406bf988
-    version: 0.0.0-SNAPSHOT-PR-28-29
+    sha256: cec29e06ea98cf8694435dc3eb9a8540ebb6b53e6e447369474f75e2dc0c4ed1
+    version: 0.0.0-SNAPSHOT-PR-28-32
   entando_k8s_plugin_controller:
-    sha256: 6dc1b4affae769e878c2707bd15de9b0da0ba564e3f38cfb617064245be69926
-    version: 0.0.0-SNAPSHOT-PR-27-19
+    sha256: 01f015c6ee859dac075bcab6ea944c8d5ed599446b2819b3f8a3b2dc95dd67b4
+    version: 0.0.0-SNAPSHOT-PR-27-23
   entando_k8s_service:
-    sha256: 4bb4300f3affa1afb2b5c99b92f0bbe5ba32dd6b358aeab5f053f5b33ada6086
-    version: 0.0.0-SNAPSHOT-4
+    sha256: dfa37055b1ba3cb28d2a38a8c9aa0729ba75acf481734b046b5ea4519c3746f2
+    version: 0.0.0-SNAPSHOT-PR-26-7
   entando_keycloak:
     sha256: 36383301348c15526deac7d378a2f1a8a216c419697f3255e6d183a9cd53e323
     version: 6.3.9
