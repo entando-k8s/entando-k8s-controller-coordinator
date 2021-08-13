@@ -5,7 +5,7 @@ pipelineConfig:
     - name: PIPELINE_CODE
       value: carc
     - name: SKIP_OWASP
-      value: "true"
+      value: "false"
     - name: TEST_DEPLOYMENT
       value: "true"
     - name: ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP
