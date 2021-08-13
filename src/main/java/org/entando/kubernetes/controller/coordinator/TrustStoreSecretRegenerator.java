@@ -17,32 +17,39 @@
 package org.entando.kubernetes.controller.coordinator;
 
 import io.fabric8.kubernetes.api.model.Secret;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
-import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.support.common.TlsHelper;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfig;
+import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 
 public class TrustStoreSecretRegenerator {
 
-    private static AtomicReference<String> lastCaSecretResourceVersion = new AtomicReference<>("");
+    private static final AtomicReference<Secret> LAST_CA_SECRET = new AtomicReference<>();
 
     private TrustStoreSecretRegenerator() {
 
     }
 
-    public static void regenerateIfNecessary(SimpleK8SClient<?> client) {
-        EntandoOperatorConfig.getCertificateAuthoritySecretName()
-                .map(client.secrets()::loadControllerSecret)
-                .filter(TrustStoreSecretRegenerator::hasNewResourceVersion)
-                .ifPresent(secret -> overwriteTrustStoreSecret(client, secret));
-    }
-
-    private static void overwriteTrustStoreSecret(SimpleK8SClient<?> client, Secret secret) {
-        client.secrets().overwriteControllerSecret(TlsHelper.newTrustStoreSecret(secret));
-        lastCaSecretResourceVersion.set(secret.getMetadata().getResourceVersion());
-    }
-
-    private static boolean hasNewResourceVersion(Secret secret) {
-        return !secret.getMetadata().getResourceVersion().equals(lastCaSecretResourceVersion.get());
+    public static void regenerateIfNecessary(SimpleKubernetesClient client) {
+        Optional<Secret> caSecret = EntandoOperatorSpiConfig.getCertificateAuthoritySecretName()
+                .flatMap(name -> Optional.ofNullable(client.loadControllerSecret(name)));
+        LAST_CA_SECRET.getAndUpdate(lastSecret -> {
+            if (caSecret.isPresent()) {
+                Secret newValue = caSecret.get();
+                if (lastSecret == null
+                        || client.loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET) == null
+                        || !lastSecret.getMetadata().getUid().equals(newValue.getMetadata().getUid())
+                        || !lastSecret.getMetadata().getResourceVersion().equals(newValue.getMetadata().getResourceVersion())
+                ) {
+                    client.overwriteControllerSecret(TrustStoreHelper.newTrustStoreSecret(newValue));
+                    return newValue;
+                } else {
+                    return lastSecret;
+                }
+            } else {
+                client.deleteControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET);
+                return null;
+            }
+        });
     }
 }

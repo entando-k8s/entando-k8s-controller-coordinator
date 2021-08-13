@@ -16,12 +16,20 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
+public enum AnnotationNames {
+    PROCESSING_INSTRUCTION("entando.org/processing-instruction"),
+    CONTROLLER_IMAGE("entando.org/controller-image"),
+    SUPPORTED_CAPABILITIES("entando.org/supported-capabilities"),
+    OPERATOR_ID_ANNOTATION("entando.org/operator-id"),
+    PROCESSED_BY_OPERATOR_VERSION("entando.org/processed-by-version");
+    private final String name;
 
-public interface SimpleEntandoOperationsRegistry {
+    AnnotationNames(String name) {
+        this.name = name;
+    }
 
-    <R extends EntandoCustomResource,
-            D extends DoneableEntandoCustomResource<R, D>
-            > SimpleEntandoOperations<R, D> getOperations(Class<R> clzz);
+    public String getName() {
+        return name;
+    }
+
 }

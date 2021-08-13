@@ -1,4 +1,4 @@
-FROM entando/entando-k8s-operator-common:6.3.19
+FROM entando/entando-k8s-operator-common:6.4.2
 ARG VERSION
 
 LABEL name="Entando K8S Controller Coordinator" \
@@ -11,5 +11,8 @@ LABEL name="Entando K8S Controller Coordinator" \
                    container to process the event in question."
 ENV JAVA_OPTIONS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
-COPY target/*-runner.jar /deployments/app.jar
+COPY target/quarkus-app/lib/main/org.entando.*.jar /deployments/lib/main/
+COPY target/quarkus-app/*.* /deployments/
+COPY target/quarkus-app/app/ /deployments/app/
+COPY target/quarkus-app/quarkus/ /deployments/quarkus/
 ENTRYPOINT [ "/deployments/run-java.sh" ]

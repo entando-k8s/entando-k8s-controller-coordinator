@@ -25,8 +25,22 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
           env:
-            - name: ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS
-              value: "{{- range $index, $name := .Values.imagePullSecrets }}{{- if $index }},{{- end }}{{ $name }}{{- end }}"
+            - name: ENTANDO_K8S_OPERATOR_DEPLOYMENT_TYPE
+              value: 'helm'
+            - name: ENTANDO_POD_READINESS_TIMEOUT_SECONDS
+              value: '2000'
+            - name: ENTANDO_POD_COMPLETION_TIMEOUT_SECONDS
+              value: '2000'
+            - name: ENTANDO_POD_SHUTDOWN_TIMEOUT_SECONDS
+              value: '2000'
+            - name: ENTANDO_NAMESPACES_TO_OBSERVE
+  {{- if .Values.clusterScope }}
+              value: '*'
+  {{- else }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+  {{- end}}
             - name: ENTANDO_K8S_OPERATOR_SERVICEACCOUNT
               valueFrom:
                 fieldRef:
@@ -44,7 +58,7 @@ spec:
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: 5
             successThreshold: 1
-            timeoutSeconds: 1
+            timeoutSeconds: 3
           readinessProbe:
             exec:
               command:
@@ -53,7 +67,7 @@ spec:
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: 5
             successThreshold: 1
-            timeoutSeconds: 1
+            timeoutSeconds: 3
   {{- else }}
           startupProbe:
             exec:
@@ -63,7 +77,7 @@ spec:
             periodSeconds: 3
             failureThreshold: {{ div .Values.livenessProbe.initialDelaySeconds 3 }}
             successThreshold: 1
-            timeoutSeconds: 1
+            timeoutSeconds: 3
           livenessProbe:
             exec:
               command:
@@ -71,7 +85,7 @@ spec:
                 - /tmp/EntandoControllerCoordinator.ready
             periodSeconds: 5
             failureThreshold: 1
-            timeoutSeconds: 1
+            timeoutSeconds: 3
           readinessProbe:
             exec:
               command:
@@ -79,7 +93,7 @@ spec:
                 - /tmp/EntandoControllerCoordinator.ready
             periodSeconds: 5
             failureThreshold: 1
-            timeoutSeconds: 1
+            timeoutSeconds: 3
   {{- end}}
           resources:
 {{  .Values.resources | toYaml | trim | indent 12 }}

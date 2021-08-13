@@ -16,42 +16,30 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import io.fabric8.kubernetes.client.Watch;
+import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.List;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
+import java.util.concurrent.TimeoutException;
+import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 
-public interface SimpleEntandoOperations<
-        R extends EntandoCustomResource,
-        D extends DoneableEntandoCustomResource<R, D>> {
+public interface SimpleEntandoOperations extends DeathEventIssuer {
 
-    SimpleEntandoOperations<R, D> inNamespace(String namespace);
+    SimpleEntandoOperations inNamespace(String namespace);
 
-    SimpleEntandoOperations<R, D> inAnyNamespace();
+    SimpleEntandoOperations inAnyNamespace();
 
-    void watch(EntandoResourceObserver<R, D> rldEntandoResourceObserver);
+    Watch watch(SerializedResourceWatcher rldEntandoResourceObserver);
 
-    List<R> list();
+    List<SerializedEntandoResource> list();
 
-    default R removeAnnotation(R r, String name) {
-        return edit(r)
-                .editMetadata()
-                .removeFromAnnotations(name)
-                .endMetadata()
-                .done();
+    SerializedEntandoResource removeAnnotation(SerializedEntandoResource r, String name);
 
-    }
+    SerializedEntandoResource putAnnotation(SerializedEntandoResource r, String name, String value);
 
-    D edit(R r);
+    void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) throws TimeoutException;
 
-    default R putAnnotation(R r, String name, String value) {
-        return edit(r)
-                .editMetadata()
-                .removeFromAnnotations(name)
-                .addToAnnotations(name, value)
-                .endMetadata()
-                .done();
+    CustomResourceDefinitionContext getDefinitionContext();
 
-    }
+    String getControllerNamespace();
 
-    void removeSuccessfullyCompletedPods(R resource);
 }
