@@ -64,7 +64,8 @@ public class ControllerExecutor {
         return new PodBuilder().withNewMetadata()
                 .withName(resource.getMetadata().getName() + "-deployer-" + NameUtils.randomNumeric(4).toLowerCase())
                 .withNamespace(this.controllerNamespace)
-                .addToOwnerReferences(ResourceUtils.buildOwnerReference(resource))
+                //Uncomment this line to reactivate ENG-2274
+                //                .addToOwnerReferences(ResourceUtils.buildOwnerReference(resource))
                 .addToLabels(CoordinatorUtils.podLabelsFor(resource))
                 .endMetadata()
                 .withNewSpec()
@@ -92,8 +93,8 @@ public class ControllerExecutor {
         Map<String, EnvVar> result = new HashMap<>();
         System.getProperties().entrySet().stream()
                 .filter(this::matchesKnownSystemProperty).forEach(objectObjectEntry -> addTo(result,
-                new EnvVar(objectObjectEntry.getKey().toString().toUpperCase(Locale.ROOT).replace(".", "_").replace("-", "_"),
-                        objectObjectEntry.getValue().toString(), null)));
+                        new EnvVar(objectObjectEntry.getKey().toString().toUpperCase(Locale.ROOT).replace(".", "_").replace("-", "_"),
+                                objectObjectEntry.getValue().toString(), null)));
         System.getenv().entrySet().stream()
                 .filter(this::matchesKnownEnvironmentVariable)
                 .forEach(objectObjectEntry -> addTo(result, new EnvVar(objectObjectEntry.getKey(),
