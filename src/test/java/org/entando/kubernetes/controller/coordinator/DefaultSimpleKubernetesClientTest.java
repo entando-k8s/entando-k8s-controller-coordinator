@@ -18,7 +18,6 @@ package org.entando.kubernetes.controller.coordinator;
 
 import static io.qameta.allure.Allure.attachment;
 import static io.qameta.allure.Allure.step;
-import static java.util.Optional.ofNullable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 

@@ -49,7 +49,6 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
 
     private static final Logger LOGGER = Logger.getLogger(DefaultSimpleEntandoOperations.class.getName());
 
-    private final KubernetesClient client;
     private final RawCustomResourceOperationsImpl operations;
     private final boolean anyNamespace;
     private final CustomResourceDefinitionContext definitionContext;
@@ -57,7 +56,6 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
     public DefaultSimpleEntandoOperations(KubernetesClient client, CustomResourceDefinitionContext definitionContext,
             RawCustomResourceOperationsImpl operations, boolean anyNamespace) {
         super(client);
-        this.client = client;
         this.definitionContext = definitionContext;
         this.operations = operations;
         this.anyNamespace = anyNamespace;

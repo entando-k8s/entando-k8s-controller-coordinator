@@ -21,14 +21,10 @@ import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
-import io.fabric8.kubernetes.client.WatcherException;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 class CrdNameMapSync implements RestartingWatcher<CustomResourceDefinition> {
 
-    private static final Logger LOGGER = Logger.getLogger(CrdNameMapSync.class.getName());
     private ConfigMap crdNameMap;
     private final SimpleKubernetesClient client;
 

@@ -16,7 +16,6 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.List;

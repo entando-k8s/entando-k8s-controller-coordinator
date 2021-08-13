@@ -16,7 +16,6 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,9 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
-import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
-import org.entando.kubernetes.controller.support.common.OperatorDeploymentType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
