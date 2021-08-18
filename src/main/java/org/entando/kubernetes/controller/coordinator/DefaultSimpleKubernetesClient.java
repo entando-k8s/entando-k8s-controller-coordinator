@@ -50,6 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
@@ -65,6 +66,8 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
     @SuppressWarnings("java:S5164")
     private static final ThreadLocal<DateTimeFormatter> dateTimeFormatter = ThreadLocal
             .withInitial(() -> DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss'Z'"));
+    private static final Watch NOOP_WATCH = () -> {
+    };
 
     Map<String, CustomResourceDefinitionContext> definitionContextMap = new ConcurrentHashMap<>();
 
@@ -192,34 +195,33 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
 
     @Override
     public Watch watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher) {
+        return performSensitiveOperation(
+                () -> this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
+                        .watch(customResourceDefinitionWatcher),
+                () -> NOOP_WATCH);
+    }
+
+    private <T> T performSensitiveOperation(Supplier<T> operation, Supplier<T> fallbackOperation) {
         try {
-            return this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
-                    .watch(customResourceDefinitionWatcher);
+            return operation.get();
         } catch (KubernetesClientException e) {
             if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN) {
-                return () -> {
-                };
+                return fallbackOperation.get();
             }
             throw e;
         }
-
     }
 
     @Override
     public Collection<CustomResourceDefinition> loadCustomResourceDefinitionsOfInterest() {
-        try {
-            return client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
-                    .list()
-                    .getItems();
-        } catch (KubernetesClientException e) {
-            if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN) {
-                return ControllerCoordinatorConfig.getNamesOfCrdsOfInterest()
+        return performSensitiveOperation(
+                () -> client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
+                        .list()
+                        .getItems(),
+                () -> ControllerCoordinatorConfig.getNamesOfCrdsOfInterest()
                         .stream()
                         .map(s -> client.apiextensions().v1beta1().customResourceDefinitions().withName(s).fromServer().get())
-                        .collect(Collectors.toList());
-            }
-            throw e;
-        }
+                        .collect(Collectors.toList()));
     }
 
     @Override
