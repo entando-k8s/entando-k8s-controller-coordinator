@@ -28,8 +28,16 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
+import io.fabric8.kubernetes.api.model.ServiceAccount;
+import io.fabric8.kubernetes.api.model.ServiceAccountBuilder;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinitionList;
+import io.fabric8.kubernetes.api.model.rbac.ClusterRole;
+import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBinding;
+import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBindingBuilder;
+import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBuilder;
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
@@ -40,8 +48,10 @@ import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +66,7 @@ import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
+import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.fluentspi.BasicDeploymentSpecBuilder;
 import org.entando.kubernetes.fluentspi.TestResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
@@ -231,9 +242,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     @Test
     @Description("Should not list CustomResourceDefinitions without the label 'entando.org/crd-of-interest'")
     void shouldNotlistCustomResourceDefintionsWithoutCrdOfInterestLabel() {
-        step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
-            deleteMyCrd();
-        });
+        step("Given I have removed the CustomResourceDefinition MyCRD", this::deleteMyCrd);
         step("And I have created the CustomResourceDefinition MyCRD without the label 'entando.org/crd-of-interest'", () -> {
             final CustomResourceDefinition value = objectMapper
                     .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
@@ -250,11 +259,79 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     }
 
     @Test
+    @Description("Should only list configured CustomResourceDefinitions of interest when lacking the 'list' permission")
+    void shouldOnlyListConfiguredCrdsOfInterest() {
+        step("Given I have created the CustomResourceDefinitions testresources.test.org and mycrds.test.org", () -> {
+            registerCrdResource(kubernetesClient, "testresources.test.org.crd.yaml");
+            registerCrdResource(kubernetesClient, "mycrds.test.org.crd.yaml");
+        });
+        step("And I have only configured testresources.test.org as a known CustomResourceDefinitionOfInterest", () -> {
+            System.setProperty(ControllerCoordinatorProperty.ENTANDO_CRDS_OF_INTEREST.getJvmSystemProperty(), "testresources.test.org");
+        });
+        step("And the serviceaccount used to connect to Kubernetes does not have 'list' permissions on CustomResourceDefinitions", () -> {
+            ClusterRole crdViewer = this.kubernetesClient.rbac().clusterRoles().withName("entando-crd-viewer").fromServer().get();
+            if (crdViewer == null) {
+                this.kubernetesClient.rbac().clusterRoles().create(new ClusterRoleBuilder()
+                        .withNewMetadata()
+                        .withName("entando-crd-viewer")
+                        .endMetadata()
+                        .addNewRule()
+                        .addNewApiGroup("apiextensions.k8s.io")
+                        .addNewResource("customresourcedefinitions")
+                        .addNewResourceName("testresources.test.org")
+                        .endRule()
+                        .build());
+                this.kubernetesClient.rbac().clusterRoleBindings().create(new ClusterRoleBindingBuilder()
+                        .withNewMetadata()
+                        .withName("entando-crd-viewer")
+                        .endMetadata()
+                        .withNewRoleRef("rbac.authorization.k8s.io", "ClusterRole", "entando-crd-viewer")
+                        .addNewSubject(null, "SystemGroup", "system:serviceaccounts", null)
+                        .build());
+            } else {
+                if (!crdViewer.getRules().get(0).getResourceNames().contains("testresources.test.org")) {
+                    crdViewer.getRules().get(0).getResourceNames().add("testresources.test.org");
+                    this.kubernetesClient.rbac().clusterRoles().patch(crdViewer);
+                }
+            }
+            ServiceAccount randomServiceAccount = this.kubernetesClient.serviceAccounts()
+                    .inNamespace(this.kubernetesClient.getNamespace())
+                    .create(new ServiceAccountBuilder()
+                            .withNewMetadata()
+                            .withName(NameUtils.shortenTo("random-shortendname", "random".length()))
+                            .withNamespace(kubernetesClient.getNamespace())
+                            .endMetadata()
+                            .build());
+            await().atMost(30, TimeUnit.SECONDS).ignoreExceptions()
+                    .until(() -> kubernetesClient.secrets().inNamespace(kubernetesClient.getNamespace()).list()
+                            .getItems().stream()
+                            .anyMatch(secret -> TestFixturePreparation.isValidTokenSecret(secret, randomServiceAccount.getMetadata()
+                                    .getName())));
+            Secret tokenSecret = kubernetesClient.secrets().inNamespace(kubernetesClient.getNamespace()).list()
+                    .getItems().stream()
+                    .filter(secret -> TestFixturePreparation.isValidTokenSecret(secret, randomServiceAccount.getMetadata()
+                            .getName()))
+                    .findFirst().get();
+            String token = new String(Base64.getDecoder().decode(tokenSecret.getData().get("token")), StandardCharsets.UTF_8);
+            this.kubernetesClient = new DefaultKubernetesClient(new ConfigBuilder(Config.autoConfigure(null))
+                    .withOauthToken(token)
+                    .build());
+            this.myClient = new DefaultSimpleKubernetesClient(kubernetesClient);
+        });
+        List<CustomResourceDefinition> crds = new ArrayList<>();
+        step("When I list the CustomResourceDefinitions of interest", () -> {
+            crds.addAll(getMyClient().loadCustomResourceDefinitionsOfInterest());
+        });
+        step("Then only the CustomResourceDefinition testresources.test.org was inluded in the list", () -> {
+            assertThat(crds).hasSize(1);
+            assertThat(crds).allMatch(crd -> crd.getMetadata().getName().equals("testresources.test.org"));
+        });
+    }
+
+    @Test
     @Description("Should list CustomResourceDefinitions with the label 'entando.org/crd-of-interest'")
     void shouldListCustomResourceDefinitionsWithCrdOfInterestLabel() {
-        step("Given I have removed the CustomResourceDefinition MyCRD", () -> {
-            deleteMyCrd();
-        });
+        step("Given I have removed the CustomResourceDefinition MyCRD", this::deleteMyCrd);
         step("And I have created the CustomResourceDefinition MyCRD with the label 'entando.org/crd-of-interest'", () -> {
             final CustomResourceDefinition value = objectMapper
                     .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
