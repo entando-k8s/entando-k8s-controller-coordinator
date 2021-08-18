@@ -31,11 +31,13 @@ import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
+import java.net.HttpURLConnection;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
@@ -49,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
@@ -189,15 +192,34 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
 
     @Override
     public Watch watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher) {
-        return this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
-                .watch(customResourceDefinitionWatcher);
+        try {
+            return this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
+                    .watch(customResourceDefinitionWatcher);
+        } catch (KubernetesClientException e) {
+            if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN) {
+                return () -> {
+                };
+            }
+            throw e;
+        }
+
     }
 
     @Override
     public Collection<CustomResourceDefinition> loadCustomResourceDefinitionsOfInterest() {
-        return client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
-                .list()
-                .getItems();
+        try {
+            return client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
+                    .list()
+                    .getItems();
+        } catch (KubernetesClientException e) {
+            if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN) {
+                return ControllerCoordinatorConfig.getNamesOfCrdsOfInterest()
+                        .stream()
+                        .map(s -> client.apiextensions().v1beta1().customResourceDefinitions().withName(s).fromServer().get())
+                        .collect(Collectors.toList());
+            }
+            throw e;
+        }
     }
 
     @Override
