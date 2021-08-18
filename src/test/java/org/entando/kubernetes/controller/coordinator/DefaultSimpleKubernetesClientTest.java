@@ -286,7 +286,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
                         .withName("entando-crd-viewer")
                         .endMetadata()
                         .withNewRoleRef("rbac.authorization.k8s.io", "ClusterRole", "entando-crd-viewer")
-                        .addNewSubject(null, "Group", "system:serviceaccounts", null)
+                        .addNewSubject(null, "SystemGroup", "system:serviceaccounts", null)
                         .build());
             } else {
                 if (!crdViewer.getRules().get(0).getResourceNames().contains("testresources.test.org")) {
