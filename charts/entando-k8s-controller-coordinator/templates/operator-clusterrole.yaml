@@ -16,6 +16,9 @@ rules:
       - secrets
     verbs:
       - create
+      - get
+      - update
+      - delete
   - apiGroups:
       - ""
     resources:
@@ -42,13 +45,14 @@ rules:
     verbs:
       - get
       - list
-      - watch      
+      - watch
   - apiGroups:
-      - extensions
+      - 'extensions'
+      - 'networking.k8s.io'
     resources:
       - ingresses
     verbs:
-      - "*"
+      - '*'
   - apiGroups:
       - ""
     resources:
