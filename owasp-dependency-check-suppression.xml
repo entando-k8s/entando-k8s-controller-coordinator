@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~
+  ~ Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+  ~
+  ~ This library is free software; you can redistribute it and/or modify it under
+  ~ the terms of the GNU Lesser General Public License as published by the Free
+  ~ Software Foundation; either version 2.1 of the License, or (at your option)
+  ~ any later version.
+  ~
+  ~  This library is distributed in the hope that it will be useful, but WITHOUT
+  ~ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  ~ FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+  ~ details.
+  ~
+  -->
+
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <suppress>
+        <notes><![CDATA[
+        A whole lot of false positives based on K8S's internals that have nothing to do with our CRDs
+      ]]></notes>
+        <cpe>cpe:/a:kubernetes:kubernetes</cpe>
+        <cve>CVE-2020-8555</cve>
+        <cve>CVE-2019-11254</cve>
+        <cve>CVE-2019-1002100</cve>
+        <cve>CVE-2020-8552</cve>
+        <cve>CVE-2020-8563</cve>
+        <cve>CVE-2019-11248</cve>
+        <cve>CVE-2019-9946</cve>
+        <cve>CVE-2019-11250</cve>
+        <cve>CVE-2020-8557</cve>
+        <cve>CVE-2020-8570</cve>
+    </suppress>
+    <suppress>
+        <cpe>cpe:2.3:a:kubernetes:java</cpe>
+        <cve>CVE-2021-25738</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        These are generally serverside vulnerabilities. The entando-k8s containers that use Keycloak run as
+        background processes that do not expose services. We also do not have a version of Keycloak to upgrade to
+        beyond 9.0.3 because this is the official version used in Red Hat SSO
+      ]]></notes>
+        <gav regex="true">org\.keycloak:keycloak-.*:9\.0\.3</gav>
+        <cve>CVE-2020-27838</cve>
+        <cve>CVE-2020-10758</cve>
+        <cve>CVE-2020-1728</cve>
+        <cve>CVE-2020-14359</cve>
+        <cve>CVE-2020-10776</cve>
+        <cve>CVE-2020-1714</cve>
+        <cve>CVE-2020-1725</cve>
+        <cve>CVE-2020-1758</cve>
+        <cve>CVE-2020-14366</cve>
+        <cve>CVE-2020-14389</cve>
+        <cve>CVE-2020-14302</cve>
+        <cve>CVE-2020-10770</cve>
+        <cve>CVE-2020-1694</cve>
+        <cve>CVE-2021-20202</cve>
+        <cve>CVE-2021-20222</cve>
+        <cve>CVE-2020-27826</cve>
+        <cve>CVE-2021-20195</cve>
+        <cve>CVE-2021-3637</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        will fall away once we upgrade to Qaurkus 2.x
+      ]]></notes>
+        <gav>jakarta.el:jakarta.el-api:3.0.3</gav>
+        <cve>CVE-2021-28170</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Not much we can do about this one except implementing Quarkus 2 which will require significant effort.
+      ]]></notes>
+        <gav>io.quarkus.arc:arc:1.13.7.Final</gav>
+        <cve>CVE-2021-21295</cve>
+        <cve>CVE-2021-21290</cve>
+        <cve>CVE-2021-3642</cve>
+        <cve>CVE-2021-28170</cve>
+        <cve>CVE-2021-29429</cve>
+        <cve>CVE-2021-29428</cve>
+        <cve>CVE-2021-29427</cve>
+        <cve>CVE-2021-37714</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Not much we can do about this one except implementing Quarkus 2 which will require significant effort.
+      ]]></notes>
+        <gav regex="true">io\.quarkus:quarkus-.*:1\.13\.7\.Final</gav>
+        <cve>CVE-2021-21295</cve>
+        <cve>CVE-2021-21290</cve>
+        <cve>CVE-2021-3642</cve>
+        <cve>CVE-2021-28170</cve>
+        <cve>CVE-2021-29429</cve>
+        <cve>CVE-2021-29428</cve>
+        <cve>CVE-2021-29427</cve>
+        <cve>CVE-2021-37714</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Not much we can do about this one except for wait for Keycloak 8. We can only update the client if the
+        server is updated.
+      ]]></notes>
+        <gav regex="true">org\.jboss\.resteasy:resteasy-.*:3\.15\.1\.Final</gav>
+        <cve>CVE-2021-20289</cve>
+        <cve>CVE-2021-20293</cve>
+    </suppress>
+</suppressions>
