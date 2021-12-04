@@ -56,6 +56,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 @Tags({@Tag("smoke"), @Tag("inter-process"), @Tag("allure"), @Tag("post-deployment")})
 @Feature("As an Entando Operator users, I want to use a deploy the Entando Controller Coordinator as a Docker container so that "
@@ -63,7 +64,8 @@ import org.junit.jupiter.api.Test;
 @Issue("ENG-2284")
 class ControllerCoordinatorSmokeTest {
 
-    private static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace("ampie-test");
+    private static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace(
+            "test-entando-controller-coordination");
     private static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
     private final KubernetesClient fabric8Client = ((DefaultKubernetesClient) new SupportProducer().getKubernetesClient())
             .inNamespace("jx");
@@ -95,10 +97,12 @@ class ControllerCoordinatorSmokeTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "ENTANDO_OPT_PREVIEW_TESTS", matches = "true")
     @Description("Should deploy all the capabilities required for an EntandoApp")
     void smokeTest() {
         //NB!!! Wildcard certs can't have more than 1 segment before the defaultRoutingSuffix: https://datatracker.ietf.org/doc/html/rfc2818#section-3.1
-        String ingressHostname = MY_APP + "-" + NAMESPACE + "." + EntandoOperatorConfig.getDefaultRoutingSuffix().orElse("apps.serv.run");
+        String ingressHostname = MY_APP + "-" + NAMESPACE + "." + EntandoOperatorConfig.getDefaultRoutingSuffix()
+                .orElse("apps.ent64azure.com");
         //TODO migrate this to TestResource and create a really simple Controller for it to execute. However, keep in mind
         //that the operator service account doesn't have access to TestResources
         step("Given that the entando-k8s-controller-coordinator has been deployed along with the entando-k8s-service", () -> {

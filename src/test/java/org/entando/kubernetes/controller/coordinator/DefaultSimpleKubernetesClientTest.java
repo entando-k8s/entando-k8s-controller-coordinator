@@ -28,12 +28,9 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
-import io.fabric8.kubernetes.api.model.ServiceAccount;
 import io.fabric8.kubernetes.api.model.ServiceAccountBuilder;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinitionList;
-import io.fabric8.kubernetes.api.model.rbac.ClusterRole;
-import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBinding;
 import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBindingBuilder;
 import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBuilder;
 import io.fabric8.kubernetes.client.Config;
@@ -78,19 +75,23 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
 @Tags({@Tag("adapter"), @Tag("pre-deployment"), @Tag("integration")})
-@Feature("As a controller-coordinator developer, I would like to perform common operations against Kubernetes using a simple "
-        + "interface to reduce the learning curve")
+@Feature(
+        "As a controller-coordinator developer, I would like to perform common operations against Kubernetes using a simple "
+                + "interface to reduce the learning curve")
 @EnableRuleMigrationSupport
 class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTestBase {
 
     private static final String MY_APP = "my-app";
+    public static final String ENTANDO_CRD_VIEWER_FOR_TEST_TMP = "entando-crd-viewer-for-test-tmp";
+    public static final String TEST_RESOURCES = "testresources.test.org";
 
     DefaultSimpleKubernetesClient myClient;
     private NamespacedKubernetesClient kubernetesClient;
 
     public DefaultSimpleKubernetesClient getMyClient() {
         this.kubernetesClient = Objects
-                .requireNonNullElseGet(this.kubernetesClient, () -> new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1));
+                .requireNonNullElseGet(this.kubernetesClient,
+                        () -> new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1));
         this.myClient = Objects.requireNonNullElseGet(this.myClient,
                 () -> new DefaultSimpleKubernetesClient(kubernetesClient));
         return this.myClient;
@@ -101,7 +102,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         final ConfigMap crdMap = getMyClient()
                 .findOrCreateControllerConfigMap(CoordinatorUtils.ENTANDO_CRD_NAMES_CONFIGMAP_NAME);
         crdMap.setData(Objects.requireNonNullElseGet(crdMap.getData(), HashMap::new));
-        crdMap.getData().put("TestResource.test.org", "testresources.test.org");
+        crdMap.getData().put("TestResource.test.org", TEST_RESOURCES);
         getMyClient().patchControllerConfigMap(crdMap);
     }
 
@@ -261,92 +262,112 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     @Test
     @Description("Should only list configured CustomResourceDefinitions of interest when lacking the 'list' permission")
     void shouldOnlyListConfiguredCrdsOfInterest() {
-        step("Given I have created the CustomResourceDefinitions testresources.test.org and mycrds.test.org", () -> {
+        step("Given I have created the CustomResourceDefinitions " + TEST_RESOURCES + " and mycrds.test.org", () -> {
             registerCrdResource(kubernetesClient, "testresources.test.org.crd.yaml");
             registerCrdResource(kubernetesClient, "mycrds.test.org.crd.yaml");
         });
-        step("And I have only configured testresources.test.org as a known CustomResourceDefinitionOfInterest", () -> {
-            System.setProperty(ControllerCoordinatorProperty.ENTANDO_CRDS_OF_INTEREST.getJvmSystemProperty(), "testresources.test.org");
+        step("And I have only configured " + TEST_RESOURCES + " as a known CustomResourceDefinitionOfInterest", () -> {
+            System.setProperty(ControllerCoordinatorProperty.ENTANDO_CRDS_OF_INTEREST.getJvmSystemProperty(),
+                    TEST_RESOURCES);
         });
-        step("And the serviceaccount used to connect to Kubernetes does not have 'list' permissions on CustomResourceDefinitions", () -> {
-            ClusterRole crdViewer = this.kubernetesClient.rbac().clusterRoles().withName("entando-crd-viewer").fromServer().get();
-            if (crdViewer == null) {
-                this.kubernetesClient.rbac().clusterRoles().create(new ClusterRoleBuilder()
-                        .withNewMetadata()
-                        .withName("entando-crd-viewer")
-                        .endMetadata()
-                        .addNewRule()
-                        .addNewApiGroup("apiextensions.k8s.io")
-                        .addNewResource("customresourcedefinitions")
-                        .addNewResourceName("testresources.test.org")
-                        .endRule()
-                        .build());
-                this.kubernetesClient.rbac().clusterRoleBindings().create(new ClusterRoleBindingBuilder()
-                        .withNewMetadata()
-                        .withName("entando-crd-viewer")
-                        .endMetadata()
-                        .withNewRoleRef("rbac.authorization.k8s.io", "ClusterRole", "entando-crd-viewer")
-                        .addNewSubject(null, "SystemGroup", "system:serviceaccounts", null)
-                        .build());
-            } else {
-                if (!crdViewer.getRules().get(0).getResourceNames().contains("testresources.test.org")) {
-                    crdViewer.getRules().get(0).getResourceNames().add("testresources.test.org");
-                    this.kubernetesClient.rbac().clusterRoles().patch(crdViewer);
-                }
-            }
-            ServiceAccount randomServiceAccount = this.kubernetesClient.serviceAccounts()
-                    .inNamespace(this.kubernetesClient.getNamespace())
-                    .create(new ServiceAccountBuilder()
-                            .withNewMetadata()
-                            .withName(NameUtils.shortenTo("random-shortendname", "random".length()))
-                            .withNamespace(kubernetesClient.getNamespace())
-                            .endMetadata()
-                            .build());
-            await().atMost(30, TimeUnit.SECONDS).ignoreExceptions()
-                    .until(() -> kubernetesClient.secrets().inNamespace(kubernetesClient.getNamespace()).list()
-                            .getItems().stream()
-                            .anyMatch(secret -> TestFixturePreparation.isValidTokenSecret(secret, randomServiceAccount.getMetadata()
-                                    .getName())));
-            Secret tokenSecret = kubernetesClient.secrets().inNamespace(kubernetesClient.getNamespace()).list()
-                    .getItems().stream()
-                    .filter(secret -> TestFixturePreparation.isValidTokenSecret(secret, randomServiceAccount.getMetadata()
-                            .getName()))
-                    .findFirst().get();
-            String token = new String(Base64.getDecoder().decode(tokenSecret.getData().get("token")), StandardCharsets.UTF_8);
-            this.kubernetesClient = new DefaultKubernetesClient(new ConfigBuilder(Config.autoConfigure(null))
-                    .withOauthToken(token)
-                    .build());
-            this.myClient = new DefaultSimpleKubernetesClient(kubernetesClient);
-        });
+        step("And the serviceaccount used to connect to Kubernetes does not have 'list' permissions on CustomResourceDefinitions",
+                () -> {
+                    prepareTheCrdOfInterestTestClusterRole();
+                    this.kubernetesClient = newKubeClientOnRandomAccount();
+                    this.myClient = new DefaultSimpleKubernetesClient(kubernetesClient);
+                });
         List<CustomResourceDefinition> crds = new ArrayList<>();
         step("When I list the CustomResourceDefinitions of interest", () -> {
             crds.addAll(getMyClient().loadCustomResourceDefinitionsOfInterest());
         });
-        step("Then only the CustomResourceDefinition testresources.test.org was inluded in the list", () -> {
+        step("Then only the CustomResourceDefinition " + TEST_RESOURCES + " was included in the list", () -> {
             assertThat(crds).hasSize(1);
-            assertThat(crds).allMatch(crd -> crd.getMetadata().getName().equals("testresources.test.org"));
+            assertThat(crds).allMatch(crd -> crd.getMetadata().getName().equals(TEST_RESOURCES));
         });
+    }
+
+    private NamespacedKubernetesClient newKubeClientOnRandomAccount() {
+        var namespace = this.kubernetesClient.getNamespace();
+        var randomServiceAccount = this.kubernetesClient.serviceAccounts().inNamespace(namespace)
+                .create(new ServiceAccountBuilder()
+                        .withNewMetadata()
+                        .withName(NameUtils.shortenTo("random-shortendname", "random".length()))
+                        .withNamespace(kubernetesClient.getNamespace())
+                        .endMetadata()
+                        .build());
+
+        await().atMost(30, TimeUnit.SECONDS).ignoreExceptions()
+                .until(() -> kubernetesClient.secrets().inNamespace(kubernetesClient.getNamespace()).list()
+                        .getItems().stream()
+                        .anyMatch(secret -> TestFixturePreparation.isValidTokenSecret(secret,
+                                randomServiceAccount.getMetadata()
+                                        .getName())));
+
+        var tokenSecret = kubernetesClient.secrets().inNamespace(kubernetesClient.getNamespace()).list()
+                .getItems().stream()
+                .filter(secret -> TestFixturePreparation.isValidTokenSecret(secret,
+                        randomServiceAccount.getMetadata()
+                                .getName()))
+                .findFirst().get();
+
+        var token = new String(Base64.getDecoder().decode(tokenSecret.getData().get("token")),
+                StandardCharsets.UTF_8);
+        return new DefaultKubernetesClient(
+                new ConfigBuilder(Config.autoConfigure(null))
+                        .withOauthToken(token)
+                        .build());
+    }
+
+    private void prepareTheCrdOfInterestTestClusterRole() {
+        var rbac = this.kubernetesClient.rbac();
+        var crdViewer = rbac.clusterRoles().withName(ENTANDO_CRD_VIEWER_FOR_TEST_TMP).fromServer().get();
+        if (crdViewer == null) {
+            // CLUSTER-ROLE: {TEST_RESOURCES}
+            rbac.clusterRoles().createOrReplace(new ClusterRoleBuilder()
+                    .withNewMetadata()
+                    .withName(ENTANDO_CRD_VIEWER_FOR_TEST_TMP)
+                    .endMetadata()
+                    .addNewRule()
+                    .addNewApiGroup("apiextensions.k8s.io")
+                    .addNewResource("customresourcedefinitions")
+                    .addNewResourceName(TEST_RESOURCES)
+                    .addNewVerb("list")
+                    .addNewVerb("get")
+                    .endRule()
+                    .build());
+            // CLUSTER-ROLE-BINDING: SERVICE-ACCOUNTS => {CLUSTER-ROLE}
+            rbac.clusterRoleBindings().create(new ClusterRoleBindingBuilder()
+                    .withNewMetadata()
+                    .withName(ENTANDO_CRD_VIEWER_FOR_TEST_TMP)
+                    .endMetadata()
+                    .withNewRoleRef("rbac.authorization.k8s.io", "ClusterRole", ENTANDO_CRD_VIEWER_FOR_TEST_TMP)
+                    .addNewSubject(null, "Group", "system:serviceaccounts", null)
+                    .build());
+        }
     }
 
     @Test
     @Description("Should list CustomResourceDefinitions with the label 'entando.org/crd-of-interest'")
     void shouldListCustomResourceDefinitionsWithCrdOfInterestLabel() {
         step("Given I have removed the CustomResourceDefinition MyCRD", this::deleteMyCrd);
-        step("And I have created the CustomResourceDefinition MyCRD with the label 'entando.org/crd-of-interest'", () -> {
-            final CustomResourceDefinition value = objectMapper
-                    .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
-                            CustomResourceDefinition.class);
-            value.getMetadata().setLabels(Map.of(LabelNames.CRD_OF_INTEREST.getName(), "MyCRD"));
-            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+        step("And I have created the CustomResourceDefinition MyCRD with the label 'entando.org/crd-of-interest'",
+                () -> {
+                    final CustomResourceDefinition value = objectMapper
+                            .readValue(Thread.currentThread().getContextClassLoader()
+                                            .getResource("mycrds.test.org.crd.yaml"),
+                                    CustomResourceDefinition.class);
+                    value.getMetadata().setLabels(Map.of(LabelNames.CRD_OF_INTEREST.getName(), "MyCRD"));
+                    getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
 
-        });
+                });
         List<CustomResourceDefinition> crds = new ArrayList<>();
         step("When I list the CustomResourceDefinitions of interest", () -> {
             crds.addAll(myClient.loadCustomResourceDefinitionsOfInterest());
         });
-        step("Then the CustomResourceDefinition without the entando.org/crd-of-interest label was not inluded in the list", () -> {
-            assertThat(crds).anyMatch(crd -> crd.getMetadata().getName().equals("mycrds.test.org"));
-        });
+        step("Then the CustomResourceDefinition without the entando.org/crd-of-interest label was not inluded in the list",
+                () -> {
+                    assertThat(crds).anyMatch(crd -> crd.getMetadata().getName().equals("mycrds.test.org"));
+                });
     }
 
     private void deleteMyCrd() throws InterruptedException {
