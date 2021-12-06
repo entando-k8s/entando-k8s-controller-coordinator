@@ -59,13 +59,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 @Tags({@Tag("smoke"), @Tag("inter-process"), @Tag("allure"), @Tag("post-deployment")})
-@Feature("As an Entando Operator users, I want to use a deploy the Entando Controller Coordinator as a Docker container so that "
-        + "I don't need to know any of its implementation details to use it.")
+@Feature(
+        "As an Entando Operator users, I want to use a deploy the Entando Controller Coordinator as a Docker container so that "
+                + "I don't need to know any of its implementation details to use it.")
 @Issue("ENG-2284")
 class ControllerCoordinatorSmokeTest {
 
-    private static final String NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace(
-            "test-entando-controller-coordination");
+    private static final String NAMESPACE;
+
+    static {
+        String pipelinesRecommendedNamespace = System.getenv("ENTANDO_OPT_TEST_NAMESPACE");
+        NAMESPACE = EntandoOperatorTestConfig.calculateNameSpace((pipelinesRecommendedNamespace != null)
+                ? pipelinesRecommendedNamespace
+                : "test-entando-controller-coordination"
+        );
+    }
+
     private static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
     private final KubernetesClient fabric8Client = ((DefaultKubernetesClient) new SupportProducer().getKubernetesClient())
             .inNamespace("jx");

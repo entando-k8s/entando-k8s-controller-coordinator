@@ -13,10 +13,15 @@ env:
   ENTANDO_OPT_USE_PPL_TAG: "v1.1.1"
   ENTANDO_OPT_FEATURES: "${{ secrets.ENTANDO_OPT_FEATURES }}"
   ENTANDO_OPT_GLOBAL_FEATURES: "${{ secrets.ENTANDO_OPT_GLOBAL_FEATURES }}"
-  ENTANDO_OPT_LOG_LEVEL: "${{ secrets.ENTANDO_OPT_LOG_LEVEL }}"
+  #ENTANDO_OPT_LOG_LEVEL: "${{ secrets.ENTANDO_OPT_LOG_LEVEL }}"
+  ENTANDO_OPT_LOG_LEVEL: "TRACE"
   ENTANDO_OPT_REPO_BOM_URL: "${{ secrets.ENTANDO_OPT_REPO_BOM_URL }}"
   ENTANDO_OPT_CUSTOM_ENV: "${{ secrets.ENTANDO_OPT_CUSTOM_ENV }}"
   ENTANDO_OPT_OKD_LOGIN: "${{ secrets.ENTANDO_OPT_OKD_LOGIN }}"
+  ENTANDO_OPT_IMAGE_REGISTRY_OVERRIDE: "${{ secrets.ENTANDO_OPT_IMAGE_REGISTRY_OVERRIDE }}"
+  ENTANDO_OPT_DOCKER_ORG: "${{ secrets.ENTANDO_OPT_DOCKER_ORG }}"
+  ENTANDO_OPT_PREVIEW_TEST_NAMESPACE: "${{ secrets.ENTANDO_OPT_PREVIEW_TEST_NAMESPACE }}"
+  ENTANDO_OPT_HELM_CLI_URL: "${{ secrets.ENTANDO_OPT_HELM_CLI_URL }}"
   PPL_CONTEXT: ${{ toJson(github) }}
   GIT_USER_NAME: "${{ secrets.GIT_USER_NAME }}"
   GIT_USER_EMAIL: "${{ secrets.GIT_USER_EMAIL }}"
@@ -43,7 +48,7 @@ jobs:
             .. status-report \
             .. @checkout-branch pr --lcd "$LOCAL_CLONE_DIR" \
             .. @setup-feature-flags "PR_PREFLIGHT_CHECKS" "BOM_CHECK" "BOM" \
-            .. @setup-features-list "SCAN_MATRIX" --prefix "MTX-" \
+            .. @setup-features-list "SCAN_MATRIX" --prefix "MTX-MVN-" \
           ;
       - name: "PR preflight checks"
         if: steps.START.outputs.PR_PREFLIGHT_CHECKS != 'false'
@@ -177,6 +182,13 @@ jobs:
               export ENTANDO_OPT_OKD_LOGIN_NAMESPACE="${{ secrets.ENTANDO_OPT_OKD_LOGIN_NAMESPACE }}"
               export ENTANDO_OPT_OKD_LOGIN_INSECURE="${{ secrets.ENTANDO_OPT_OKD_LOGIN_INSECURE }}"
               export ENTANDO_OPT_OKD_CLI_URL="${{ secrets.ENTANDO_OPT_OKD_CLI_URL }}"
+              export ENTANDO_OPT_IMAGE_REGISTRY_CREDENTIALS="${{ secrets.ENTANDO_OPT_IMAGE_REGISTRY_CREDENTIALS }}"
+              export ENTANDO_OPT_PREVIEW_TEST_NAMESPACE="${{ secrets.ENTANDO_OPT_PREVIEW_TEST_NAMESPACE }}"
+              export ENTANDO_OPT_PREVIEW_TEST_HOSTNAME_SUFFIX="${{ secrets.ENTANDO_OPT_PREVIEW_TEST_HOSTNAME_SUFFIX }}"
+              export ENTANDO_OPT_DOCKER_BUILDS="${{ secrets.ENTANDO_OPT_DOCKER_BUILDS }}"
+              export ENTANDO_OPT_DOCKER_ORG="${{ secrets.ENTANDO_OPT_DOCKER_ORG }}"
+              export ENTANDO_OPT_DOCKER_USERNAME="${{ secrets.ENTANDO_OPT_DOCKER_USERNAME }}"
+              export ENTANDO_OPT_DOCKER_PASSWORD="${{ secrets.ENTANDO_OPT_DOCKER_PASSWORD }}"
               ;;
           esac
           ~/ppl-run generic "$SCAN_TYPE" mvn --id "$SCAN_TYPE" --lcd "$LOCAL_CLONE_DIR"
