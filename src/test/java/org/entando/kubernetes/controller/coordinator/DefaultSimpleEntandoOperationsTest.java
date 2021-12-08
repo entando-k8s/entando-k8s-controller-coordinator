@@ -103,7 +103,7 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
             attachment("Started Pod", objectMapper.writeValueAsString(startedPod));
         });
         step("And I have waited for the pod to be ready", () -> {
-            await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(
+            await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(
                     () -> PodResult.of(getPodInNamespace(MY_APP_NAMESPACE_1, MY_POD)).getState() != State.CREATING);
 
             attachment("Started Pod", objectMapper.writeValueAsString(getPodInNamespace(MY_APP_NAMESPACE_1, MY_POD)));

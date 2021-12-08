@@ -3,4 +3,4 @@ dependencies:
 - alias: preview
   name: entando-k8s-controller-coordinator
   repository: file://../entando-k8s-controller-coordinator
-  version: 0.0.1
+  version: {{ENTANDO_PROJECT_VERSION}}

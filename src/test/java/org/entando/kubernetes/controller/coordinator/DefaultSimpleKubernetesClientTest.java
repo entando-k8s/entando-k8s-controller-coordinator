@@ -127,7 +127,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
             attachment("Started Pod", objectMapper.writeValueAsString(startedPod));
         });
         step("And I have waited for the pod to be ready", () -> {
-            await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() ->
+            await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() ->
                     PodResult.of(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()).getState()
                             == State.READY);
             attachment("Started Pod", objectMapper
