@@ -28,6 +28,7 @@ spec:
       JSONPath: .metadata.creationTimestamp
   validation:
     openAPIV3Schema:
+      type: object
       properties:
         spec:
           type: object

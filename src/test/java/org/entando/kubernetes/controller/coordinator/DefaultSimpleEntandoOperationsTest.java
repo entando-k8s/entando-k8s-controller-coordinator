@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
+@SuppressWarnings("CodeBlock2Expr")
 @Tags({@Tag("adapter"), @Tag("pre-deployment"), @Tag("integration")})
 @Feature("As a controller-coordinator developer, I would like perform common operations on a specific resource using a simple "
         + "interface to reduce the learning curve")
@@ -98,21 +99,25 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
                     .withRestartPolicy("Never")
                     .endSpec()
                     .build());
+
             attachment("Started Pod", objectMapper.writeValueAsString(startedPod));
         });
         step("And I have waited for the pod to be ready", () -> {
-            await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() ->
-                    PodResult.of(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()).getState()
-                            != State.CREATING);
-            attachment("Started Pod", objectMapper
-                    .writeValueAsString(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()));
+            await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(
+                    () -> PodResult.of(getPodInNamespace(MY_APP_NAMESPACE_1, MY_POD)).getState() != State.CREATING);
+
+            attachment("Started Pod", objectMapper.writeValueAsString(getPodInNamespace(MY_APP_NAMESPACE_1, MY_POD)));
         });
         step("When I remove all the successfully completed pods", () -> {
             getMyOperations().removeSuccessfullyCompletedPods(CoordinatorTestUtils.toSerializedResource(testResource));
         });
         step("Then that pod will be absent immediately after the call finished", () -> {
-            assertThat(getFabric8Client().pods().inNamespace(MY_APP_NAMESPACE_1).withName(MY_POD).fromServer().get()).isNull();
+            assertThat(getPodInNamespace(MY_APP_NAMESPACE_1, MY_POD)).isNull();
         });
+    }
+
+    private Pod getPodInNamespace(String ns, String podName) {
+        return getFabric8Client().pods().inNamespace(ns).withName(podName).fromServer().get();
     }
 
     @Test
