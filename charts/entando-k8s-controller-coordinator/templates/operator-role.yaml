@@ -56,7 +56,7 @@ rules:
     resources:
       - roles
     verbs:
-      - get
+      - "*"
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:

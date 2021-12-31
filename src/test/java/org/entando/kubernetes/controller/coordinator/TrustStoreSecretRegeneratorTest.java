@@ -52,7 +52,7 @@ class TrustStoreSecretRegeneratorTest {
         newCaSecret.getData().put("some-other.crt", oldCaSecret.getData().get("ca.crt"));
         client.overwriteControllerSecret(newCaSecret);
         TrustStoreSecretRegenerator.regenerateIfNecessary(client);
-        Secret newTrustStoreSecret = client.loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET);
+        Secret  newTrustStoreSecret = client.loadControllerSecret(TrustStoreHelper.DEFAULT_TRUSTSTORE_SECRET);
         assertThat(newTrustStoreSecret, notNullValue());
         assertNotEquals(newTrustStoreSecret.getMetadata().getResourceVersion(), oldTrustStoreSecret.getMetadata().getResourceVersion());
     }

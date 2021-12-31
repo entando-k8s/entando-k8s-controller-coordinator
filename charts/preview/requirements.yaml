@@ -1,6 +1,6 @@
 # !! File must end with empty line !!
 dependencies:
 - alias: preview
-  name: entando-k8s-controller-coordinator
-  repository: file://../entando-k8s-controller-coordinator
+  name: {{ENTANDO_PROJECT_NAME}}
+  repository: file://../{{ENTANDO_PROJECT_NAME}}
   version: {{ENTANDO_PROJECT_VERSION}}

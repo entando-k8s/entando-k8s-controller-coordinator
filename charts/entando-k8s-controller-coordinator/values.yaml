@@ -11,7 +11,7 @@ livenessProbe:
   initialDelaySeconds: 60
 clusterScope: false
 generateClusterRoles: true
-namespacePlaceholder: "{{ENTANDO_OPT_TEST_NAMESPACE}}"
+namespacePlaceholder: {{ENTANDO_OPT_TEST_NAMESPACE}}
 env:
   ENTANDO_K8S_OPERATOR_SECURITY_MODE: strict
   ENTANDO_K8S_OPERATOR_IMPOSE_LIMITS: 'false'
