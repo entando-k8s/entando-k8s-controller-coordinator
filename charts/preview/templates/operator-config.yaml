@@ -1,0 +1,7 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: entando-operator-config
+data:
+  entando.ca.secret.name: test-ca-secret
+  entando.default.routing.suffix: concoo-test.{{ .Values.preview.env.ENTANDO_DEFAULT_ROUTING_SUFFIX }}
