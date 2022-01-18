@@ -35,3 +35,4 @@ testParams:
   tlsSecret:
     crt: {{ENTANDO_OPT_TEST_TLS_CRT}}
     key: {{ENTANDO_OPT_TEST_TLS_KEY}}
+

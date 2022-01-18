@@ -21,9 +21,11 @@ import static io.qameta.allure.Allure.step;
 import static java.util.Optional.ofNullable;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.extensions.Ingress;
@@ -32,11 +34,19 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Issue;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
+import org.entando.kubernetes.controller.spi.common.LabelNames;
+import org.entando.kubernetes.controller.spi.common.NameUtils;
+import org.entando.kubernetes.controller.spi.common.SecretUtils;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
+import org.entando.kubernetes.controller.spi.container.ProvidedSsoCapability;
+import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.support.client.impl.SupportProducer;
@@ -45,7 +55,11 @@ import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.app.EntandoAppBuilder;
+import org.entando.kubernetes.model.capability.CapabilityProvisioningStrategy;
+import org.entando.kubernetes.model.capability.CapabilityScope;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
+import org.entando.kubernetes.model.capability.ProvidedCapabilityBuilder;
+import org.entando.kubernetes.model.capability.StandardCapability;
 import org.entando.kubernetes.model.capability.StandardCapabilityImplementation;
 import org.entando.kubernetes.model.common.DbmsVendor;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
@@ -75,7 +89,7 @@ class ControllerCoordinatorSmokeTest {
         );
     }
 
-    private static final String MY_APP = EntandoOperatorTestConfig.calculateName("my-app");
+    private static final String MY_APP = EntandoOperatorTestConfig.calculateName("test-coordinator");
     private final KubernetesClient fabric8Client = ((DefaultKubernetesClient) new SupportProducer().getKubernetesClient())
             .inNamespace("jx");
     private final SimpleKubernetesClient client = new DefaultSimpleKubernetesClient(fabric8Client);
@@ -109,7 +123,6 @@ class ControllerCoordinatorSmokeTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "ENTANDO_OPT_PREVIEW_TESTS", matches = "true")
     @Description("Should deploy all the capabilities required for an EntandoApp")
     void smokeTest() {
         //NB!!! Wildcard certs can't have more than 1 segment before the defaultRoutingSuffix: https://datatracker.ietf.org/doc/html/rfc2818#section-3.1
@@ -125,8 +138,7 @@ class ControllerCoordinatorSmokeTest {
                     attachment("EntandoK8SService", objectMapper.writeValueAsString(k8sSvc));
                     assertThat(k8sSvc).isNotNull();
                     final Optional<Deployment> operatorDeployment = fabric8Client.apps().deployments()
-                            .inNamespace(NAMESPACE).list().getItems()
-                            .stream()
+                            .inNamespace(NAMESPACE).list().getItems().stream()
                             .filter(deployment -> deployment.getSpec().getTemplate().getSpec().getContainers().get(0)
                                     .getImage()
                                     .contains("entando-k8s-controller-coordinator")).findFirst();
@@ -200,5 +212,46 @@ class ControllerCoordinatorSmokeTest {
             await().atMost(3, TimeUnit.MINUTES).ignoreExceptions()
                     .until(() -> HttpTestHelper.statusOk(strUrl));
         });
+    }
+
+
+    public ProvidedCapability createKeycloakCapability(DefaultSimpleK8SClient client) throws MalformedURLException {
+        final ProvidedCapability requiredCapability = new ProvidedCapabilityBuilder()
+                .withNewMetadata()
+                .withNamespace(NAMESPACE)
+                .withName("default-sso-in-namespace")
+                .addToLabels(LabelNames.CAPABILITY.getName(), StandardCapability.SSO.getCamelCaseName())
+                .addToLabels(LabelNames.CAPABILITY_PROVISION_SCOPE.getName(),
+                        CapabilityScope.NAMESPACE.getCamelCaseName())
+                .endMetadata().build();
+        client.secrets().createSecretIfAbsent(requiredCapability, new SecretBuilder()
+                .withNewMetadata()
+                .withName(NameUtils.standardAdminSecretName(requiredCapability))
+                .withNamespace(NAMESPACE)
+                .endMetadata()
+                .addToStringData(SecretUtils.USERNAME_KEY, EntandoOperatorTestConfig.getKeycloakUser())
+                .addToStringData(SecretUtils.PASSSWORD_KEY, EntandoOperatorTestConfig.getKeycloakPassword())
+                .build());
+        final ProvidedCapability providedCapability = client.entandoResources()
+                .createOrPatchEntandoResource(new ProvidedCapabilityBuilder(requiredCapability)
+                        .withNewSpec()
+                        .withCapability(StandardCapability.SSO)
+                        .withResolutionScopePreference(CapabilityScope.NAMESPACE)
+                        .withProvisioningStrategy(CapabilityProvisioningStrategy.USE_EXTERNAL)
+                        .withNewExternallyProvidedService()
+                        .withAdminSecretName(NameUtils.standardAdminSecretName(requiredCapability))
+                        .withHost(getBaseUrl().getHost())
+                        .withPort(getBaseUrl().getPort())
+                        .withPath(getBaseUrl().getPath())
+                        .endExternallyProvidedService()
+                        .addAllToCapabilityParameters(
+                                Map.of(ProvidedSsoCapability.DEFAULT_REALM_PARAMETER, NAMESPACE))
+                        .endSpec()
+                        .build());
+        return providedCapability;
+    }
+
+    private URL getBaseUrl() throws MalformedURLException {
+        return new URL(EntandoOperatorTestConfig.getKeycloakBaseUrl());
     }
 }
