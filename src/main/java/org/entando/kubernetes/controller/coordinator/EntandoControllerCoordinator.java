@@ -171,6 +171,7 @@ public class EntandoControllerCoordinator implements RestartingWatcher<CustomRes
 
     private void startImage(Action action, SerializedEntandoResource resource) {
         try {
+            System.out.println("##### startImage --- action: " + action.name() + " --- CRD: " + resource.getKind() + " - " + resource.getMetadata().getName());
             final String controllerImage = getControllerImageFor(resource);
             if (CoordinatorUtils.NO_IMAGE.equals(controllerImage)) {
                 //A CRD with now Kubernetes semantics
@@ -180,6 +181,8 @@ public class EntandoControllerCoordinator implements RestartingWatcher<CustomRes
             } else {
                 TrustStoreSecretRegenerator.regenerateIfNecessary(client);
                 ControllerExecutor executor = new ControllerExecutor(client.getControllerNamespace(), client, controllerImage);
+                System.out.println("##### Starting controller for resource " + resource.getKind() + " - " + resource.getMetadata().getName());
+                System.out.println("##### Resource labels " + resource.getMetadata().getLabels().entrySet().stream().map(e -> "k: " + e.getKey() + " - v: " + e.getValue()).collect(Collectors.joining(",")));
                 executor.startControllerFor(action, client.updatePhase(resource, EntandoDeploymentPhase.REQUESTED));
             }
         } catch (Exception e) {
@@ -191,6 +194,7 @@ public class EntandoControllerCoordinator implements RestartingWatcher<CustomRes
     @Override
     public void eventReceived(Action action, CustomResourceDefinition customResourceDefinition) {
         if (CoordinatorUtils.isOfInterest(customResourceDefinition)) {
+            System.out.println("##### eventReceived --- action: " + action.name() + " --- CRD: " + customResourceDefinition.getKind() + " - " + customResourceDefinition.getMetadata().getName());
             processCustomResourceDefinition(customResourceDefinition);
             startObservingInstances(customResourceDefinition);
         }
