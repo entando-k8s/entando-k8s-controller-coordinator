@@ -11,12 +11,22 @@ ignore:
   SNYK-JAVA-LOG4J-2316893:
     - '*':
         reason: '.'
+  SNYK-JAVA-LOG4J-2342645:
+    - '*':
+        reason: '.'      
+  SNYK-JAVA-LOG4J-2342646:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-LOG4J-2342647:
+    - '*':
+        reason: '.'        
   SNYK-JAVA-LOG4J-572732:
     - '*':
         reason: '.'
   SNYK-JAVA-ORGJBOSSRESTEASY-1009963:
     - '*':
         reason: '.'
+
   SNYK-JAVA-ORGKEYCLOAK-1061996:
     - '*':
         reason: '.'
@@ -27,14 +37,5 @@ ignore:
     - '*':
         reason: '.'
   SNYK-JAVA-ORGKEYCLOAK-1085642:
-    - '*':
-        reason: '.'
-  SNYK-JAVA-LOG4J-2342645:
-    - '*':
-        reason: '.'
-  SNYK-JAVA-LOG4J-2342646:
-    - '*':
-        reason: '.'
-  SNYK-JAVA-LOG4J-2342647:
     - '*':
         reason: '.'
