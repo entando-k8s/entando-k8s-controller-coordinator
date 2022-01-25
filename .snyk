@@ -26,7 +26,6 @@ ignore:
   SNYK-JAVA-ORGJBOSSRESTEASY-1009963:
     - '*':
         reason: '.'
-
   SNYK-JAVA-ORGKEYCLOAK-1061996:
     - '*':
         reason: '.'
