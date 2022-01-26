@@ -1,4 +1,4 @@
-name: Standard Publication
+name: PUB
 
 on:
   push:
