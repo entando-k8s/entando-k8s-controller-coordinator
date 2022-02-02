@@ -43,10 +43,10 @@ relatedImages:
     version: 6.0.5
   entando_component_manager_6_3:
     sha256: 026030b67330e61a08000f899a819e3e1691047faeca52d213248612147a462a
-    version: 6.3.26
+    version: 7.0.0-ENG-3083-PR-170
   entando_component_manager_6_4:
     sha256: c807bf8033a73217b717b1d506ef5ac1184a54ae833b77511520cb8aaa1da3f4
-    version: 0.0.0-SNAPSHOT-PR-135-25
+    version: 7.0.0-ENG-3083-PR-170
   entando_de_app_eap_6_3:
     sha256: cb382354c75731ff6e29b26197ad92c9934bf80fe8dee95635807a2ea7a6ca35
     version: 6.3.68
@@ -90,7 +90,7 @@ relatedImages:
     sha256: ff9374f45a370365b8ee79259340e1efb47c3040604fa1cb431b29b15ae0c06c
     version: 6.0.50
   entando_redhat_sso:
-    sha256: 3692adb3694b3bf278bed7a678c9d0eaa0aba8e3e3ed4117ca04156525bcac72
+    sha256: 144ee626c16a2fdb2c6b5d55aa36b89d72756d5e7abcffe9d5ff00734e01342d
     version: 6.3.9
   mysql_57_centos7:
     sha256: e08ee4d43b7356607685b69bde6335e27cf20c020f345b6c6c59400183882764
