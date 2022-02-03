@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import org.entando.kubernetes.controller.spi.common.LabelNames;
+import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 
 public class CoordinatorUtils {
@@ -89,7 +90,7 @@ public class CoordinatorUtils {
                 LabelNames.JOB_KIND.getName(), "deployer",
                 LabelNames.RESOURCE_KIND.getName(), resource.getKind(),
                 LabelNames.RESOURCE_NAMESPACE.getName(), resource.getMetadata().getNamespace(),
-                resource.getKind(), resource.getMetadata().getName());
+                resource.getKind(), NameUtils.shortenLabelToMaxLength(resource.getMetadata().getName()));
     }
 
 }
