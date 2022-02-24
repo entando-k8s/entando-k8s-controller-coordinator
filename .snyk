@@ -5,24 +5,6 @@ ignore:
   SNYK-JAVA-IOQUARKUS-2331899:
     - '*':
         reason: '.'
-  SNYK-JAVA-LOG4J-1300176:
-    - '*':
-        reason: '.'
-  SNYK-JAVA-LOG4J-2316893:
-    - '*':
-        reason: '.'
-  SNYK-JAVA-LOG4J-2342645:
-    - '*':
-        reason: '.'      
-  SNYK-JAVA-LOG4J-2342646:
-    - '*':
-        reason: '.'
-  SNYK-JAVA-LOG4J-2342647:
-    - '*':
-        reason: '.'        
-  SNYK-JAVA-LOG4J-572732:
-    - '*':
-        reason: '.'
   SNYK-JAVA-ORGJBOSSRESTEASY-1009963:
     - '*':
         reason: '.'
