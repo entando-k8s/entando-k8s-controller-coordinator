@@ -29,6 +29,7 @@ rules:
       - configmaps
       - serviceaccounts
       - events
+      - limitranges
     verbs:
       - "*"
   - apiGroups:
