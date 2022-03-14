@@ -4,50 +4,50 @@ metadata:
   name: entando-docker-image-info
 data:
   app-builder-6-3: >-
-    {"version":"{{ .Values.relatedImages.app_builder_6_3.version }}","executable-type":"n/a","registry":"docker.io","organization":"entando","repository":"app-builder"}
+    {"version":"{{ .Values.relatedImages.app_builder_6_3.version }}","executable-type":"n/a","registry":"registry.hub.docker.com","organization":"entando","repository":"app-builder"}
   app-builder-6-4: >-
-    {"version":"{{ .Values.relatedImages.app_builder_6_4.version }}","executable-type":"n/a","registry":"docker.io","organization":"entando","repository":"app-builder"}
+    {"version":"{{ .Values.relatedImages.app_builder_6_4.version }}","executable-type":"n/a","registry":"registry.hub.docker.com","organization":"entando","repository":"app-builder"}
   busybox: >-
-    {"version":"latest","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"latest","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-avatar-plugin: >-
-    {"version":"6.0.5","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"6.0.5","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-component-manager-6-3: >-
-    {"version":"{{ .Values.relatedImages.entando_component_manager_6_3.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-component-manager"}
+    {"version":"{{ .Values.relatedImages.entando_component_manager_6_3.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-component-manager"}
   entando-component-manager-6-4: >-
-    {"version":"{{ .Values.relatedImages.entando_component_manager_6_4.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-component-manager"}
+    {"version":"{{ .Values.relatedImages.entando_component_manager_6_4.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-component-manager"}
   entando-de-app-eap-6-3: >-
-    {"version":"{{ .Values.relatedImages.entando_de_app_eap_6_3.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-de-app-eap"}
+    {"version":"{{ .Values.relatedImages.entando_de_app_eap_6_3.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-de-app-eap"}
   entando-de-app-eap-6-4: >-
-    {"version":"{{ .Values.relatedImages.entando_de_app_eap_6_4.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-de-app-eap"}
+    {"version":"{{ .Values.relatedImages.entando_de_app_eap_6_4.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-de-app-eap"}
   entando-de-app-wildfly-6-3: >-
-    {"version":"{{ .Values.relatedImages.entando_de_app_wildfly_6_3.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-de-app-wildfly"}
+    {"version":"{{ .Values.relatedImages.entando_de_app_wildfly_6_3.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-de-app-wildfly"}
   entando-de-app-wildfly-6-4: >-
-    {"version":"{{ .Values.relatedImages.entando_de_app_wildfly_6_4.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando","repository":"entando-de-app-wildfly"}
+    {"version":"{{ .Values.relatedImages.entando_de_app_wildfly_6_4.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-de-app-wildfly"}
   entando-k8s-app-controller: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_app_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_k8s_app_controller.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-k8s-app-plugin-link-controller: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_app_plugin_link_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_k8s_app_plugin_link_controller.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-k8s-database-service-controller: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_database_service_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_k8s_database_service_controller.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-k8s-dbjob: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_dbjob.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_k8s_dbjob.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-k8s-keycloak-controller: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_keycloak_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_k8s_keycloak_controller.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-k8s-plugin-controller: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_plugin_controller.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_k8s_plugin_controller.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-k8s-service: >-
-    {"version":"{{ .Values.relatedImages.entando_k8s_service.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_k8s_service.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-keycloak: >-
-    {"version":"{{ .Values.relatedImages.entando_keycloak.version }}","executable-type":"","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_keycloak.version }}","executable-type":"","registry":"registry.hub.docker.com","organization":"entando"}
   entando-process-driven-plugin: >-
-    {"version":"{{ .Values.relatedImages.entando_process_driven_plugin.version }}","executable-type":"jvm","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_process_driven_plugin.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-redhat-sso: >-
-    {"version":"{{ .Values.relatedImages.entando_redhat_sso.version }}","executable-type":"","registry":"docker.io","organization":"entando"}
+    {"version":"{{ .Values.relatedImages.entando_redhat_sso.version }}","executable-type":"","registry":"registry.hub.docker.com","organization":"entando"}
   mysql-80-centos7: >-
-    {"version":"latest","executable-type":"jvm","registry":"docker.io","organization":"centos"}
+    {"version":"{{ .Values.relatedImages.mysql_80_centos7.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-mysql-rocky"}
   postgresql-12-centos7: >-
-    {"version":"latest","executable-type":"jvm","registry":"docker.io","organization":"centos"}
+    {"version":"{{ .Values.relatedImages.postgresql_12_centos7.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-postgres-rocky"}
   rhel8-mysql-80: >-
-    {"version":"latest","executable-type":"jvm","registry":"registry.redhat.io","organization":"rhel8"}
+    {"version":"{{ .Values.relatedImages.rhel8_mysql_80.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando",,"repository":"entando-mysql-ubi"}
   rhel8-postgresql-12: >-
-    {"version":"latest","executable-type":"jvm","registry":"registry.redhat.io","organization":"rhel8"}
+    {"version":"{{ .Values.relatedImages.rhel8_postgresql_12.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-postgres-ubi"}
