@@ -59,6 +59,7 @@ rules:
     resources:
       - namespaces
       - pods/exec
+      - pods/log
     verbs:
       - get
   - apiGroups:
