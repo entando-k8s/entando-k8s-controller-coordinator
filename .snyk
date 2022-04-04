@@ -2,4 +2,21 @@
 version: v1.19.0
 # ignores vulnerabilities until expiry date; change duration by modifying expiry date
 ignore:
-
+  SNYK-JAVA-IOQUARKUS-2331899:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGJBOSSRESTEASY-1009963:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1061996:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1062507:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1083276:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1085642:
+    - '*':
+        reason: '.'
