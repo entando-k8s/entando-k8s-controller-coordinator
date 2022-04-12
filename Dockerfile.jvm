@@ -1,4 +1,4 @@
-FROM entando/entando-k8s-operator-common:7.0.1
+FROM entando/entando-k8s-operator-common:7.0.1-ENG-3480-PR-96
 ARG VERSION
 
 LABEL name="Entando K8S Controller Coordinator" \
