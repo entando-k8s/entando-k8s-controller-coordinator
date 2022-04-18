@@ -17,15 +17,15 @@ ignore:
   SNYK-JAVA-ORGKEYCLOAK-1083276:
     - '*':
         reason: '.'
-  SNYK-JAVA-ORGKEYCLOAK-2434281:
+  SNYK-JAVA-ORGKEYCLOAK-1085642:
     - '*':
         reason: '.'
-  SNYK-JAVA-ORGKEYCLOAK-1085642:
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-2421244:
     - '*':
         reason: '.'
   SNYK-JAVA-ORGPOSTGRESQL-2401816:
     - '*':
         reason: '.'
-  SNYK-JAVA-COMFASTERXMLJACKSONCORE-2421244:
+  SNYK-JAVA-ORGKEYCLOAK-2434281:
     - '*':
         reason: '.'
