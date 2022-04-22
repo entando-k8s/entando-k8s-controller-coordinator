@@ -21,14 +21,13 @@ import static io.qameta.allure.Allure.step;
 import static java.util.Optional.ofNullable;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
-import io.fabric8.kubernetes.api.model.extensions.Ingress;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.qameta.allure.Description;
@@ -46,7 +45,6 @@ import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.SecretUtils;
 import org.entando.kubernetes.controller.spi.common.TrustStoreHelper;
 import org.entando.kubernetes.controller.spi.container.ProvidedSsoCapability;
-import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SClient;
 import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.support.client.impl.SupportProducer;
@@ -70,7 +68,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 @Tags({@Tag("smoke"), @Tag("inter-process"), @Tag("allure"), @Tag("post-deployment")})
 @Feature(
@@ -198,7 +195,7 @@ class ControllerCoordinatorSmokeTest {
                             .findFirst().get().getStatus().getReadyReplicas() >= 1);
         });
         step("And an Ingress for the Entando App", () -> {
-            Optional<Ingress> ingress = fabric8Client.extensions().ingresses().inNamespace(NAMESPACE)
+            Optional<Ingress> ingress = fabric8Client.network().v1().ingresses().inNamespace(NAMESPACE)
                     .list()
                     .getItems()
                     .stream()
