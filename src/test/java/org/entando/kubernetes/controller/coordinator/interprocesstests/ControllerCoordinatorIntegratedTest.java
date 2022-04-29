@@ -104,7 +104,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
     private static K8SIntegrationTestHelper helper = new K8SIntegrationTestHelper();
 
     static {
-        /* 
+        /*
          NB!!! this part is a bit convoluted. The ENTANDO_CA_SECRET_NAME JVM property could potentially be set in the
          constructor K8SIntegrationTestHelper. The init statement TestFixturePreparation.newClient() actually indirectly
          calls CertificateSecretHelper.buildCertificateSecretsFromDirectory() but only if certs could be picked up
@@ -181,7 +181,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 .inNamespace(client.getNamespace()).create(keycloakServer);
 
         //Then I expect to see at least one controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
@@ -293,7 +293,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 .inNamespace(NAMESPACE)
                 .create(appToCreate);
         //Then I expect to see the keycloak controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> keycloakControllerList = client.pods()
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
@@ -327,7 +327,7 @@ class ControllerCoordinatorIntegratedTest implements FluentIntegrationTesting, F
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(KEYCLOAK_NAME).get().getPodStatus() != null
         );
         //And the plugin controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> pluginControllerList = client.pods()
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch> pluginControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoPlugin")
                 .withLabel("EntandoPlugin", app.getSpec().getComponents().get(1).getMetadata().getName());

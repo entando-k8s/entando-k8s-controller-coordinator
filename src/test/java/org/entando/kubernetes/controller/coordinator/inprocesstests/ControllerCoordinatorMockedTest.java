@@ -140,7 +140,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .inNamespace(client.getNamespace()).create(keycloakServer);
         afterCreate(keycloakServer);
         //Then I expect to see at least one controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
@@ -179,7 +179,7 @@ class ControllerCoordinatorMockedTest implements FluentIntegrationTesting, Fluen
                 .inNamespace(client.getNamespace()).create(keycloakServer);
         afterCreate(keycloakServer);
         //And I the controller pod is created.
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> listable = client.pods()
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch> listable = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer");
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
