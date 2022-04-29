@@ -1,10 +1,10 @@
-FROM entando/entando-k8s-operator-common:7.0.1-ENG-3480-PR-96
+FROM entando/entando-k8s-operator-common:7.0.2
 ARG VERSION
 
 LABEL name="Entando K8S Controller Coordinator" \
       vendor="Entando" \
       version="v${VERSION}" \
-      release="6" \
+      release="7.0" \
       summary="This container is the entrypoint for the Entando Operator and launches delegate containers to process Entando custom resources." \
       description="This is container runs background threads that observe events occurring against Entando custom resources. \
                    When it detects an event against a known Entando custom resource, it spawns the appropriate run-to-completion \
