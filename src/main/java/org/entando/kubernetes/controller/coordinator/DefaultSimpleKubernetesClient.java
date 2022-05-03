@@ -29,7 +29,7 @@ import io.fabric8.kubernetes.api.model.EventBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Secret;
-import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
@@ -133,7 +133,7 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
 
     private CustomResourceDefinitionContext resolveDefinitionContext(SerializedEntandoResource resource) {
         return definitionContextMap.computeIfAbsent(CoordinatorUtils.keyOf(resource), key ->
-                CustomResourceDefinitionContext.fromCrd(client.apiextensions().v1beta1().customResourceDefinitions()
+                CustomResourceDefinitionContext.fromCrd(client.apiextensions().v1().customResourceDefinitions()
                         .withName(ofNullable(
                                 ofNullable(findOrCreateControllerConfigMap(CoordinatorUtils.ENTANDO_CRD_NAMES_CONFIGMAP_NAME).getData())
                                         .orElse(Collections.emptyMap()).get(key))
@@ -196,7 +196,7 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
     @Override
     public Watch watchCustomResourceDefinitions(Watcher<CustomResourceDefinition> customResourceDefinitionWatcher) {
         return performSensitiveOperation(
-                () -> this.client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
+                () -> this.client.apiextensions().v1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
                         .watch(customResourceDefinitionWatcher),
                 () -> NOOP_WATCH);
     }
@@ -215,12 +215,12 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
     @Override
     public Collection<CustomResourceDefinition> loadCustomResourceDefinitionsOfInterest() {
         return performSensitiveOperation(
-                () -> client.apiextensions().v1beta1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
+                () -> client.apiextensions().v1().customResourceDefinitions().withLabel(LabelNames.CRD_OF_INTEREST.getName())
                         .list()
                         .getItems(),
                 () -> ControllerCoordinatorConfig.getNamesOfCrdsOfInterest()
                         .stream()
-                        .map(s -> client.apiextensions().v1beta1().customResourceDefinitions().withName(s).fromServer().get())
+                        .map(s -> client.apiextensions().v1().customResourceDefinitions().withName(s).fromServer().get())
                         .collect(Collectors.toList()));
     }
 

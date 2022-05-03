@@ -29,8 +29,8 @@ import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.ServiceAccountBuilder;
-import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
-import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinitionList;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinitionList;
 import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBindingBuilder;
 import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBuilder;
 import io.fabric8.kubernetes.client.Config;
@@ -231,7 +231,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
                     .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                             CustomResourceDefinition.class);
             value.getMetadata().setLabels(Map.of(LabelNames.CRD_OF_INTEREST.getName(), "MyCRD"));
-            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+            getFabric8Client().apiextensions().v1().customResourceDefinitions().create(value);
 
         });
         step("Then the CustomResourceDefinition was ignored", () -> {
@@ -248,7 +248,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
             final CustomResourceDefinition value = objectMapper
                     .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                             CustomResourceDefinition.class);
-            getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+            getFabric8Client().apiextensions().v1().customResourceDefinitions().create(value);
         });
         List<CustomResourceDefinition> crds = new ArrayList<>();
         step("When I list the CustomResourceDefinitions of interest", () -> {
@@ -357,7 +357,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
                                             .getResource("mycrds.test.org.crd.yaml"),
                                     CustomResourceDefinition.class);
                     value.getMetadata().setLabels(Map.of(LabelNames.CRD_OF_INTEREST.getName(), "MyCRD"));
-                    getFabric8Client().apiextensions().v1beta1().customResourceDefinitions().create(value);
+                    getFabric8Client().apiextensions().v1().customResourceDefinitions().create(value);
 
                 });
         List<CustomResourceDefinition> crds = new ArrayList<>();
@@ -372,7 +372,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
 
     private void deleteMyCrd() throws InterruptedException {
         NonNamespaceOperation<CustomResourceDefinition, CustomResourceDefinitionList, Resource<CustomResourceDefinition>> crdResource =
-                getFabric8Client().apiextensions().v1beta1().customResourceDefinitions();
+                getFabric8Client().apiextensions().v1().customResourceDefinitions();
         crdResource.withName("mycrds.test.org").delete();
         crdResource.waitUntilCondition(crd -> crdResource.withName("mycrds.test.org").fromServer().get() == null, 20, TimeUnit.SECONDS);
     }

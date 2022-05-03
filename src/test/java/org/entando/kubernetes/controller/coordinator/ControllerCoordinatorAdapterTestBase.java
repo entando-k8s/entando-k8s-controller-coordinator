@@ -20,7 +20,7 @@ import static org.awaitility.Awaitility.await;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.IOException;
@@ -68,8 +68,8 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
     @AfterAll
     static void deleteCrds() {
         try (final DefaultKubernetesClient c = new DefaultKubernetesClient()) {
-            c.apiextensions().v1beta1().customResourceDefinitions().withName("mycrds.test.org").delete();
-            c.apiextensions().v1beta1().customResourceDefinitions().withName("testresources.test.org").delete();
+            c.apiextensions().v1().customResourceDefinitions().withName("mycrds.test.org").delete();
+            c.apiextensions().v1().customResourceDefinitions().withName("testresources.test.org").delete();
         }
     }
 
@@ -93,7 +93,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
             final CustomResourceDefinition value = new ObjectMapper(new YAMLFactory())
                     .readValue(Thread.currentThread().getContextClassLoader().getResource(resourceName),
                             CustomResourceDefinition.class);
-            return c.apiextensions().v1beta1().customResourceDefinitions().createOrReplace(value);
+            return c.apiextensions().v1().customResourceDefinitions().createOrReplace(value);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
