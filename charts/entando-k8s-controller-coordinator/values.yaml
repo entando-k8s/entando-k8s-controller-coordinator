@@ -26,9 +26,15 @@ relatedImages:
   rhel8_mysql_80:
     sha256: 570bce7dc649ac7ac85e7ecb196aabc281c77a94590aa7df7d9746869ce757ea
     version: latest
+    registry: registry.hub.docker.com
+    organization: entando
+    repository: entando-mysql-ubi
   rhel8_postgresql_12:
     sha256: f4e5c728b644bf1888ec8086424852ed74b5596a511be29e636fb10218fc9b6f
     version: latest
+    registry: registry.hub.docker.com
+    organization: entando
+    repository: entando-postgres-ubi
   app_builder_6_3:
     sha256: b1b36ed310050e1a04cb6c05e1a08d13232ba3ea2f5b74a7c17dcbae3e052cd0
     version: 6.3.93
@@ -95,10 +101,12 @@ relatedImages:
   mysql_80_centos7:
     sha256: e08ee4d43b7356607685b69bde6335e27cf20c020f345b6c6c59400183882764
     version: latest
+    registry: registry.hub.docker.com
     organization: entando
     repository: entando-mysql-rocky
   postgresql_12_centos7:
     sha256: f574a3f9048a68c9e1e7277009bc1123f81bdbffd1e15f875d84bbb30ff7d62a
     version: latest
+    registry: registry.hub.docker.com
     organization: entando
     repository: entando-mysql-rocky

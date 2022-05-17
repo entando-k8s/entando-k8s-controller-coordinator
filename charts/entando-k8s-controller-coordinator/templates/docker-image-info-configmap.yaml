@@ -44,10 +44,10 @@ data:
   entando-redhat-sso: >-
     {"version":"{{ .Values.relatedImages.entando_redhat_sso.version }}","executable-type":"","registry":"registry.hub.docker.com","organization":"entando"}
   mysql-80-centos7: >-
-    {"version":"{{ .Values.relatedImages.mysql_80_centos7.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"{{.Values.relatedImages.mysql_80_centos7.organization}}","repository":"{{.Values.relatedImages.mysql_80_centos7.repository}}"}
+    {"version":"{{ .Values.relatedImages.mysql_80_centos7.version }}","executable-type":"jvm","registry":"{{.Values.relatedImages.mysql_80_centos7.registry}}","organization":"{{.Values.relatedImages.mysql_80_centos7.organization}}","repository":"{{.Values.relatedImages.mysql_80_centos7.repository}}"}
   postgresql-12-centos7: >-
-    {"version":"{{ .Values.relatedImages.postgresql_12_centos7.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"{{.Values.relatedImages.postgresql_12_centos7.organization}}","repository":"{{.Values.relatedImages.postgresql_12_centos7.repository}}"}
+    {"version":"{{ .Values.relatedImages.postgresql_12_centos7.version }}","executable-type":"jvm","registry":"{{.Values.relatedImages.postgresql_12_centos7.registry}}","organization":"{{.Values.relatedImages.postgresql_12_centos7.organization}}","repository":"{{.Values.relatedImages.postgresql_12_centos7.repository}}"}
   rhel8-mysql-80: >-
-    {"version":"{{ .Values.relatedImages.rhel8_mysql_80.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando",,"repository":"entando-mysql-ubi"}
+    {"version":"{{ .Values.relatedImages.rhel8_mysql_80.version }}","executable-type":"jvm","registry":"{{.Values.relatedImages.rhel8_mysql_80.registry}}","organization":"{{.Values.relatedImages.rhel8_mysql_80.organization}}",,"repository":"{{.Values.relatedImages.rhel8_mysql_80.repository}}"}
   rhel8-postgresql-12: >-
-    {"version":"{{ .Values.relatedImages.rhel8_postgresql_12.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-postgres-ubi"}
+    {"version":"{{ .Values.relatedImages.rhel8_postgresql_12.version }}","executable-type":"jvm","registry":"{{.Values.relatedImages.rhel8_postgresql_12.registry}}","organization":"{{.Values.relatedImages.rhel8_postgresql_12.organization}}","repository":"{{.Values.relatedImages.rhel8_postgresql_12.repository}}"}
