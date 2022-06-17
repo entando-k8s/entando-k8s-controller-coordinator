@@ -1,4 +1,4 @@
-apiVersion: "{{- if .Values.supportOpenshift311 }}extensions/v1beta1{{- else }}apps/v1{{- end }}"
+apiVersion: "{{- if .Values.supportOpenshift311 }}extensions/v1{{- else }}apps/v1{{- end }}"
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}
