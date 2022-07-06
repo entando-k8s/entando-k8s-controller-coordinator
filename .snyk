@@ -8,15 +8,33 @@ ignore:
   SNYK-JAVA-ORGJBOSSRESTEASY-1009963:
     - '*':
         reason: '.'
-  SNYK-JAVA-ORGKEYCLOAK-1061996:
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-2421244:
     - '*':
         reason: '.'
-  SNYK-JAVA-ORGKEYCLOAK-1062507:
+  SNYK-JAVA-ORGBOUNCYCASTLE-2841508:
     - '*':
         reason: '.'
-  SNYK-JAVA-ORGKEYCLOAK-1083276:
+  SNYK-JAVA-ORGKEYCLOAK-2434281:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-2805802:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGPOSTGRESQL-2401816:
     - '*':
         reason: '.'
   SNYK-JAVA-ORGKEYCLOAK-1085642:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-2434281:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-2421244:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-2805802:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGBOUNCYCASTLE-2841508:
     - '*':
         reason: '.'
