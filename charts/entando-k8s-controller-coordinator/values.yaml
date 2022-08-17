@@ -109,4 +109,4 @@ relatedImages:
     version: latest
     registry: registry.hub.docker.com
     organization: entando
-    repository: entando-mysql-rocky
+    repository: entando-postgres-rocky
