@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>7.2.0-ENG-4124-PR-42</version>
+        <version>7.2.0-ENG-3907-PR-41</version>
         <relativePath/>
     </parent>
     <version>7.2.0-SNAPSHOT</version>
@@ -63,7 +63,7 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando-k8s-operator-common.version>7.2.0-ENG-4142-PR-120</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>7.2.0-ENG-3907-PR-117</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>smoke</postDeploymentTestGroups>
         <maven.compiler.source>11</maven.compiler.source>
