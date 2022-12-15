@@ -17,6 +17,7 @@
 package org.entando.kubernetes.controller.coordinator;
 
 public enum AnnotationNames {
+
     PROCESSING_INSTRUCTION("entando.org/processing-instruction"),
     CONTROLLER_IMAGE("entando.org/controller-image"),
     SUPPORTED_CAPABILITIES("entando.org/supported-capabilities"),
