@@ -86,4 +86,3 @@ spec:
   {{- end}}
           resources:
 {{  .Values.resources | toYaml | trim | indent 12 }}
-          terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
