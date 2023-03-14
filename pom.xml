@@ -30,7 +30,7 @@
     <description>Entando's K8S Controller Coordinator</description>
     <inceptionYear>2019</inceptionYear>
     <url>https://central.entando.com</url>
-
+    
     <licenses>
         <license>
             <name>GNU LESSER GENERAL PUBLIC LICENSE, Version 3, 29 June 2007</name>
