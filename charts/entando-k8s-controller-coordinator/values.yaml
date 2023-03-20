@@ -65,6 +65,9 @@ relatedImages:
   entando_de_app_wildfly_6_4:
     sha256: cdbd9c90bfed8b56f4cfc8b7e76f8a3ea7126f1c1b679a7bcaaaed5f58f71c44
     version: 6.4.6
+  entando_de_app_tomcat_6_4:
+    sha256: 8192bff872f40c02267d62f923a78863630e8bfc11559ab6d9efc8256484af03
+    version: 7.2.0-ENG-4528-PR-94
   entando_k8s_app_controller:
     sha256: 70975aa76c170cfbb5c5d700d71b511388f5c59a2f1ffc6d597372a358fea7e8
     version: 6.4.0

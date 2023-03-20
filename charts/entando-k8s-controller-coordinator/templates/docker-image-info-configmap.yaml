@@ -23,6 +23,8 @@ data:
     {"version":"{{ .Values.relatedImages.entando_de_app_wildfly_6_3.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-de-app-wildfly"}
   entando-de-app-wildfly-6-4: >-
     {"version":"{{ .Values.relatedImages.entando_de_app_wildfly_6_4.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-de-app-wildfly"}
+  entando-de-app-tomcat-6-4: >-
+    {"version":"{{ .Values.relatedImages.entando_de_app_tomcat_6_4.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando","repository":"entando-de-app-tomcat"}
   entando-k8s-app-controller: >-
     {"version":"{{ .Values.relatedImages.entando_k8s_app_controller.version }}","executable-type":"jvm","registry":"registry.hub.docker.com","organization":"entando"}
   entando-k8s-app-plugin-link-controller: >-
