@@ -1,0 +1,14 @@
+{
+    "LABEL": {
+        "name": "title needs correct naming convention",
+        "color": "EEEEEE"
+    },
+    "CHECKS": {
+        "regexp": "[A-Z]{2,5}-[0-9]{1,5}"
+    },
+    "MESSAGES": {
+        "success": "All OK",
+        "failure": "Failing PR test",
+        "notice": "Check the naming convention rules to naming PRs"
+    }
+}
