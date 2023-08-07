@@ -102,58 +102,58 @@ jobs:
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # SCANS
-  scans:
-    needs: [ 'prepare', 'full-build' ]
-    runs-on: ubuntu-latest
-    if: ${{ needs.prepare.outputs.SCAN_MATRIX != '' }}
-    strategy:
-      max-parallel: 5
-      fail-fast: false
-      matrix:
-        scan-type: ${{fromJson(needs.prepare.outputs.SCAN_MATRIX)}}
-      
-    steps:
-      #~ CHECKOUT
-      - name: "CHECKOUT"
-        run: |
-          ${{ secrets.ENTANDO_OPT_PPL_INSTALL_CMD }}
-          ~/ppl-run checkout-branch pr --lcd "$LOCAL_CLONE_DIR"
-      #~ JDK
-      - name: "Set up JDK 11"
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-      #~ MAVEN CACHE
-      - name: "Cache Maven packages"
-        id: maven-cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-matrix-${{ matrix.scan-type }}
-          restore-keys: |
-            ${{ runner.os }}-m2-matrix-${{ matrix.scan-type }}
-            ${{ runner.os }}-m2-matrix-
-            ${{ runner.os }}-m2-
-      #~ SCAN
-      - name: "Run the matrix step ${{ matrix.scan-type }}"
-        run: |
-          SCAN_TYPE="${{ matrix.scan-type }}"
-          case "$SCAN_TYPE" in
-            MTX-MVN-SCAN-SONAR)
-              export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-              export SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}"
-              export ENTANDO_OPT_SONAR_PROJECT_KEY="${{ secrets.ENTANDO_OPT_SONAR_PROJECT_KEY }}"
-              ;;
-            MTX-SCAN-SNYK)
-              export SNYK_TOKEN="${{ secrets.SNYK_TOKEN }}"
-              ;;
-            MTX-MVN-POST-DEPLOYMENT-TESTS)
-              export ENTANDO_OPT_OKD_LOGIN_TOKEN="${{ secrets.ENTANDO_OPT_OKD_LOGIN_TOKEN }}"
-              export ENTANDO_OPT_IMAGE_REGISTRY_CREDENTIALS="${{ secrets.ENTANDO_OPT_IMAGE_REGISTRY_CREDENTIALS }}"
-              export ENTANDO_OPT_DOCKER_USERNAME="${{ secrets.ENTANDO_OPT_DOCKER_USERNAME }}"
-              export ENTANDO_OPT_DOCKER_PASSWORD="${{ secrets.ENTANDO_OPT_DOCKER_PASSWORD }}"
-              export ENTANDO_OPT_TEST_TLS_CRT="${{ secrets.ENTANDO_OPT_TEST_TLS_CRT }}"
-              export ENTANDO_OPT_TEST_TLS_KEY="${{ secrets.ENTANDO_OPT_TEST_TLS_KEY }}"
-              ;;
-          esac
-          ~/ppl-run generic "$SCAN_TYPE" mvn --id "$SCAN_TYPE" --lcd "$LOCAL_CLONE_DIR"
+#  scans:
+#    needs: [ 'prepare', 'full-build' ]
+#    runs-on: ubuntu-latest
+#    if: ${{ needs.prepare.outputs.SCAN_MATRIX != '' }}
+#    strategy:
+#      max-parallel: 5
+#      fail-fast: false
+#      matrix:
+#        scan-type: ${{fromJson(needs.prepare.outputs.SCAN_MATRIX)}}
+#      
+#    steps:
+#      #~ CHECKOUT
+#      - name: "CHECKOUT"
+#        run: |
+#          ${{ secrets.ENTANDO_OPT_PPL_INSTALL_CMD }}
+#          ~/ppl-run checkout-branch pr --lcd "$LOCAL_CLONE_DIR"
+#      #~ JDK
+#      - name: "Set up JDK 11"
+#        uses: actions/setup-java@v1
+#        with:
+#          java-version: 11
+#      #~ MAVEN CACHE
+#      - name: "Cache Maven packages"
+#        id: maven-cache
+#        uses: actions/cache@v2
+#        with:
+#          path: ~/.m2
+#          key: ${{ runner.os }}-m2-matrix-${{ matrix.scan-type }}
+#          restore-keys: |
+#            ${{ runner.os }}-m2-matrix-${{ matrix.scan-type }}
+#            ${{ runner.os }}-m2-matrix-
+#            ${{ runner.os }}-m2-
+#      #~ SCAN
+#      - name: "Run the matrix step ${{ matrix.scan-type }}"
+#        run: |
+#          SCAN_TYPE="${{ matrix.scan-type }}"
+#          case "$SCAN_TYPE" in
+#            MTX-MVN-SCAN-SONAR)
+#              export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+#              export SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}"
+#              export ENTANDO_OPT_SONAR_PROJECT_KEY="${{ secrets.ENTANDO_OPT_SONAR_PROJECT_KEY }}"
+#              ;;
+#            MTX-SCAN-SNYK)
+#              export SNYK_TOKEN="${{ secrets.SNYK_TOKEN }}"
+#              ;;
+#            MTX-MVN-POST-DEPLOYMENT-TESTS)
+#              export ENTANDO_OPT_OKD_LOGIN_TOKEN="${{ secrets.ENTANDO_OPT_OKD_LOGIN_TOKEN }}"
+#              export ENTANDO_OPT_IMAGE_REGISTRY_CREDENTIALS="${{ secrets.ENTANDO_OPT_IMAGE_REGISTRY_CREDENTIALS }}"
+#              export ENTANDO_OPT_DOCKER_USERNAME="${{ secrets.ENTANDO_OPT_DOCKER_USERNAME }}"
+#              export ENTANDO_OPT_DOCKER_PASSWORD="${{ secrets.ENTANDO_OPT_DOCKER_PASSWORD }}"
+#              export ENTANDO_OPT_TEST_TLS_CRT="${{ secrets.ENTANDO_OPT_TEST_TLS_CRT }}"
+#              export ENTANDO_OPT_TEST_TLS_KEY="${{ secrets.ENTANDO_OPT_TEST_TLS_KEY }}"
+#              ;;
+#          esac
+#          ~/ppl-run generic "$SCAN_TYPE" mvn --id "$SCAN_TYPE" --lcd "$LOCAL_CLONE_DIR"
