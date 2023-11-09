@@ -12,7 +12,7 @@ env:
   JDK_VERSION: 11
   BUILD_COMMANDS: mvn package -Pjvm;
   DEPLOY_COMMANDS: -B javadoc:jar source:jar source:test-jar -DskipTests=true -DaltDeploymentRepository=${{ vars.NEXUS_SERVER_ID }}::default::${{ vars.NEXUS_INSTANCE_URI }} -Pprepare-for-nexus -DskipPreDeploymentTests=true -DskipPostDeploymentTests=true -Ddependency-check.skip=true
-  DOCKER_IMAGE_BASE_NAME: entando/entando-k8s-operator-common
+  DOCKER_IMAGE_BASE_NAME: entando/entando-k8s-controller-coordinator
   DOCKER_IMAGE_ARCHITECTURE: linux/amd64,linux/arm64
   DOCKER_IMAGE_CONTEXT: .
   DOCKER_IMAGE_FILE: Dockerfile.jvm
