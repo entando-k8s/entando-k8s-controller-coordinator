@@ -6,12 +6,12 @@ on:
       - 'v*'
 
 env:
-  PPL_TEMPLATE_VERSION: "v2.0.0"
+  PPL_TEMPLATE_VERSION: "v2.0.4"
   ENTANDO_BOT_TOKEN: ${{ secrets.ENTANDO_BOT_TOKEN }}
   PR_CHECKER_PATH: ".github/pr-title-checker-config.json"
-
-  JDK_VERSION: 11
+  JDK_VERSION: 17
   BUILD_COMMANDS: mvn package -Pjvm;
+  DEPLOY_COMMANDS: -B javadoc:jar source:jar source:test-jar -DskipTests=true -DaltDeploymentRepository=${{ vars.NEXUS_SERVER_ID }}::default::${{ vars.NEXUS_INSTANCE_URI }} -Pprepare-for-nexus -DskipPreDeploymentTests=true -DskipPostDeploymentTests=true -Ddependency-check.skip=true
   DOCKER_IMAGE_BASE_NAME: entando/entando-k8s-controller-coordinator
   DOCKER_IMAGE_ARCHITECTURE: linux/amd64,linux/arm64
   DOCKER_IMAGE_CONTEXT: .
@@ -50,10 +50,37 @@ jobs:
           key: ${{ runner.os }}-m2
           restore-keys: ${{ runner.os }}-m2
 
+      - name: Setting up variables
+        run: |
+          REF_VERSION=${GITHUB_REF_NAME:1}
+          REF_VERSION=${REF_VERSION/+*}
+          echo "REF_VERSION=$REF_VERSION" >> $GITHUB_ENV
+
       - name: Build with Maven
         run: ${{ env.BUILD_COMMANDS }}
 
+      - name: Updating pom.xml version
+        run: mvn versions:set -DnewVersion=${{ env.REF_VERSION }}
+
+      - name: Release Maven package
+        uses: samuelmeuli/action-maven-publish@v1
+        with:
+          server_id: ${{ vars.NEXUS_SERVER_ID }}
+          nexus_username: ${{ secrets.NEXUS_USERNAME }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          maven_args: ${{ env.DEPLOY_COMMANDS }}
+          maven_goals_phases: deploy
+          gpg_private_key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg_passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+
+      - name: Check for Dockerfile
+        id: dockerfile
+        uses: andstor/file-existence-action@v2
+        with:
+          files: Dockerfile*
+
       - name: Docker meta
+        if: steps.dockerfile.outputs.files_exists == 'true'
         id: meta
         uses: docker/metadata-action@v4
         with:
@@ -71,20 +98,24 @@ jobs:
             type=raw,event=pr,value={{base_ref}}
 
       - name: Set up QEMU
+        if: steps.dockerfile.outputs.files_exists == 'true'
         uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
+        if: steps.dockerfile.outputs.files_exists == 'true'
         uses: docker/setup-buildx-action@v2
         with:
           platforms: ${{ env.DOCKER_IMAGE_ARCHITECTURE }}
 
       - name: Login to Docker Hub
+        if: steps.dockerfile.outputs.files_exists == 'true'
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.ENTANDO_OPT_DOCKER_USERNAME }}
           password: ${{ secrets.ENTANDO_OPT_DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
+        if: steps.dockerfile.outputs.files_exists == 'true'
         uses: docker/build-push-action@v4
         with:
           context: ${{ env.DOCKER_IMAGE_CONTEXT }}
