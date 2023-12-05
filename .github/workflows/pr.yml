@@ -99,6 +99,15 @@ jobs:
         run: |
           ~/ppl-run generic FULL-BUILD --lcd "$LOCAL_CLONE_DIR"
 
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test results
+          path: "local-checkout/target/surefire-reports/*.xml"
+          reporter: java-junit
+          fail-on-error: true
+          max-annotations: '0'
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # SCANS
