@@ -21,10 +21,10 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>7.3.0</version>
+        <version>7.3.1-ENG-5347-PR-54</version>
         <relativePath/>
     </parent>
-    <version>7.3.0</version>
+    <version>7.3.1</version>
     <artifactId>entando-k8s-controller-coordinator</artifactId>
     <name>Entando K8S Controller Coordinator</name>
     <description>Entando's K8S Controller Coordinator</description>
@@ -63,11 +63,11 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando-k8s-operator-common.version>7.3.0</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>7.3.1-ENG-5347-PR-152</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>smoke</postDeploymentTestGroups>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <skipLicenseDownload>true</skipLicenseDownload>
     </properties>
     <issueManagement>

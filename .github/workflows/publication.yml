@@ -9,7 +9,7 @@ env:
   PPL_TEMPLATE_VERSION: "v2.0.4"
   ENTANDO_BOT_TOKEN: ${{ secrets.ENTANDO_BOT_TOKEN }}
   PR_CHECKER_PATH: ".github/pr-title-checker-config.json"
-  JDK_VERSION: 11
+  JDK_VERSION: 17
   BUILD_COMMANDS: mvn package -Pjvm;
   DEPLOY_COMMANDS: -B javadoc:jar source:jar source:test-jar -DskipTests=true -DaltDeploymentRepository=${{ vars.NEXUS_SERVER_ID }}::default::${{ vars.NEXUS_INSTANCE_URI }} -Pprepare-for-nexus -DskipPreDeploymentTests=true -DskipPostDeploymentTests=true -Ddependency-check.skip=true
   DOCKER_IMAGE_BASE_NAME: entando/entando-k8s-controller-coordinator
