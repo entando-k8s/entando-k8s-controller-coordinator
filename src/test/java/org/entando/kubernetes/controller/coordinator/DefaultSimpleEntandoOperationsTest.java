@@ -71,7 +71,7 @@ class DefaultSimpleEntandoOperationsTest extends ControllerCoordinatorAdapterTes
                     return new DefaultSimpleEntandoOperations(
                             client,
                             definitionContext,
-                            client.customResource(definitionContext),
+                            client.genericKubernetesResources(definitionContext),
                             true);
                 });
         return this.myClient;

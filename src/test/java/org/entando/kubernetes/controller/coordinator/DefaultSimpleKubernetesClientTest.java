@@ -33,12 +33,7 @@ import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition
 import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinitionList;
 import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBindingBuilder;
 import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBuilder;
-import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
-import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
+import io.fabric8.kubernetes.client.*;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
@@ -63,6 +58,7 @@ import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
+import org.entando.kubernetes.controller.support.client.impl.DefaultPodClient;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.fluentspi.BasicDeploymentSpecBuilder;
 import org.entando.kubernetes.fluentspi.TestResource;
@@ -91,7 +87,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     public DefaultSimpleKubernetesClient getMyClient() {
         this.kubernetesClient = Objects
                 .requireNonNullElseGet(this.kubernetesClient,
-                        () -> new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1));
+                        () -> (new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1)));
         this.myClient = Objects.requireNonNullElseGet(this.myClient,
                 () -> new DefaultSimpleKubernetesClient(kubernetesClient));
         return this.myClient;
@@ -163,7 +159,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         step("When I update its phase to 'successful'", () ->
                 getMyClient().updatePhase(serializedEntandoResource, EntandoDeploymentPhase.SUCCESSFUL));
         step("Then the updated status reflects on the TestResource", () -> {
-            final TestResource actual = getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1)
+            final TestResource actual = getFabric8Client().resources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1)
                     .withName(MY_APP)
                     .get();
             assertThat(actual.getStatus().getPhase()).isEqualTo(EntandoDeploymentPhase.SUCCESSFUL);
@@ -328,11 +324,11 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
                     .withName(ENTANDO_CRD_VIEWER_FOR_TEST_TMP)
                     .endMetadata()
                     .addNewRule()
-                    .addNewApiGroup("apiextensions.k8s.io")
-                    .addNewResource("customresourcedefinitions")
-                    .addNewResourceName(TEST_RESOURCES)
-                    .addNewVerb("list")
-                    .addNewVerb("get")
+                    .addToApiGroups("apiextensions.k8s.io")
+                    .addToResources("customresourcedefinitions")
+                    .addToResourceNames(TEST_RESOURCES)
+                    .addToVerbs("list")
+                    .addToVerbs("get")
                     .endRule()
                     .build());
             // CLUSTER-ROLE-BINDING: SERVICE-ACCOUNTS => {CLUSTER-ROLE}
@@ -374,7 +370,9 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         NonNamespaceOperation<CustomResourceDefinition, CustomResourceDefinitionList, Resource<CustomResourceDefinition>> crdResource =
                 getFabric8Client().apiextensions().v1().customResourceDefinitions();
         crdResource.withName("mycrds.test.org").delete();
-        crdResource.waitUntilCondition(crd -> crdResource.withName("mycrds.test.org").fromServer().get() == null, 20, TimeUnit.SECONDS);
+        // DefaultPodClient.waitUntilCondition(crdResource, crd -> crdResource.withName("mycrds.test.org").fromServer().get() == null, 20, TimeUnit.SECONDS);
+        DefaultPodClient.waitUntilCondition(crdResource, crd -> crd == null || crdResource.withName("mycrds.test.org").get() == null, 20, TimeUnit.SECONDS);
+//        DefaultPodClient.waitUntilCondition(crdResource, Objects::isNull, 20, TimeUnit.SECONDS);
     }
 
     @Test

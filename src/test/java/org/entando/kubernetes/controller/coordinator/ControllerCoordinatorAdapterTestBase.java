@@ -53,12 +53,12 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
                     TestFixturePreparation.createNamespace(c,MY_APP_NAMESPACE_1);
                 }
                 //Wait for the API to be 100% available
-                final TestResource testResource1 = c.customResources(TestResource.class)
+                final TestResource testResource1 = c.resources(TestResource.class)
                         .inNamespace(new TestResource().withNames(MY_APP_NAMESPACE_1, "my-app").getMetadata().getNamespace())
                         .createOrReplace(new TestResource().withNames(MY_APP_NAMESPACE_1, "my-app"));
                 c.secrets().inNamespace(testResource1.getMetadata().getNamespace())
                         .create(SecretUtils.buildSecret(testResource1, "dummy", "koos", "asdfasdf"));
-                c.customResources(TestResource.class).inNamespace(testResource1.getMetadata().getNamespace())
+                c.resources(TestResource.class).inNamespace(testResource1.getMetadata().getNamespace())
                         .delete(testResource1);
                 return true;
             });
@@ -74,7 +74,7 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
     }
 
     protected TestResource createTestResource(TestResource testResource1) {
-        return getFabric8Client().customResources(TestResource.class).inNamespace(testResource1.getMetadata().getNamespace())
+        return getFabric8Client().resources(TestResource.class).inNamespace(testResource1.getMetadata().getNamespace())
                 .createOrReplace(testResource1);
     }
 

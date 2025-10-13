@@ -94,7 +94,7 @@ class CrdManagementTest {
         final CustomResourceDefinition value = objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
-        final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
+        final CustomResourceDefinitionBuilder.MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
         step("And I have a CustomResourceDefinition with", () -> {
             step(format("the %s label ", LabelNames.CRD_OF_INTEREST.getName()), () -> {
@@ -136,7 +136,7 @@ class CrdManagementTest {
         final CustomResourceDefinition value = objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
-        final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
+        final CustomResourceDefinitionBuilder.MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
         step("And I have a CustomResourceDefinition with", () -> {
             step(format("the %s label ", LabelNames.CRD_OF_INTEREST.getName()), () -> {
@@ -179,7 +179,7 @@ class CrdManagementTest {
         crd.set(objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class));
-        final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(crd.get())
+        final CustomResourceDefinitionBuilder.MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(crd.get())
                 .editMetadata();
         step("And I have registered a CustomResourceDefinition with", () -> {
             step(format("the %s label ", LabelNames.CRD_OF_INTEREST.getName()), () -> {
@@ -229,7 +229,7 @@ class CrdManagementTest {
         final CustomResourceDefinition value = objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
-        final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
+        final CustomResourceDefinitionBuilder.MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
         step("And I have a CustomResourceDefinition with", () -> {
             step(format("the %s label ", LabelNames.CRD_OF_INTEREST.getName()), () -> {
@@ -274,7 +274,7 @@ class CrdManagementTest {
         final CustomResourceDefinition value = objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
-        final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
+        final CustomResourceDefinitionBuilder.MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
         step("And I have a CustomResourceDefinition with", () -> {
             step(format("the %s label ", LabelNames.CRD_OF_INTEREST.getName()), () -> {
@@ -333,7 +333,7 @@ class CrdManagementTest {
         final CustomResourceDefinition value = objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
-        final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
+        final CustomResourceDefinitionBuilder.MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
         step("And I have a CustomResourceDefinition with", () -> {
             step(format("the %s label ", LabelNames.CRD_OF_INTEREST.getName()), () -> {
@@ -390,7 +390,7 @@ class CrdManagementTest {
         final CustomResourceDefinition value = objectMapper
                 .readValue(Thread.currentThread().getContextClassLoader().getResource("mycrds.test.org.crd.yaml"),
                         CustomResourceDefinition.class);
-        final MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
+        final CustomResourceDefinitionBuilder.MetadataNested<CustomResourceDefinitionBuilder> builder = new CustomResourceDefinitionBuilder(value)
                 .editMetadata();
 
         step("And I have a CustomResourceDefinition with", () -> {
