@@ -22,7 +22,14 @@ import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.interr
 import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
+import io.fabric8.kubernetes.api.model.Event;
+import io.fabric8.kubernetes.api.model.EventBuilder;
+import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -115,9 +122,9 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
             CustomResourceDefinitionContext definition = Optional.ofNullable(ser.getDefinition()).orElse(
                     resolveDefinitionContext(ser));
             ser.setDefinition(definition);
-//            RawCustomResourceOperationsImpl resource = client.customResource(definition)
-//                    .inNamespace(customResource.getMetadata().getNamespace())
-//                    .withName(customResource.getMetadata().getName());
+            // RawCustomResourceOperationsImpl resource = client.customResource(definition)
+            //         .inNamespace(customResource.getMetadata().getNamespace())
+            //         .withName(customResource.getMetadata().getName());
 
             // Use genericKubernetesResources instead of customResource
             var resource = client.genericKubernetesResources(definition)
@@ -129,10 +136,12 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
             ser.setDefinition(definition);
             consumer.accept(ser);
 
-//            final Map<String, Object> map = resource.updateStatus(objectMapper.writeValueAsString(ser));
-//            return objectMapper.readValue(objectMapper.writeValueAsString(map), SerializedEntandoResource.class);
+            // final Map<String, Object> map = resource.updateStatus(objectMapper.writeValueAsString(ser));
+            // return objectMapper.readValue(objectMapper.writeValueAsString(map), SerializedEntandoResource.class);
 
-            var updated = resource.updateStatus((GenericKubernetesResource) objectMapper.readValue(objectMapper.writeValueAsString(ser), GenericKubernetesResource.class));
+            var updated = resource.updateStatus(
+                    (GenericKubernetesResource) objectMapper.readValue(
+                            objectMapper.writeValueAsString(ser), GenericKubernetesResource.class));
             return objectMapper.readValue(
                     objectMapper.writeValueAsString(updated),
                     SerializedEntandoResource.class);

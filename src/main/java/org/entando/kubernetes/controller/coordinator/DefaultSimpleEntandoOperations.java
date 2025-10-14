@@ -59,7 +59,9 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
     private final CustomResourceDefinitionContext definitionContext;
 
     public DefaultSimpleEntandoOperations(KubernetesClient client, CustomResourceDefinitionContext definitionContext,
-            MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList, Resource<GenericKubernetesResource>> operations, boolean anyNamespace) {
+            MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList,
+                    Resource<GenericKubernetesResource>> operations,
+            boolean anyNamespace) {
         super(client);
         this.definitionContext = definitionContext;
         this.operations = operations;
@@ -68,12 +70,16 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
 
     @Override
     public SimpleEntandoOperations inNamespace(String namespace) {
-        return new DefaultSimpleEntandoOperations(client, definitionContext, (MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList, Resource<GenericKubernetesResource>>) operations.inNamespace(namespace), false);
+        return new DefaultSimpleEntandoOperations(client, definitionContext,
+                (MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList,
+                        Resource<GenericKubernetesResource>>) operations.inNamespace(namespace), false);
     }
 
     @Override
     public SimpleEntandoOperations inAnyNamespace() {
-        return new DefaultSimpleEntandoOperations(client, getDefinitionContext(), (MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList, Resource<GenericKubernetesResource>>) operations.inAnyNamespace(), true);
+        return new DefaultSimpleEntandoOperations(client, getDefinitionContext(),
+                (MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList,
+                        Resource<GenericKubernetesResource>>) operations.inAnyNamespace(), true);
     }
 
     @Override

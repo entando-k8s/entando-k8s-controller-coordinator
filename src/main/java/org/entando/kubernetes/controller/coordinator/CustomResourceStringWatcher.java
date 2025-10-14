@@ -73,7 +73,7 @@ public class CustomResourceStringWatcher implements RestartingWatcher<String>, W
 
     /**
      * Creates a Watcher adapter for Fabric8 v6 that converts GenericKubernetesResource to String
-     * and delegates to this CustomResourceStringWatcher
+     * and delegates to this CustomResourceStringWatcher.
      */
     public Watcher<GenericKubernetesResource> asGenericWatcher() {
         return new Watcher<GenericKubernetesResource>() {
