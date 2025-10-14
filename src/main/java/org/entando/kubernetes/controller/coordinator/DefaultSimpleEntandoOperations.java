@@ -160,15 +160,24 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
 
     private void removePodsAndWait(FilterWatchListDeletable<Pod, PodList, PodResource> podResource) throws InterruptedException {
         podResource.delete();
-        DefaultPodClient.waitUntilCondition(podResource, Objects::isNull,
-                ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(), TimeUnit.SECONDS);
+        // Use the DefaultPodClient utility method to wait for pods to be deleted
+        // This avoids blocking calls on the event loop
+        DefaultPodClient.waitUntilConditionOnList(
+                podResource,
+                java.util.List::isEmpty,
+                ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(),
+                TimeUnit.SECONDS);
     }
 
     private void waitForCompletionOfPods(FilterWatchListDeletable<Pod, PodList, PodResource> podResource) throws InterruptedException {
         try {
-            DefaultPodClient.waitUntilCondition(
-                    podResource ,ignored -> podResource.list().getItems().stream().allMatch(pod -> PodResult.of(pod).getState() == State.COMPLETED),
-                    ControllerCoordinatorConfig.getRemovalDelay(), TimeUnit.SECONDS);
+            // Use the DefaultPodClient utility method to wait for all pods to complete
+            // This avoids blocking calls on the event loop
+            DefaultPodClient.waitUntilConditionOnList(
+                    podResource,
+                    podList -> podList.stream().allMatch(pod -> PodResult.of(pod).getState() == State.COMPLETED),
+                    ControllerCoordinatorConfig.getRemovalDelay(),
+                    TimeUnit.SECONDS);
         } catch (KubernetesClientException e) {
             LOGGER.log(Level.WARNING, e, () -> format(
                     "Some pods remained active after the removal delay period. You can consider increasing the setting %s ",

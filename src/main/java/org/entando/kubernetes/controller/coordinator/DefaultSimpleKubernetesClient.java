@@ -175,9 +175,14 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
     public void removePodsAndWait(String namespace, Map<String, String> labels) throws TimeoutException {
         FilterWatchListDeletable<Pod, PodList, PodResource> podResource = client.pods().inNamespace(namespace).withLabels(labels);
         podResource.delete();
+        // Use the DefaultPodClient utility method to wait for pods to be deleted
+        // This avoids blocking calls on the event loop
         interruptionSafe(() ->
-                DefaultPodClient.waitUntilCondition(client.pods().inNamespace(namespace),Objects::isNull,
-                        ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(), TimeUnit.SECONDS));
+                DefaultPodClient.waitUntilConditionOnList(
+                        client.pods().inNamespace(namespace).withLabels(labels),
+                        List::isEmpty,
+                        ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(),
+                        TimeUnit.SECONDS));
     }
 
     @Override

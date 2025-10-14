@@ -171,16 +171,23 @@ public class EntandoControllerCoordinator implements RestartingWatcher<CustomRes
 
     private void startImage(Action action, SerializedEntandoResource resource) {
         try {
+            LOGGER.log(Level.INFO, () -> format("Starting image for %s %s/%s",
+                    resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
             final String controllerImage = getControllerImageFor(resource);
+            LOGGER.log(Level.INFO, () -> format("Controller image resolved to: %s for %s %s/%s",
+                    controllerImage, resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
             if (CoordinatorUtils.NO_IMAGE.equals(controllerImage)) {
                 //A CRD with now Kubernetes semantics
                 LOGGER.log(Level.WARNING, () -> format("No controller image found for the %s %s/%s. Automatically updating to 'SUCCESSFUL'",
                         resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
                 client.updatePhase(resource, EntandoDeploymentPhase.SUCCESSFUL);
             } else {
+                LOGGER.log(Level.INFO, () -> format("Starting controller pod with image: %s", controllerImage));
                 TrustStoreSecretRegenerator.regenerateIfNecessary(client);
                 ControllerExecutor executor = new ControllerExecutor(client.getControllerNamespace(), client, controllerImage);
                 executor.startControllerFor(action, client.updatePhase(resource, EntandoDeploymentPhase.REQUESTED));
+                LOGGER.log(Level.INFO, () -> format("Controller pod started for %s %s/%s",
+                        resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e, () -> format("Could not start the controller image for the %s %s/%s", resource.getKind(),

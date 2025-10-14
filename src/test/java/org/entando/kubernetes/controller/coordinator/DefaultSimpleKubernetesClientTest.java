@@ -33,7 +33,12 @@ import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition
 import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinitionList;
 import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBindingBuilder;
 import io.fabric8.kubernetes.api.model.rbac.ClusterRoleBuilder;
-import io.fabric8.kubernetes.client.*;
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.ConfigBuilder;
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
@@ -366,13 +371,13 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
                 });
     }
 
-    private void deleteMyCrd() throws InterruptedException {
+    private void deleteMyCrd() {
         NonNamespaceOperation<CustomResourceDefinition, CustomResourceDefinitionList, Resource<CustomResourceDefinition>> crdResource =
                 getFabric8Client().apiextensions().v1().customResourceDefinitions();
         crdResource.withName("mycrds.test.org").delete();
-        // DefaultPodClient.waitUntilCondition(crdResource, crd -> crdResource.withName("mycrds.test.org").fromServer().get() == null, 20, TimeUnit.SECONDS);
-        DefaultPodClient.waitUntilCondition(crdResource, crd -> crd == null || crdResource.withName("mycrds.test.org").get() == null, 20, TimeUnit.SECONDS);
-//        DefaultPodClient.waitUntilCondition(crdResource, Objects::isNull, 20, TimeUnit.SECONDS);
+        // Wait for the CRD to be deleted using the non-blocking waitUntilCondition
+        // OldCode   DefaultPodClient.waitUntilCondition(crdResource, crd -> crdResource.withName("mycrds.test.org").fromServer().get() == null, 20, TimeUnit.SECONDS);
+        DefaultPodClient.waitUntilCondition(crdResource, Objects::isNull, 20, TimeUnit.SECONDS);
     }
 
     @Test
