@@ -377,9 +377,6 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
                 getFabric8Client().apiextensions().v1().customResourceDefinitions();
         crdResource.withName("mycrds.test.org").delete();
         // Wait for the CRD to be deleted using the non-blocking waitUntilCondition
-        // OldCode   DefaultPodClient.waitUntilCondition(
-        // crdResource, crd -> 
-        // crdResource.withName("mycrds.test.org").fromServer().get() == null, 20, TimeUnit.SECONDS);
         DefaultPodClient.waitUntilCondition(crdResource, Objects::isNull, 20, TimeUnit.SECONDS);
     }
 
@@ -472,8 +469,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
 
         step("It reflects on the cluster", () -> {
             Event actual = kubernetesClient.v1().events()
-                    .withName(event.getMetadata().getName())
-                    .fromServer().get();
+                    .withName(event.getMetadata().getName()).get();
             assertThat(actual).isNotNull();
             assertThat(actual.getInvolvedObject().getUid()).isEqualTo(startedPod.get().getMetadata().getUid());
 

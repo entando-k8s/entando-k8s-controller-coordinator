@@ -38,7 +38,6 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-//import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
 import java.net.HttpURLConnection;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -122,11 +121,7 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
             CustomResourceDefinitionContext definition = Optional.ofNullable(ser.getDefinition()).orElse(
                     resolveDefinitionContext(ser));
             ser.setDefinition(definition);
-            // RawCustomResourceOperationsImpl resource = client.customResource(definition)
-            //         .inNamespace(customResource.getMetadata().getNamespace())
-            //         .withName(customResource.getMetadata().getName());
 
-            // Use genericKubernetesResources instead of customResource
             var resource = client.genericKubernetesResources(definition)
                     .inNamespace(customResource.getMetadata().getNamespace())
                     .withName(customResource.getMetadata().getName());
@@ -135,9 +130,6 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
             ser = objectMapper.readValue(objectMapper.writeValueAsString(resource.get()), SerializedEntandoResource.class);
             ser.setDefinition(definition);
             consumer.accept(ser);
-
-            // final Map<String, Object> map = resource.updateStatus(objectMapper.writeValueAsString(ser));
-            // return objectMapper.readValue(objectMapper.writeValueAsString(map), SerializedEntandoResource.class);
 
             var updated = resource.updateStatus(
                     (GenericKubernetesResource) objectMapper.readValue(
@@ -197,7 +189,7 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
     @Override
     public ConfigMap findOrCreateControllerConfigMap(String name) {
         return Objects.requireNonNullElseGet(
-                this.client.configMaps().inNamespace(getControllerNamespace()).withName(name).fromServer().get(),
+                this.client.configMaps().inNamespace(getControllerNamespace()).withName(name).get(),
                 () ->
                         this.client.configMaps().inNamespace(getControllerNamespace())
                                 .create(new ConfigMapBuilder()
