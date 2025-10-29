@@ -63,6 +63,7 @@ import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
+import org.entando.kubernetes.controller.support.client.impl.DefaultPodClient;
 import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.fluentspi.BasicDeploymentSpecBuilder;
 import org.entando.kubernetes.fluentspi.TestResource;
@@ -91,7 +92,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
     public DefaultSimpleKubernetesClient getMyClient() {
         this.kubernetesClient = Objects
                 .requireNonNullElseGet(this.kubernetesClient,
-                        () -> new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1));
+                        () -> (new DefaultKubernetesClient().inNamespace(MY_APP_NAMESPACE_1)));
         this.myClient = Objects.requireNonNullElseGet(this.myClient,
                 () -> new DefaultSimpleKubernetesClient(kubernetesClient));
         return this.myClient;
@@ -163,7 +164,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
         step("When I update its phase to 'successful'", () ->
                 getMyClient().updatePhase(serializedEntandoResource, EntandoDeploymentPhase.SUCCESSFUL));
         step("Then the updated status reflects on the TestResource", () -> {
-            final TestResource actual = getFabric8Client().customResources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1)
+            final TestResource actual = getFabric8Client().resources(TestResource.class).inNamespace(MY_APP_NAMESPACE_1)
                     .withName(MY_APP)
                     .get();
             assertThat(actual.getStatus().getPhase()).isEqualTo(EntandoDeploymentPhase.SUCCESSFUL);
@@ -328,11 +329,11 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
                     .withName(ENTANDO_CRD_VIEWER_FOR_TEST_TMP)
                     .endMetadata()
                     .addNewRule()
-                    .addNewApiGroup("apiextensions.k8s.io")
-                    .addNewResource("customresourcedefinitions")
-                    .addNewResourceName(TEST_RESOURCES)
-                    .addNewVerb("list")
-                    .addNewVerb("get")
+                    .addToApiGroups("apiextensions.k8s.io")
+                    .addToResources("customresourcedefinitions")
+                    .addToResourceNames(TEST_RESOURCES)
+                    .addToVerbs("list")
+                    .addToVerbs("get")
                     .endRule()
                     .build());
             // CLUSTER-ROLE-BINDING: SERVICE-ACCOUNTS => {CLUSTER-ROLE}
@@ -370,11 +371,13 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
                 });
     }
 
-    private void deleteMyCrd() throws InterruptedException {
-        NonNamespaceOperation<CustomResourceDefinition, CustomResourceDefinitionList, Resource<CustomResourceDefinition>> crdResource =
+    private void deleteMyCrd() {
+        NonNamespaceOperation<CustomResourceDefinition, CustomResourceDefinitionList,
+                Resource<CustomResourceDefinition>> crdResource =
                 getFabric8Client().apiextensions().v1().customResourceDefinitions();
         crdResource.withName("mycrds.test.org").delete();
-        crdResource.waitUntilCondition(crd -> crdResource.withName("mycrds.test.org").fromServer().get() == null, 20, TimeUnit.SECONDS);
+        // Wait for the CRD to be deleted using the non-blocking waitUntilCondition
+        DefaultPodClient.waitUntilCondition(crdResource, Objects::isNull, 20, TimeUnit.SECONDS);
     }
 
     @Test
@@ -466,8 +469,7 @@ class DefaultSimpleKubernetesClientTest extends ControllerCoordinatorAdapterTest
 
         step("It reflects on the cluster", () -> {
             Event actual = kubernetesClient.v1().events()
-                    .withName(event.getMetadata().getName())
-                    .fromServer().get();
+                    .withName(event.getMetadata().getName()).get();
             assertThat(actual).isNotNull();
             assertThat(actual.getInvolvedObject().getUid()).isEqualTo(startedPod.get().getMetadata().getUid());
 

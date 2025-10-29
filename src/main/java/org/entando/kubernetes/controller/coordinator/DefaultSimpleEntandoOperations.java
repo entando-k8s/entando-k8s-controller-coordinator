@@ -21,16 +21,18 @@ import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.interr
 import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.fabric8.kubernetes.api.model.ListOptions;
+import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
+import io.fabric8.kubernetes.api.model.GenericKubernetesResourceList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import io.fabric8.kubernetes.client.dsl.MixedOperation;
+import io.fabric8.kubernetes.client.dsl.PodResource;
+import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,17 +46,20 @@ import java.util.stream.Collectors;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.PodResult.State;
+import org.entando.kubernetes.controller.support.client.impl.DefaultPodClient;
 
 public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase implements SimpleEntandoOperations {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultSimpleEntandoOperations.class.getName());
 
-    private final RawCustomResourceOperationsImpl operations;
+    private final MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList, Resource<GenericKubernetesResource>> operations;
     private final boolean anyNamespace;
     private final CustomResourceDefinitionContext definitionContext;
 
     public DefaultSimpleEntandoOperations(KubernetesClient client, CustomResourceDefinitionContext definitionContext,
-            RawCustomResourceOperationsImpl operations, boolean anyNamespace) {
+            MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList,
+                    Resource<GenericKubernetesResource>> operations,
+            boolean anyNamespace) {
         super(client);
         this.definitionContext = definitionContext;
         this.operations = operations;
@@ -63,25 +68,24 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
 
     @Override
     public SimpleEntandoOperations inNamespace(String namespace) {
-        return new DefaultSimpleEntandoOperations(client, definitionContext, operations.inNamespace(namespace), false);
+        return new DefaultSimpleEntandoOperations(client, definitionContext,
+                (MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList,
+                        Resource<GenericKubernetesResource>>) operations.inNamespace(namespace), false);
     }
 
     @Override
     public SimpleEntandoOperations inAnyNamespace() {
-        return new DefaultSimpleEntandoOperations(client, getDefinitionContext(), operations.inAnyNamespace(), true);
+        return new DefaultSimpleEntandoOperations(client, getDefinitionContext(),
+                (MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList,
+                        Resource<GenericKubernetesResource>>) operations.inAnyNamespace(), true);
     }
 
     @Override
     public Watch watch(SerializedResourceWatcher observer) {
         Function<CustomResourceStringWatcher, Watch> restartingAction = customResourceWatcher -> {
             try {
-                if (anyNamespace) {
-                    return operations.watch((Map<String, String>) null, null, customResourceWatcher);
-                } else {
-                    return operations
-                            .watch(operations.getNamespace(), null, null, (ListOptions) null, customResourceWatcher);
-                }
-            } catch (IOException e) {
+                return operations.watch(customResourceWatcher.asGenericWatcher());
+            } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, e,
                         () -> "EntandoResourceObserver registration failed. Can't recover. The container should restart now.");
                 Liveness.dead();
@@ -92,10 +96,9 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<SerializedEntandoResource> list() {
-        final List<Map<String, Object>> items = (List<Map<String, Object>>) operations.list().get("items");
-        return items.stream().map(this::toResource).collect(Collectors.toList());
+        final GenericKubernetesResourceList resourceList = operations.list();
+        return resourceList.getItems().stream().map(this::toResource).collect(Collectors.toList());
     }
 
     @Override
@@ -104,22 +107,30 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
     }
 
     @SuppressWarnings("unchecked")
-    private SerializedEntandoResource editAnnotations(SerializedEntandoResource r, Consumer<Map<String, Object>> editAction) {
+    private SerializedEntandoResource editAnnotations(SerializedEntandoResource r, Consumer<Map<String, String>> editAction) {
         return ioSafe(() -> {
-            final Map<String, Object> map = operations.get(r.getMetadata().getNamespace(), r.getMetadata().getName());
-            final Map<String, Object> metadata = (Map<String, Object>) map.get("metadata");
-            final Map<String, Object> annotations = (Map<String, Object>) metadata
-                    .computeIfAbsent("annotations", key -> new HashMap<String, String>());
+            GenericKubernetesResource resource = operations.inNamespace(r.getMetadata().getNamespace())
+                    .withName(r.getMetadata().getName())
+                    .get();
+
+            Map<String, String> annotations = resource.getMetadata().getAnnotations();
+            if (annotations == null) {
+                annotations = new HashMap<>();
+                resource.getMetadata().setAnnotations(annotations);
+            }
             editAction.accept(annotations);
-            operations.inNamespace(r.getMetadata().getNamespace()).withName(r.getMetadata().getName()).edit(map);
-            return this.toResource(map);
+
+            GenericKubernetesResource updated = operations.inNamespace(r.getMetadata().getNamespace())
+                    .withName(r.getMetadata().getName())
+                    .patch(resource);
+            return this.toResource(updated);
         });
     }
 
-    private SerializedEntandoResource toResource(Map<String, Object> map) {
+    private SerializedEntandoResource toResource(GenericKubernetesResource resource) {
         return ioSafe(() -> {
             ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(objectMapper.writeValueAsString(map), SerializedEntandoResource.class);
+            return objectMapper.readValue(objectMapper.writeValueAsString(resource), SerializedEntandoResource.class);
         });
     }
 
@@ -141,7 +152,7 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
     @Override
     public void removeSuccessfullyCompletedPods(SerializedEntandoResource resource) throws TimeoutException {
         String namespace = client.getNamespace();
-        FilterWatchListDeletable<Pod, PodList> podResource = client.pods().inNamespace(namespace).withLabels(
+        FilterWatchListDeletable<Pod, PodList, PodResource> podResource = client.pods().inNamespace(namespace).withLabels(
                 CoordinatorUtils.podLabelsFor(resource));
         interruptionSafe(() -> {
             waitForCompletionOfPods(podResource);
@@ -150,17 +161,26 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
         });
     }
 
-    private void removePodsAndWait(FilterWatchListDeletable<Pod, PodList> podResource) throws InterruptedException {
+    private void removePodsAndWait(FilterWatchListDeletable<Pod, PodList, PodResource> podResource) throws InterruptedException {
         podResource.delete();
-        podResource.waitUntilCondition(ignore -> podResource.list().getItems().isEmpty(),
-                ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(), TimeUnit.SECONDS);
+        // Use the DefaultPodClient utility method to wait for pods to be deleted
+        // This avoids blocking calls on the event loop
+        DefaultPodClient.waitUntilConditionOnList(
+                podResource,
+                java.util.List::isEmpty,
+                ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(),
+                TimeUnit.SECONDS);
     }
 
-    private void waitForCompletionOfPods(FilterWatchListDeletable<Pod, PodList> podResource) throws InterruptedException {
+    private void waitForCompletionOfPods(FilterWatchListDeletable<Pod, PodList, PodResource> podResource) throws InterruptedException {
         try {
-            podResource.waitUntilCondition(
-                    ignored -> podResource.list().getItems().stream().allMatch(pod -> PodResult.of(pod).getState() == State.COMPLETED),
-                    ControllerCoordinatorConfig.getRemovalDelay(), TimeUnit.SECONDS);
+            // Use the DefaultPodClient utility method to wait for all pods to complete
+            // This avoids blocking calls on the event loop
+            DefaultPodClient.waitUntilConditionOnList(
+                    podResource,
+                    podList -> podList.stream().allMatch(pod -> PodResult.of(pod).getState() == State.COMPLETED),
+                    ControllerCoordinatorConfig.getRemovalDelay(),
+                    TimeUnit.SECONDS);
         } catch (KubernetesClientException e) {
             LOGGER.log(Level.WARNING, e, () -> format(
                     "Some pods remained active after the removal delay period. You can consider increasing the setting %s ",

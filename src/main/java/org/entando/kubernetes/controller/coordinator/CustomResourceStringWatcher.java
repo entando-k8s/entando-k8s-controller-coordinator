@@ -20,7 +20,10 @@ import static org.entando.kubernetes.controller.spi.common.ExceptionUtils.ioSafe
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Event;
+import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.client.Watch;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.function.Function;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
@@ -66,6 +69,31 @@ public class CustomResourceStringWatcher implements RestartingWatcher<String>, W
             observer.eventReceived(action, r);
             return null;
         });
+    }
+
+    /**
+     * Creates a Watcher adapter for Fabric8 v6 that converts GenericKubernetesResource to String
+     * and delegates to this CustomResourceStringWatcher.
+     */
+    public Watcher<GenericKubernetesResource> asGenericWatcher() {
+        return new Watcher<GenericKubernetesResource>() {
+            @Override
+            public void eventReceived(Action action, GenericKubernetesResource resource) {
+                ioSafe(() -> {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    // Convert GenericKubernetesResource to String and delegate
+                    String json = objectMapper.writeValueAsString(resource);
+                    CustomResourceStringWatcher.this.eventReceived(action, json);
+                    return null;
+                });
+            }
+
+            @Override
+            public void onClose(WatcherException e) {
+                // Handle watcher close in Fabric8 v6
+                CustomResourceStringWatcher.this.onClose(e);
+            }
+        };
     }
 
     @Override

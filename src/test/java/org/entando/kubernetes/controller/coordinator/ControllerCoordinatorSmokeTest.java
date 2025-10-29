@@ -53,6 +53,7 @@ import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.app.EntandoAppBuilder;
+import org.entando.kubernetes.model.app.EntandoAppSpec;
 import org.entando.kubernetes.model.capability.CapabilityProvisioningStrategy;
 import org.entando.kubernetes.model.capability.CapabilityScope;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
@@ -60,9 +61,13 @@ import org.entando.kubernetes.model.capability.ProvidedCapabilityBuilder;
 import org.entando.kubernetes.model.capability.StandardCapability;
 import org.entando.kubernetes.model.capability.StandardCapabilityImplementation;
 import org.entando.kubernetes.model.common.DbmsVendor;
+import org.entando.kubernetes.model.common.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.common.EntandoCustomResourceStatus;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceSpec;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
+import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerSpec;
 import org.entando.kubernetes.test.common.KeycloakTestCapabilityProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -109,11 +114,11 @@ class ControllerCoordinatorSmokeTest {
                         EntandoDatabaseService.class,
                         EntandoKeycloakServer.class)
                 .forEach(resourceType -> await().atMost(3, TimeUnit.MINUTES).ignoreExceptions().until(() -> {
-                    if (fabric8Client.customResources(resourceType).inNamespace(NAMESPACE).list().getItems()
+                    if (fabric8Client.resources(resourceType).inNamespace(NAMESPACE).list().getItems()
                             .isEmpty()) {
                         return true;
                     } else {
-                        fabric8Client.customResources(resourceType).inNamespace(NAMESPACE).delete();
+                        fabric8Client.resources(resourceType).inNamespace(NAMESPACE).delete();
                         return false;
                     }
                 }));
@@ -152,7 +157,7 @@ class ControllerCoordinatorSmokeTest {
                             NAMESPACE);
                     final ProvidedCapability keycloakCapability = keycloakProvider.createKeycloakCapability();
                     await().atMost(4, TimeUnit.MINUTES).ignoreExceptions()
-                            .until(() -> fabric8Client.customResources(ProvidedCapability.class).inNamespace(NAMESPACE)
+                            .until(() -> fabric8Client.resources(ProvidedCapability.class).inNamespace(NAMESPACE)
                                     .withName(keycloakCapability.getMetadata().getName()).fromServer().get().getStatus()
                                     .getPhase() == EntandoDeploymentPhase.SUCCESSFUL);
                     keycloakProvider.deleteTestRealms(keycloakCapability, NAMESPACE);
@@ -160,7 +165,7 @@ class ControllerCoordinatorSmokeTest {
                 });
         step("When I create an EntandoApp that requires SSO and a PostgreSQL DBMS capability", () -> {
             EntandoApp entandoApp =
-                    fabric8Client.customResources(EntandoApp.class).inNamespace(NAMESPACE)
+                    fabric8Client.resources(EntandoApp.class).inNamespace(NAMESPACE)
                             .create(new EntandoAppBuilder()
                                     .withNewMetadata()
                                     .withNamespace(NAMESPACE)
@@ -175,7 +180,7 @@ class ControllerCoordinatorSmokeTest {
         });
         step("Then I expect to see a PostgreSQL database capability that has been made available", () -> {
             await().atMost(8, TimeUnit.MINUTES).ignoreExceptions()
-                    .until(() -> fabric8Client.customResources(ProvidedCapability.class).inNamespace(NAMESPACE)
+                    .until(() -> fabric8Client.resources(ProvidedCapability.class).inNamespace(NAMESPACE)
                             .list().getItems().stream().anyMatch(
                                     providedCapability -> providedCapability.getSpec().getImplementation().isPresent()
                                             && providedCapability

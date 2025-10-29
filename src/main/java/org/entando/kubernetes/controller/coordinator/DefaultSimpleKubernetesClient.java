@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.EventBuilder;
+import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Secret;
@@ -35,8 +36,8 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-import io.fabric8.kubernetes.client.dsl.internal.RawCustomResourceOperationsImpl;
 import java.net.HttpURLConnection;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -57,6 +58,7 @@ import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.LabelNames;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
+import org.entando.kubernetes.controller.support.client.impl.DefaultPodClient;
 import org.entando.kubernetes.model.common.EntandoCustomResource;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 
@@ -119,15 +121,25 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
             CustomResourceDefinitionContext definition = Optional.ofNullable(ser.getDefinition()).orElse(
                     resolveDefinitionContext(ser));
             ser.setDefinition(definition);
-            RawCustomResourceOperationsImpl resource = client.customResource(definition)
+
+            var resource = client.genericKubernetesResources(definition)
                     .inNamespace(customResource.getMetadata().getNamespace())
                     .withName(customResource.getMetadata().getName());
+
             final ObjectMapper objectMapper = new ObjectMapper();
             ser = objectMapper.readValue(objectMapper.writeValueAsString(resource.get()), SerializedEntandoResource.class);
             ser.setDefinition(definition);
             consumer.accept(ser);
-            final Map<String, Object> map = resource.updateStatus(objectMapper.writeValueAsString(ser));
-            return objectMapper.readValue(objectMapper.writeValueAsString(map), SerializedEntandoResource.class);
+
+            var updated = resource.updateStatus(
+                    (GenericKubernetesResource) objectMapper.readValue(
+                            objectMapper.writeValueAsString(ser), GenericKubernetesResource.class));
+            return objectMapper.readValue(
+                    objectMapper.writeValueAsString(updated),
+                    SerializedEntandoResource.class);
+
+
+
         });
     }
 
@@ -162,17 +174,22 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
 
     @Override
     public void removePodsAndWait(String namespace, Map<String, String> labels) throws TimeoutException {
-        FilterWatchListDeletable<Pod, PodList> podResource = client.pods().inNamespace(namespace).withLabels(labels);
+        FilterWatchListDeletable<Pod, PodList, PodResource> podResource = client.pods().inNamespace(namespace).withLabels(labels);
         podResource.delete();
+        // Use the DefaultPodClient utility method to wait for pods to be deleted
+        // This avoids blocking calls on the event loop
         interruptionSafe(() ->
-                podResource.waitUntilCondition(pod -> podResource.list().getItems().isEmpty(),
-                        ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(), TimeUnit.SECONDS));
+                DefaultPodClient.waitUntilConditionOnList(
+                        client.pods().inNamespace(namespace).withLabels(labels),
+                        List::isEmpty,
+                        ControllerCoordinatorConfig.getPodShutdownTimeoutSeconds(),
+                        TimeUnit.SECONDS));
     }
 
     @Override
     public ConfigMap findOrCreateControllerConfigMap(String name) {
         return Objects.requireNonNullElseGet(
-                this.client.configMaps().inNamespace(getControllerNamespace()).withName(name).fromServer().get(),
+                this.client.configMaps().inNamespace(getControllerNamespace()).withName(name).get(),
                 () ->
                         this.client.configMaps().inNamespace(getControllerNamespace())
                                 .create(new ConfigMapBuilder()
@@ -226,7 +243,8 @@ public class DefaultSimpleKubernetesClient extends DeathEventIssuerBase implemen
 
     @Override
     public SimpleEntandoOperations getOperations(CustomResourceDefinitionContext context) {
-        return new DefaultSimpleEntandoOperations(client, context, client.customResource(context), true);
+        // In Fabric8 v6, use genericKubernetesResources instead of customResource
+        return new DefaultSimpleEntandoOperations(client, context, client.genericKubernetesResources(context), true);
     }
 
     @Override

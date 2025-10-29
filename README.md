@@ -6,7 +6,7 @@ This project produces the Entando Kubernetes Controller Coordinator image. This 
 
 ```
 mvn clean package -Pjvm
-docker build . -f Dockerfile.jvm -t entando/entando-k8s-controller-coordinator:6.3.999
+docker build . -f Dockerfile.jvm -t entando/entando-k8s-controller-coordinator:7.3.0-fix.1
 ```
 
 

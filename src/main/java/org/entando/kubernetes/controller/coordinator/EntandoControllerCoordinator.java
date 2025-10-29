@@ -26,6 +26,9 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.quarkus.runtime.StartupEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -37,9 +40,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
-import javax.inject.Inject;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.model.capability.ProvidedCapability;
 import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
@@ -171,16 +171,23 @@ public class EntandoControllerCoordinator implements RestartingWatcher<CustomRes
 
     private void startImage(Action action, SerializedEntandoResource resource) {
         try {
+            LOGGER.log(Level.INFO, () -> format("Starting image for %s %s/%s",
+                    resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
             final String controllerImage = getControllerImageFor(resource);
+            LOGGER.log(Level.INFO, () -> format("Controller image resolved to: %s for %s %s/%s",
+                    controllerImage, resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
             if (CoordinatorUtils.NO_IMAGE.equals(controllerImage)) {
                 //A CRD with now Kubernetes semantics
                 LOGGER.log(Level.WARNING, () -> format("No controller image found for the %s %s/%s. Automatically updating to 'SUCCESSFUL'",
                         resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
                 client.updatePhase(resource, EntandoDeploymentPhase.SUCCESSFUL);
             } else {
+                LOGGER.log(Level.INFO, () -> format("Starting controller pod with image: %s", controllerImage));
                 TrustStoreSecretRegenerator.regenerateIfNecessary(client);
                 ControllerExecutor executor = new ControllerExecutor(client.getControllerNamespace(), client, controllerImage);
                 executor.startControllerFor(action, client.updatePhase(resource, EntandoDeploymentPhase.REQUESTED));
+                LOGGER.log(Level.INFO, () -> format("Controller pod started for %s %s/%s",
+                        resource.getKind(), resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e, () -> format("Could not start the controller image for the %s %s/%s", resource.getKind(),

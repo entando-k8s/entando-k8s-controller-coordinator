@@ -16,6 +16,7 @@
 
 package org.entando.kubernetes.controller.coordinator;
 
+import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -27,6 +28,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.entando.kubernetes.controller.spi.client.SerializedEntandoResource;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.spi.common.NameUtils;
@@ -34,6 +37,7 @@ import org.entando.kubernetes.controller.support.common.EntandoImageResolver;
 
 public class ControllerExecutor {
 
+    private static final Logger LOGGER = Logger.getLogger(ControllerExecutor.class.getName());
     private final SimpleKubernetesClient client;
     private EntandoImageResolver imageResolver;
     private final String controllerNamespace;
@@ -46,19 +50,41 @@ public class ControllerExecutor {
     }
 
     public Pod startControllerFor(Action action, SerializedEntandoResource resource) throws TimeoutException {
-        this.imageResolver = new EntandoImageResolver(client.loadDockerImageInfoConfigMap(), resource);
+        LOGGER.log(Level.INFO, () -> String.format("startControllerFor called for %s/%s",
+                resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
+        ConfigMap dockerImageInfoConfigMap = client.loadDockerImageInfoConfigMap();
+        LOGGER.log(Level.INFO, () -> String.format("Loaded ConfigMap: %s with %d entries",
+                dockerImageInfoConfigMap.getMetadata().getName(),
+                dockerImageInfoConfigMap.getData() != null ? dockerImageInfoConfigMap.getData().size() : 0));
+        this.imageResolver = new EntandoImageResolver(dockerImageInfoConfigMap, resource);
+        LOGGER.log(Level.INFO, () -> String.format("Removing obsolete controller pods for %s/%s",
+                resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
         removeObsoleteControllerPods(resource);
+        LOGGER.log(Level.INFO, () -> String.format("Building controller pod for %s/%s with input image name: %s",
+                resource.getMetadata().getNamespace(), resource.getMetadata().getName(), imageName));
         Pod pod = buildControllerPod(action, resource);
-        return client.startPod(pod);
+        LOGGER.log(Level.INFO, () -> String.format("Starting pod: %s in namespace: %s with image: %s",
+                pod.getMetadata().getName(), pod.getMetadata().getNamespace(),
+                pod.getSpec().getContainers().get(0).getImage()));
+        Pod result = client.startPod(pod);
+        LOGGER.log(Level.INFO, () -> String.format("Pod started successfully: %s", result.getMetadata().getName()));
+        return result;
     }
 
     private void removeObsoleteControllerPods(SerializedEntandoResource resource) throws TimeoutException {
         //We need to make sure they all terminate so that we don't have racing conditions between 2 controllers
         // processing the same resource
-        this.client.removePodsAndWait(controllerNamespace, CoordinatorUtils.podLabelsFor(resource));
+        Map<String, String> labels = CoordinatorUtils.podLabelsFor(resource);
+        LOGGER.log(Level.INFO, () -> String.format("Looking for obsolete pods with labels: %s in namespace: %s",
+                labels, controllerNamespace));
+        this.client.removePodsAndWait(controllerNamespace, labels);
+        LOGGER.log(Level.INFO, () -> String.format("Finished removing obsolete controller pods for %s/%s",
+                resource.getMetadata().getNamespace(), resource.getMetadata().getName()));
     }
 
     private Pod buildControllerPod(Action action, SerializedEntandoResource resource) {
+        String resolvedImageUri = this.imageResolver.determineImageUri(imageName);
+        LOGGER.log(Level.INFO, () -> String.format("Image resolved from '%s' to '%s'", imageName, resolvedImageUri));
         return new PodBuilder().withNewMetadata()
                 .withName(resource.getMetadata().getName() + "-deployer-" + NameUtils.randomNumeric(4).toLowerCase())
                 .withNamespace(this.controllerNamespace)
@@ -71,7 +97,7 @@ public class ControllerExecutor {
                 .withServiceAccountName(determineServiceAccountName())
                 .addNewContainer()
                 .withName("deployer")
-                .withImage(this.imageResolver.determineImageUri(imageName))
+                .withImage(resolvedImageUri)
                 .withImagePullPolicy("IfNotPresent")
                 .withEnv(buildEnvVars(action, resource))
                 .endContainer()
