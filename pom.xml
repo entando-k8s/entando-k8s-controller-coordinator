@@ -21,8 +21,7 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>7.3.0-fix.1-ESB-513-PR-61</version>
-        <!--<version>7.3.0-fix.1</version>-->
+        <version>7.3.0-fix.1</version>
         <relativePath/>
     </parent>
     <version>7.3.0-fix.1</version>
@@ -64,7 +63,7 @@
     </scm>
     <properties>
         <github.organization>entando-k8s</github.organization>
-        <entando-k8s-operator-common.version>7.3.0-fix.1-ESB-513-PR-165</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>7.3.0-fix.1</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>smoke</postDeploymentTestGroups>
         <maven.compiler.source>17</maven.compiler.source>
@@ -105,11 +104,6 @@
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-client</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.jboss.resteasy</groupId>-->
-<!--            <artifactId>resteasy-jaxrs</artifactId>-->
-<!--            <version>${resteasy.version}</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-jackson2-provider</artifactId>

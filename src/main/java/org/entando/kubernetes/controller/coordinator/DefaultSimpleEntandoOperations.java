@@ -28,7 +28,6 @@ import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
-import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.PodResource;
@@ -37,7 +36,6 @@ import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
@@ -86,7 +84,6 @@ public class DefaultSimpleEntandoOperations extends DeathEventIssuerBase impleme
     public Watch watch(SerializedResourceWatcher observer) {
         Function<CustomResourceStringWatcher, Watch> restartingAction = customResourceWatcher -> {
             try {
-                // In v6, use the asGenericWatcher() adapter to convert between types
                 return operations.watch(customResourceWatcher.asGenericWatcher());
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, e,
