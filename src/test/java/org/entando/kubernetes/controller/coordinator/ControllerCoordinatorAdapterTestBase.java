@@ -20,6 +20,7 @@ import static org.awaitility.Awaitility.await;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -38,9 +39,27 @@ public abstract class ControllerCoordinatorAdapterTestBase extends AbstractK8SIn
     public static final String MY_POD = "my-pod";
 
     protected void awaitDefaultToken(String namespace) {
+        // In Kubernetes 1.24+, service account token secrets are no longer auto-generated.
+        // We need to manually create the token secret for the "default" service account.
+        var tokenSecretName = "default-token";
+        var existingSecret = getFabric8Client().secrets().inNamespace(namespace).withName(tokenSecretName).get();
+        if (existingSecret == null) {
+            getFabric8Client().secrets().inNamespace(namespace)
+                    .create(new SecretBuilder()
+                            .withNewMetadata()
+                            .withName(tokenSecretName)
+                            .withNamespace(namespace)
+                            .addToAnnotations("kubernetes.io/service-account.name", "default")
+                            .endMetadata()
+                            .withType("kubernetes.io/service-account-token")
+                            .build());
+        }
         await().atMost(30, TimeUnit.SECONDS).ignoreExceptions()
-                .until(() -> getFabric8Client().secrets().inNamespace(namespace).list()
-                        .getItems().stream().anyMatch(secret -> TestFixturePreparation.isValidTokenSecret(secret, "default")));
+                .until(() -> {
+                    var secret = getFabric8Client().secrets().inNamespace(namespace)
+                            .withName(tokenSecretName).get();
+                    return secret != null && secret.getData() != null && secret.getData().containsKey("token");
+                });
     }
 
     @BeforeAll

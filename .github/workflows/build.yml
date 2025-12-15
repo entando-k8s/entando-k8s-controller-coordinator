@@ -1,0 +1,263 @@
+name: Build and Publish
+
+env:
+  ENTANDO_GITHUB_TOOLS_VERSION: "v0.1.1"
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_PR_TITLE: ${{ github.event.pull_request.title }}
+  GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+  GH_PR_RUN_NUMBER: ${{ github.run_number }}
+  GITHUB_REF: ${{ github.ref }}
+  JDK_VERSION: '17'
+  # Docker settings
+  IMAGES_TO_BUILD: "Dockerfile.jvm:entando-k8s-controller-coordinator"
+  DOCKER_IMAGE_ARCHITECTURE: linux/amd64,linux/arm64
+
+on:
+  push:
+    branches: [ "develop", "release/*" ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ "develop", "release/*" ]
+
+jobs:
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # BUILD JOB - Compiles and packages the project
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      SKIP_SCANS: ${{ steps.configure.outputs.SKIP_SCANS }}
+      SKIP_TESTS: ${{ steps.configure.outputs.SKIP_TESTS }}
+
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK ${{ env.JDK_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JDK_VERSION }}
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Configure
+      id: configure
+      run: |
+        if [ -f ".github/configure" ]; then . .github/configure "build"; fi
+        gh.job.outputVar SKIP_SCANS
+        gh.job.outputVar SKIP_TESTS
+
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2-
+
+    - name: Build Java
+      run: .github/build.sh
+
+    - name: Submit Dependency Snapshot
+      if: github.event_name != 'pull_request'
+      uses: advanced-security/maven-dependency-submission-action@v4
+
+    - name: Save build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        retention-days: 1
+        path: |
+          target/quarkus-app/
+          target/generated-resources/licenses/
+          target/*.jar
+          pom.xml
+
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # TEST AND SCAN JOB - Runs all tests (unit + integration) and SonarQube analysis
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  test-and-scan:
+    needs: build
+    if: ${{ needs.build.outputs.SKIP_SCANS != 'true' || needs.build.outputs.SKIP_TESTS != 'true' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    env:
+      ARTIFACT_VERSION: ${{ needs.build.outputs.ARTIFACT_VERSION }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_ORG: ${{ vars.SONAR_ORG }}
+      SONAR_URL: ${{ vars.SONAR_URL }}
+      # K8S integration test configuration
+      ENTANDO_K8S_OPERATOR_TESTS_RUN_TARGET: K8S
+      ENTANDO_TEST_NAMESPACE_OVERRIDE: ${{ vars.ENTANDO_TEST_NAMESPACE }}
+      ENTANDO_DEFAULT_ROUTING_SUFFIX: ${{ vars.ENTANDO_DEFAULT_ROUTING_SUFFIX }}
+      ENTANDO_TEST_KEYCLOAK_BASE_URL: "${{ secrets.TEST_KEYCLOAK24_URL }}"
+      ENTANDO_TEST_KEYCLOAK_ADMIN_USER: "${{ secrets.TEST_KEYCLOAK24_USERNAME }}"
+      ENTANDO_TEST_KEYCLOAK_ADMIN_PASSWORD: "${{ secrets.TEST_KEYCLOAK24_PASSWORD }}"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JDK_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JDK_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Restore build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: .
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.RANCHER_KUBECONFIG_BASE64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify cluster connection
+        run: |
+          if kubectl cluster-info > /dev/null 2>&1; then
+            echo "Connection ok"
+          else
+            echo "Connection failed"
+            exit 1
+          fi
+
+      - name: Configure
+        id: configure
+        run: if [ -f ".github/configure" ]; then . .github/configure "test-and-scan"; fi
+
+      - name: Test and Scan
+        run: .github/test-and-scan.sh
+
+      - name: Save test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-report
+          compression-level: 0
+          retention-days: 1
+          path: |
+            target/site/surefire-report.html
+            target/reports/surefire.html
+            target/surefire-reports/
+
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # PUBLISH NEXUS JOB - Publishes JAR to Nexus (runs after all tests pass)
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  publish-nexus:
+    needs: [build, test-and-scan]
+    if: |
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.test-and-scan.result == 'success' || needs.test-and-scan.result == 'skipped')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JDK_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JDK_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+          server-id: ${{ vars.NEXUS_SERVER_ID }}
+          server-username: NEXUS_USERNAME
+          server-password: NEXUS_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Restore build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: .
+
+      - name: Configure
+        run: if [ -f ".github/configure" ]; then . .github/configure "publish-nexus"; fi
+
+      - name: Publish to Nexus
+        env:
+          # Secrets required for authentication (read by Maven settings or script)
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+
+          # Variables required by the bash script
+          NEXUS_URL: ${{ vars.NEXUS_INSTANCE_URI }}
+          NEXUS_REPO_ID: ${{ vars.NEXUS_SERVER_ID }}
+        run: .github/publish-nexus.sh
+
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # PUBLISH DOCKER JOB - Builds and pushes Docker image (runs after all tests pass)
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  publish-docker:
+    needs: [build, test-and-scan]
+    if: |
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.test-and-scan.result == 'success' || needs.test-and-scan.result == 'skipped')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: .
+
+      - name: Configure
+        run: if [ -f ".github/configure" ]; then . .github/configure "publish-docker"; fi
+
+      - name: Build Docker image
+        run: |
+          mkdir -p ./target/generated-resources/licenses
+          touch ./target/generated-resources/licenses.xml
+
+          .github/github-tools/docker.multiBuild \
+            "${IMAGES_TO_BUILD}" \
+            "${ARTIFACT_VERSION}" \
+            "${{ vars.DOCKER_ORG }}" \
+          ;
+
+      - name: Publish Docker image
+        run: |
+          GH_DO_COMMENT=true \
+            .github/github-tools/docker.multiPublish \
+              "${IMAGES_TO_BUILD}" \
+              "${ARTIFACT_VERSION}" \
+              "${{ vars.DOCKER_ORG }}" \
+              "${{ vars.DOCKER_REGISTRY }}" \
+              "${{ secrets.DOCKER_USERNAME }}" \
+              "${{ secrets.DOCKER_PASSWORD }}" \
+              "${ARTIFACT_PUB_TYPE}" \
+            ;
