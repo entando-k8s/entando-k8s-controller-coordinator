@@ -10,8 +10,8 @@ preview:
   imagePullSecrets:
     - redhat-registry
   image:
-    repository: {{ENTANDO_IMAGE_REPO}}
-    tag: {{ENTANDO_IMAGE_TAG}}
+    repository: entando/entando-k8s-controller-coordinator
+    tag: 7.3.0-fix.2
     pullPolicy: Always
   env:
     ENTANDO_DOCKER_IMAGE_VERSION_FALLBACK: 6.0.0
