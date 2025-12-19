@@ -1,0 +1,20 @@
+#!/bin/bash
+
+git config --global advice.detachedHead false
+
+(
+  cd .github
+  git clone --depth 1 --branch "${ENTANDO_GITHUB_TOOLS_VERSION}" "https://github.com/entando-ps/github-tools" &>/dev/null
+)
+
+. .github/github-tools/lib.sh
+
+configure.start "$1"
+
+if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+  . .github/github-tools/base.configure --tag "$GITHUB_REF"
+else
+  . .github/github-tools/base.configure "$GH_PR_TITLE" "$GH_PR_NUMBER"
+fi
+
+configure.complete
