@@ -36,6 +36,7 @@ rules:
       - extensions
     resources:
       - deployments
+      - deployments/scale
     verbs:
       - "*"
   - apiGroups:
