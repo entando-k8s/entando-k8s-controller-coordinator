@@ -24,7 +24,7 @@
         <version>7.5.1</version>
         <relativePath/>
     </parent>
-    <version>7.5.1-SNAPSHOT</version>
+    <version>7.5.1</version>
     <artifactId>entando-k8s-controller-coordinator</artifactId>
     <name>Entando K8S Controller Coordinator</name>
     <description>Entando's K8S Controller Coordinator</description>
