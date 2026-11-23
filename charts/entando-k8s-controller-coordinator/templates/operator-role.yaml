@@ -50,10 +50,16 @@ rules:
       - ""
     resources:
       - namespaces
-      - pods/exec
       - pods/log
     verbs:
       - get
+  - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - get
+      - create
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
